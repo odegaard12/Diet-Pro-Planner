@@ -1,0 +1,11 @@
+services:
+  diet-pro-planner:
+    build: .
+    container_name: diet-pro-planner
+    restart: unless-stopped
+    ports:
+      - "8099:8099"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
