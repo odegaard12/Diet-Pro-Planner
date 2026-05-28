@@ -1,6 +1,6 @@
 # Diet Pro Planner
 
-**Current version:** v0.0.5
+**Current version:** v0.0.6
 
 Local-first web app for tracking body weight, meals by grams, reusable foods, meal templates, workouts, weekly plans and optional integrations.
 
@@ -79,3 +79,5 @@ Tokens are stored locally under `data/` and are excluded from Git.
 - `v0.0.2`: manual Strava import by date range.
 - `v0.0.3`: branding, app icon, ES/EN toggle and Strava auto-preview.
 - `v0.0.4`: background Strava auto-sync and last-sync status.
+
+- v0.0.6: stable Spanish UI, removed broken ES/EN DOM translation and improved rule visibility.

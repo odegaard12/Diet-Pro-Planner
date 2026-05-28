@@ -296,324 +296,6 @@ async function importSelectedStrava(){
   }
 }
 
-
-// V003_BRAND_LANG_STRAVA_AUTO
-(function(){
-  window.__stravaPreview = window.__stravaPreview || [];
-
-  function getLang(){
-    return localStorage.getItem('dietLang') || 'es';
-  }
-
-  function setLang(lang){
-    localStorage.setItem('dietLang', lang);
-    document.documentElement.lang = lang;
-    document.documentElement.dataset.lang = lang;
-    applyLang();
-  }
-
-  window.toggleLang = function(){
-    setLang(getLang() === 'es' ? 'en' : 'es');
-  };
-
-  const textMapEN = new Map(Object.entries({
-    'Resumen':'Home',
-    'Registrar':'Register',
-    'Deporte':'Sport',
-    'Plantillas':'Templates',
-    'Alimentos':'Foods',
-    'Plan':'Plan',
-    'Historial peso':'Weight history',
-    'Integraciones':'Integrations',
-    'Historial':'History',
-    'Regla de hoy':'Today rule',
-    'Proteína + aceite medido':'Protein + measured oil',
-    '5 g normal · 10 g máximo. Pasta/arroz siempre en seco.':'5 g normal · 10 g max. Pasta/rice always weighed dry.',
-    '5 g normal · 10 g máximo · pasta/arroz siempre en seco.':'5 g normal · 10 g max · pasta/rice always weighed dry.',
-    'Dieta controlada':'Controlled diet',
-    'Actualizar':'Refresh',
-    'Exportar DB':'Export DB',
-    'Registrar comida':'Log meal',
-    'Registrar entreno':'Log workout',
-    'Registrar peso':'Log weight',
-    'Día seleccionado':'Selected day',
-    'Día de hoy':'Today',
-    'Ir a hoy real':'Go to real today',
-    'Así no se mezclan actividades de ayer con hoy.':'This avoids mixing yesterday’s activities with today.',
-    'Último peso':'Latest weight',
-    'Comido':'Food',
-    'Proteína':'Protein',
-    'Actividad':'Activity',
-    'Asistente':'Assistant',
-    'Comidas':'Meals',
-    'Entreno':'Workout',
-    'Privacidad':'Privacy',
-    'Conectar Strava':'Connect Strava',
-    'Desde':'From',
-    'Hasta':'To',
-    'Buscar actividades':'Search activities',
-    'Importar seleccionadas':'Import selected',
-    'Actividades encontradas':'Activities found',
-    'Seleccionar todas':'Select all',
-    'Ninguna':'None',
-    'Desde última importada':'From last import',
-    'Cargar al abrir':'Load on open'
-  }));
-
-  const textMapES = new Map(Object.entries([...textMapEN.entries()].map(([k,v]) => [v,k])));
-
-  function replaceExactText(root, map){
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while(walker.nextNode()) nodes.push(walker.currentNode);
-    for(const n of nodes){
-      const raw = n.nodeValue;
-      const trimmed = raw.trim();
-      if(map.has(trimmed)){
-        n.nodeValue = raw.replace(trimmed, map.get(trimmed));
-      }
-    }
-  }
-
-  window.applyLang = function(){
-    const lang = getLang();
-    document.documentElement.lang = lang;
-    document.documentElement.dataset.lang = lang;
-    document.title = 'Diet Pro Planner · v0.0.3';
-
-    const b = document.querySelector('.brand h1');
-    if(b) b.textContent = 'Diet Pro Planner';
-
-    const p = document.querySelector('.brand p');
-    if(p) p.textContent = lang === 'en' ? 'Raspberry · local · private' : 'Raspberry · local · privado';
-
-    const btn = document.querySelector('#btnLang');
-    if(btn){
-      btn.textContent = lang === 'en' ? 'ES' : 'EN';
-      btn.onclick = toggleLang;
-      btn.title = lang === 'en' ? 'Cambiar a español' : 'Switch to English';
-    }
-
-    if(lang === 'en') replaceExactText(document.body, textMapEN);
-    else replaceExactText(document.body, textMapES);
-  };
-
-  window.renderIntegrations = function(){
-    const lang = getLang();
-    const to = today();
-    const fromDefault = new Date(Date.now() - 14 * 86400000).toISOString().slice(0,10);
-    const from = localStorage.getItem('stravaFrom') || fromDefault;
-    const savedTo = localStorage.getItem('stravaTo') || to;
-    const auto = localStorage.getItem('stravaAutoPreview') === '1';
-
-    $('#view').innerHTML = `
-      <div class="grid cols-2">
-        <div class="card integration-card">
-          <h3>🔗 Strava</h3>
-          <p class="muted">${lang === 'en'
-            ? 'Connect Strava, choose a date range, review activities and import only the selected ones.'
-            : 'Conecta Strava, elige fechas, revisa actividades e importa solo las que marques.'}</p>
-
-          <div id="stravaStatus" class="empty">${lang === 'en' ? 'Checking Strava...' : 'Comprobando Strava...'}</div>
-
-          <div class="strava-toolbar">
-            <button class="btn" onclick="connectStrava()">${lang === 'en' ? 'Connect Strava' : 'Conectar Strava'}</button>
-            <button class="btn secondary" onclick="useLastImportedStrava()">${lang === 'en' ? 'From last import' : 'Desde última importada'}</button>
-          </div>
-
-          <div class="row" style="margin-top:14px">
-            <div class="field span-4">
-              <label>${lang === 'en' ? 'From' : 'Desde'}</label>
-              <input id="stravaFrom" type="date" value="${from}" onchange="localStorage.setItem('stravaFrom', this.value)">
-            </div>
-            <div class="field span-4">
-              <label>${lang === 'en' ? 'To' : 'Hasta'}</label>
-              <input id="stravaTo" type="date" value="${savedTo}" onchange="localStorage.setItem('stravaTo', this.value)">
-            </div>
-            <div class="field span-4">
-              <label>&nbsp;</label>
-              <button class="btn secondary" onclick="previewStrava()">${lang === 'en' ? 'Search activities' : 'Buscar actividades'}</button>
-            </div>
-          </div>
-
-          <label class="strava-auto-row">
-            <input id="stravaAutoPreview" type="checkbox" ${auto ? 'checked' : ''} onchange="localStorage.setItem('stravaAutoPreview', this.checked ? '1' : '0')">
-            <span>${lang === 'en' ? 'Load activities automatically when opening this page' : 'Cargar actividades automáticamente al abrir esta página'}</span>
-          </label>
-
-          <div id="stravaList" style="margin-top:14px"></div>
-        </div>
-
-        <div class="card note-box">
-          <h3>${lang === 'en' ? 'Privacy' : 'Privacidad'}</h3>
-          <p>${lang === 'en' ? 'Strava is queried only when you search/import or when auto-load is enabled.' : 'Strava solo se consulta cuando buscas/importas o si activas carga automática.'}</p>
-          <p>${lang === 'en' ? 'Tokens remain on the Raspberry under data/ and are not committed to Git.' : 'Los tokens quedan en la Raspberry dentro de data/ y no se suben al repo.'}</p>
-          <p class="muted">${lang === 'en' ? 'Recommended route: Zepp/Amazfit -> Strava -> Diet Pro Planner.' : 'Ruta recomendada: Zepp/Amazfit → Strava → Diet Pro Planner.'}</p>
-        </div>
-      </div>
-    `;
-
-    loadStravaStatus().then(()=>{
-      if(localStorage.getItem('stravaAutoPreview') === '1'){
-        previewStrava();
-      }
-    });
-
-    applyLang();
-  };
-
-  window.loadStravaStatus = async function(){
-    try{
-      const s = await api('/api/strava/status');
-      const lang = getLang();
-      $('#stravaStatus').innerHTML = `
-        <div class="status ${s.connected ? 'ok' : s.configured ? 'warn' : 'bad'}">
-          <b>${s.connected ? (lang === 'en' ? 'Connected' : 'Conectado') : s.configured ? (lang === 'en' ? 'Configured, connection pending' : 'Configurado, falta conectar') : (lang === 'en' ? 'Not configured' : 'No configurado')}</b>
-          <span>${s.connected ? (lang === 'en' ? 'Ready to search activities by date.' : 'Listo para buscar actividades por fecha.') : s.message}</span>
-        </div>`;
-      window.__stravaConnectUrl = s.connect_url;
-    }catch(e){
-      $('#stravaStatus').textContent = 'Strava: ' + e.message;
-    }
-  };
-
-  window.connectStrava = function(){
-    if(window.__stravaConnectUrl) window.open(window.__stravaConnectUrl, '_blank');
-    else toast(getLang() === 'en' ? 'Configure Strava in .env first' : 'Primero configura Strava en .env');
-  };
-
-  window.previewStrava = async function(){
-    const after_date = $('#stravaFrom').value;
-    const before_date = $('#stravaTo').value;
-    localStorage.setItem('stravaFrom', after_date);
-    localStorage.setItem('stravaTo', before_date);
-
-    $('#stravaList').innerHTML = `<div class="empty">${getLang() === 'en' ? 'Searching Strava activities...' : 'Buscando actividades en Strava...'}</div>`;
-
-    try{
-      const r = await api('/api/strava/preview', {
-        method:'POST',
-        body: JSON.stringify({after_date, before_date})
-      });
-      window.__stravaPreview = r.activities || [];
-      renderStravaPreview();
-    }catch(e){
-      $('#stravaList').innerHTML = `<div class="empty">Strava: ${e.message}</div>`;
-    }
-  };
-
-  window.renderStravaPreview = function(){
-    const lang = getLang();
-    const acts = window.__stravaPreview || [];
-
-    if(!acts.length){
-      $('#stravaList').innerHTML = `<div class="empty">${lang === 'en' ? 'No activities in this range.' : 'No hay actividades en ese rango.'}</div>`;
-      return;
-    }
-
-    $('#stravaList').innerHTML = `
-      <div class="section-title compact-title">
-        <div>
-          <h3>${lang === 'en' ? 'Activities found' : 'Actividades encontradas'}</h3>
-          <p>${acts.length} ${lang === 'en' ? 'activities · select the ones to import' : 'actividades · selecciona cuáles importar'}</p>
-        </div>
-        <div class="strava-toolbar">
-          <button class="btn secondary" onclick="selectAllStrava(true)">${lang === 'en' ? 'Select all' : 'Seleccionar todas'}</button>
-          <button class="btn secondary" onclick="selectAllStrava(false)">${lang === 'en' ? 'None' : 'Ninguna'}</button>
-          <button class="btn" onclick="importSelectedStrava()">${lang === 'en' ? 'Import selected' : 'Importar seleccionadas'}</button>
-        </div>
-      </div>
-
-      <div class="compact-list">
-        ${acts.map(a => `
-          <label class="compact-card workout" style="display:block;cursor:pointer;opacity:${a.already_imported ? .55 : 1}">
-            <div class="compact-head">
-              <div>
-                <b>${a.date} ${a.time} · ${a.sport_type || a.type}</b>
-                <small>${a.title} · ${fmt(a.minutes)} min · ${fmt(a.distance_km)} km · ${fmt(a.kcal)} kcal ${a.already_imported ? (lang === 'en' ? '· already imported' : '· ya importada') : ''}</small>
-              </div>
-              <input type="checkbox" data-strava-id="${a.id}" ${a.already_imported ? 'disabled' : 'checked'}>
-            </div>
-          </label>
-        `).join('')}
-      </div>
-    `;
-  };
-
-  window.selectAllStrava = function(value){
-    document.querySelectorAll('[data-strava-id]:not(:disabled)').forEach(x => x.checked = value);
-  };
-
-  window.importSelectedStrava = async function(){
-    const ids = [...document.querySelectorAll('[data-strava-id]:checked')].map(x => x.dataset.stravaId);
-    if(!ids.length){
-      toast(getLang() === 'en' ? 'No activities selected' : 'No seleccionaste actividades');
-      return;
-    }
-
-    try{
-      const r = await api('/api/strava/import', {
-        method:'POST',
-        body: JSON.stringify({
-          after_date: $('#stravaFrom').value,
-          before_date: $('#stravaTo').value,
-          ids
-        })
-      });
-
-      toast(`${getLang() === 'en' ? 'Imported' : 'Importadas'}: ${r.imported} · ${getLang() === 'en' ? 'duplicates' : 'duplicadas'}: ${r.skipped}`);
-      await load();
-      page = 'home';
-      renderNav();
-      render();
-    }catch(e){
-      toast('Strava: ' + e.message);
-    }
-  };
-
-  window.useLastImportedStrava = async function(){
-    try{
-      const r = await api('/api/strava/last');
-      if(r.found && r.date){
-        $('#stravaFrom').value = r.date;
-        localStorage.setItem('stravaFrom', r.date);
-        toast((getLang() === 'en' ? 'From last import: ' : 'Desde última importada: ') + r.date);
-      }else{
-        toast(getLang() === 'en' ? 'No Strava imports yet' : 'Aún no hay importaciones Strava');
-      }
-    }catch(e){
-      toast('Strava: ' + e.message);
-    }
-  };
-
-  const oldRender = window.render || render;
-  if(!window.__v003RenderWrapped){
-    window.__v003RenderWrapped = true;
-    window.render = function(){
-      oldRender();
-      setTimeout(applyLang, 0);
-    };
-  }
-
-  const oldRenderNav = window.renderNav || renderNav;
-  if(!window.__v003NavWrapped){
-    window.__v003NavWrapped = true;
-    window.renderNav = function(){
-      oldRenderNav();
-      setTimeout(applyLang, 0);
-    };
-  }
-
-  setTimeout(()=>{
-    const btn = document.querySelector('#btnLang');
-    if(btn) btn.onclick = toggleLang;
-    applyLang();
-    if(typeof renderNav === 'function') renderNav();
-    if(typeof render === 'function' && window.state) render();
-  }, 0);
-})();
-
-
 // V004_STRAVA_AUTO_SYNC_UI
 async function loadStravaAutoStatus(){
   try{
@@ -712,3 +394,55 @@ function renderIntegrations(){
   loadStravaStatus();
   loadStravaAutoStatus().then(()=>{ if(autoPreview) previewStrava(); });
 }
+
+
+// V006_STABLE_ES_FIXES
+(function(){
+  // Spanish-only stable UI. Full i18n needs a key-based refactor, not DOM text replacement.
+  function stableHeader(){
+    document.documentElement.lang = 'es';
+    document.documentElement.dataset.lang = 'es';
+    document.title = 'Diet Pro Planner · v0.0.6';
+    const brand = document.querySelector('.brand h1');
+    if(brand) brand.textContent = 'Diet Pro Planner';
+    const sub = document.querySelector('.brand p');
+    if(sub) sub.textContent = 'Raspberry · local · privado';
+    const eyebrow = document.querySelector('.eyebrow');
+    if(eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.6';
+    const lang = document.querySelector('#btnLang');
+    if(lang) lang.remove();
+  }
+
+  const oldRender = window.render || render;
+  window.render = function(){
+    oldRender();
+    stableHeader();
+  };
+
+  const oldRenderNav = window.renderNav || renderNav;
+  window.renderNav = function(){
+    oldRenderNav();
+    stableHeader();
+  };
+
+  // Make sure numeric totals stay numeric even after older cached language state.
+  const oldRenderHome = window.renderHome || renderHome;
+  window.renderHome = function(){
+    oldRenderHome();
+    stableHeader();
+    const metrics = document.querySelectorAll('.metric');
+    // If an older broken translation left text like "Home,Resumen" in the activity metric, force rerender by data.
+    try{
+      const workouts = byDate(state.workouts);
+      const sport = workoutTotals(workouts);
+      const cards = [...document.querySelectorAll('.metric')];
+      const activity = cards.find(c => /Actividad/.test(c.textContent));
+      if(activity){
+        const b = activity.querySelector('b');
+        if(b) b.textContent = fmt(sport);
+      }
+    }catch(e){}
+  };
+
+  stableHeader();
+})();
