@@ -6,6 +6,7 @@ import secrets
 import sqlite3
 import time
 import urllib.parse
+import threading
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -808,7 +809,196 @@ def api_strava_last():
     })
 
 
+
+# V004_STRAVA_AUTO_SYNC
+
+STRAVA_AUTO_FILE = DATA / "strava_auto_sync.json"
+STRAVA_AUTO_LOCK = threading.Lock()
+STRAVA_AUTO_THREAD_STARTED = False
+
+
+def _auto_now_label() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+def read_strava_auto_config() -> dict[str, Any]:
+    base = {
+        "enabled": False,
+        "interval_minutes": 30,
+        "after_date": "",
+        "last_sync_at": "",
+        "last_success_at": "",
+        "last_message": "Aún no sincronizado automáticamente",
+        "last_result": {},
+        "_last_run_ts": 0,
+    }
+    if not STRAVA_AUTO_FILE.exists():
+        return base
+    try:
+        data = json.loads(STRAVA_AUTO_FILE.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            base.update(data)
+    except Exception:
+        pass
+    return base
+
+
+def write_strava_auto_config(cfg: dict[str, Any]) -> None:
+    STRAVA_AUTO_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _latest_strava_import_date() -> str:
+    try:
+        with con() as db:
+            row = db.execute(
+                """
+                SELECT date FROM workouts
+                WHERE notes LIKE 'Strava ·%id=%'
+                ORDER BY date DESC, time DESC, id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        return row["date"] if row else ""
+    except Exception:
+        return ""
+
+
+def _strava_import_all_in_range(after_date: str, before_date: str) -> dict[str, Any]:
+    raw = _strava_fetch_range(after_date, before_date)
+    imported = 0
+    skipped = 0
+
+    with con() as db:
+        for item in raw:
+            a = _strava_card(item)
+            if not a.get("id"):
+                continue
+
+            found = db.execute(
+                "SELECT id FROM workouts WHERE notes LIKE ? LIMIT 1",
+                (f"%id={a['id']}%",),
+            ).fetchone()
+            if found:
+                skipped += 1
+                continue
+
+            notes = f"Strava · {a['title']} · id={a['id']}"
+            db.execute(
+                """
+                INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes)
+                VALUES(?,?,?,?,?,?,?,?)
+                """,
+                (
+                    a["date"],
+                    a["time"],
+                    None,
+                    a["sport_type"],
+                    a["minutes"],
+                    a["distance_km"],
+                    a["kcal"],
+                    notes,
+                ),
+            )
+            imported += 1
+
+    return {"received": len(raw), "imported": imported, "skipped": skipped, "after_date": after_date, "before_date": before_date}
+
+
+def run_strava_auto_sync(force: bool = False) -> dict[str, Any]:
+    with STRAVA_AUTO_LOCK:
+        cfg = read_strava_auto_config()
+        if not force and not cfg.get("enabled"):
+            return {"ok": True, "enabled": False, "message": "Sincronización automática desactivada"}
+
+        if not read_strava_tokens():
+            cfg["last_sync_at"] = _auto_now_label()
+            cfg["last_message"] = "Strava no conectado"
+            write_strava_auto_config(cfg)
+            return {"ok": False, "error": "Strava no conectado"}
+
+        after_date = (cfg.get("after_date") or _latest_strava_import_date() or date.fromtimestamp(time.time() - 14 * 86400).isoformat())
+        before_date = today_iso()
+
+        try:
+            result = _strava_import_all_in_range(after_date, before_date)
+            label = _auto_now_label()
+            cfg["last_sync_at"] = label
+            cfg["last_success_at"] = label
+            cfg["last_message"] = f"Sincronizado correctamente a {label}"
+            cfg["last_result"] = result
+            cfg["_last_run_ts"] = int(time.time())
+            write_strava_auto_config(cfg)
+            return {"ok": True, **result, "message": cfg["last_message"]}
+        except Exception as exc:
+            label = _auto_now_label()
+            cfg["last_sync_at"] = label
+            cfg["last_message"] = f"Error sincronizando a {label}: {exc}"
+            cfg["_last_run_ts"] = int(time.time())
+            write_strava_auto_config(cfg)
+            return {"ok": False, "error": str(exc), "message": cfg["last_message"]}
+
+
+@app.get("/api/strava/auto-status")
+def api_strava_auto_status():
+    cfg = read_strava_auto_config()
+    cfg["latest_import_date"] = _latest_strava_import_date()
+    return jsonify(cfg)
+
+
+@app.post("/api/strava/auto-config")
+def api_strava_auto_config():
+    d = request.json or {}
+    cfg = read_strava_auto_config()
+    cfg["enabled"] = bool(d.get("enabled"))
+    cfg["after_date"] = str(d.get("after_date") or cfg.get("after_date") or _latest_strava_import_date() or today_iso())
+    try:
+        cfg["interval_minutes"] = max(5, min(1440, int(d.get("interval_minutes") or cfg.get("interval_minutes") or 30)))
+    except Exception:
+        cfg["interval_minutes"] = 30
+    cfg["last_message"] = "Sincronización automática activada" if cfg["enabled"] else "Sincronización automática desactivada"
+    write_strava_auto_config(cfg)
+    start_strava_auto_thread()
+    return jsonify({"ok": True, **cfg})
+
+
+@app.post("/api/strava/auto-run")
+def api_strava_auto_run():
+    result = run_strava_auto_sync(force=True)
+    status = 200 if result.get("ok") else 400
+    return jsonify(result), status
+
+
+def _strava_auto_loop() -> None:
+    while True:
+        try:
+            cfg = read_strava_auto_config()
+            if cfg.get("enabled"):
+                interval = max(5, int(cfg.get("interval_minutes") or 30)) * 60
+                last = int(cfg.get("_last_run_ts") or 0)
+                if time.time() - last >= interval:
+                    run_strava_auto_sync(force=True)
+        except Exception as exc:
+            try:
+                cfg = read_strava_auto_config()
+                cfg["last_sync_at"] = _auto_now_label()
+                cfg["last_message"] = f"Error en auto-sync: {exc}"
+                write_strava_auto_config(cfg)
+            except Exception:
+                pass
+        time.sleep(60)
+
+
+def start_strava_auto_thread() -> None:
+    global STRAVA_AUTO_THREAD_STARTED
+    if STRAVA_AUTO_THREAD_STARTED:
+        return
+    STRAVA_AUTO_THREAD_STARTED = True
+    t = threading.Thread(target=_strava_auto_loop, name="strava-auto-sync", daemon=True)
+    t.start()
+
+
 init_db()
+start_strava_auto_thread()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))

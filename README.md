@@ -1,29 +1,26 @@
 # Diet Pro Planner
 
-**Current version:** v0.0.3
+**Current version:** v0.0.4
 
 Local-first web app for tracking body weight, meals by grams, reusable foods, meal templates, workouts, weekly plans and optional integrations.
 
-Designed to run privately on a Raspberry Pi with Docker. Personal data stays local.
+Designed to run privately on a Raspberry Pi with Docker. Your personal data stays local.
 
 ## Features
 
 - Official and reference weight tracking.
 - Meal logging by saved foods and grams.
-- Reusable meal templates where quantities can be adjusted before saving.
+- Reusable meal templates where you can adjust quantities before saving.
 - Product catalog with brand, nutrition values and optional local label photo.
 - Manual workout logging.
-- Strava OAuth connection.
+- Strava OAuth connection through localhost.
 - Manual Strava import by date range.
-- Optional auto-load of Strava activity previews when opening the integration page.
-- Duplicate prevention for imported Strava activities.
-- Spanish/English UI toggle.
-- Local app icon and browser favicon.
+- Optional Strava auto-sync in the Raspberry background.
 - Local SQLite database in `data/dieta.db`.
 
 ## Privacy
 
-Do not commit local/private files. The repository excludes them through `.gitignore`:
+Do not commit local or private files. The repository excludes them through `.gitignore`:
 
 - `data/`
 - `*.db`
@@ -33,8 +30,6 @@ Do not commit local/private files. The repository excludes them through `.gitign
 - backups
 - ZIP files
 - local label photos
-
-Strava tokens are stored locally under `data/` and are not committed.
 
 ## Docker
 
@@ -65,26 +60,22 @@ ssh -N -L 8099:127.0.0.1:8099 user@raspberry-ip
 ```
 
 6. Open `http://localhost:8099`.
-7. Go to `Integrations -> Strava -> Connect Strava`.
+7. Go to Integrations -> Strava -> Connect Strava.
 
-## Strava import workflow
+Tokens are stored locally under `data/` and are excluded from Git.
 
-No background sync is performed by default.
+## Strava import modes
 
-The integration page supports:
-
-- choose start date
-- choose end date
-- search activities
-- review activities before importing
-- select all / select none
-- import selected activities
-- avoid duplicates
-- optionally load activity previews automatically when opening the page
-- start from the last imported Strava date
+- Manual preview by date range.
+- Select activities before importing.
+- Duplicate protection by Strava activity id.
+- Optional auto-sync in the Raspberry background.
+- Auto-sync imports newly detected activities every configured interval.
+- A visible status message shows the latest successful sync time.
 
 ## Releases
 
 - `v0.0.1`: first clean public release.
 - `v0.0.2`: manual Strava import by date range.
-- `v0.0.3`: app icon, bilingual UI toggle and Strava auto-preview option.
+- `v0.0.3`: branding, app icon, ES/EN toggle and Strava auto-preview.
+- `v0.0.4`: background Strava auto-sync and last-sync status.
