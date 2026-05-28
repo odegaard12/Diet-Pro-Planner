@@ -788,6 +788,26 @@ def api_strava_import():
         return jsonify({"error": str(e)}), 400
 
 
+
+# V003_STRAVA_LAST_ENDPOINT
+@app.get("/api/strava/last")
+def api_strava_last():
+    with con() as db:
+        row = db.execute(
+            "SELECT date, time, name, notes FROM workouts WHERE notes LIKE 'Strava ·%' AND notes LIKE '%id=%' ORDER BY date DESC, time DESC, id DESC LIMIT 1"
+        ).fetchone()
+    if not row:
+        return jsonify({"ok": True, "found": False})
+    return jsonify({
+        "ok": True,
+        "found": True,
+        "date": row["date"],
+        "time": row["time"],
+        "name": row["name"],
+        "notes": row["notes"],
+    })
+
+
 init_db()
 
 if __name__ == "__main__":
