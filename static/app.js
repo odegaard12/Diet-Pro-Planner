@@ -149,3 +149,149 @@ async function syncStrava(){ try{const r=await api('/api/strava/sync',{method:'P
 
 function renderHistory(){ $('#view').innerHTML=`<div class="grid cols-2"><div><div class="section-title"><h3>Comidas</h3></div><div class="list">${state.meals.map(mealCard).join('')}</div></div><div><div class="section-title"><h3>Deporte</h3></div><div class="list">${state.workouts.map(workoutCard).join('')}</div></div></div>`}
 $('#btnRefresh').onclick=load; load().catch(e=>{document.body.innerHTML='<pre style="padding:20px">Error cargando app: '+e.message+'</pre>'})
+
+
+// V002_STRAVA_MANUAL_IMPORT_UI
+let __stravaPreview = [];
+
+function renderIntegrations(){
+  const to = today();
+  const from = new Date(Date.now() - 14 * 86400000).toISOString().slice(0,10);
+
+  $('#view').innerHTML = `
+    <div class="grid cols-2">
+      <div class="card integration-card">
+        <h3>🔗 Strava</h3>
+        <p class="muted">Conecta Strava, elige fechas, revisa actividades e importa solo las que marques.</p>
+
+        <div id="stravaStatus" class="empty">Comprobando Strava...</div>
+
+        <div class="action-row">
+          <button class="btn" onclick="connectStrava()">Conectar Strava</button>
+        </div>
+
+        <div class="row" style="margin-top:14px">
+          <div class="field span-4">
+            <label>Desde</label>
+            <input id="stravaFrom" type="date" value="${from}">
+          </div>
+          <div class="field span-4">
+            <label>Hasta</label>
+            <input id="stravaTo" type="date" value="${to}">
+          </div>
+          <div class="field span-4">
+            <label>&nbsp;</label>
+            <button class="btn secondary" onclick="previewStrava()">Buscar actividades</button>
+          </div>
+        </div>
+
+        <div id="stravaList" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card note-box">
+        <h3>Privacidad</h3>
+        <p>Strava solo se consulta cuando pulsas buscar/importar.</p>
+        <p>Los tokens quedan en la Raspberry dentro de data/ y no se suben al repo.</p>
+        <p class="muted">Ruta recomendada: Zepp/Amazfit → Strava → Diet Pro Planner.</p>
+      </div>
+    </div>
+  `;
+
+  loadStravaStatus();
+}
+
+async function loadStravaStatus(){
+  try{
+    const s = await api('/api/strava/status');
+    $('#stravaStatus').innerHTML = `
+      <div class="status ${s.connected ? 'ok' : s.configured ? 'warn' : 'bad'}">
+        <b>${s.connected ? 'Conectado' : s.configured ? 'Configurado, falta conectar' : 'No configurado'}</b>
+        <span>${s.connected ? 'Listo para buscar actividades por fecha.' : s.message}</span>
+      </div>`;
+    window.__stravaConnectUrl = s.connect_url;
+  }catch(e){
+    $('#stravaStatus').textContent = 'No se pudo comprobar Strava: ' + e.message;
+  }
+}
+
+function connectStrava(){
+  if(window.__stravaConnectUrl) window.open(window.__stravaConnectUrl, '_blank');
+  else toast('Primero configura Strava en .env');
+}
+
+async function previewStrava(){
+  const after_date = $('#stravaFrom').value;
+  const before_date = $('#stravaTo').value;
+
+  $('#stravaList').innerHTML = '<div class="empty">Buscando actividades en Strava...</div>';
+
+  try{
+    const r = await api('/api/strava/preview', {
+      method: 'POST',
+      body: JSON.stringify({after_date, before_date})
+    });
+    __stravaPreview = r.activities || [];
+    renderStravaPreview();
+  }catch(e){
+    $('#stravaList').innerHTML = `<div class="empty">Strava: ${e.message}</div>`;
+  }
+}
+
+function renderStravaPreview(){
+  if(!__stravaPreview.length){
+    $('#stravaList').innerHTML = '<div class="empty">No hay actividades en ese rango.</div>';
+    return;
+  }
+
+  $('#stravaList').innerHTML = `
+    <div class="section-title compact-title">
+      <div>
+        <h3>Actividades encontradas</h3>
+        <p>${__stravaPreview.length} actividades · selecciona cuáles importar</p>
+      </div>
+      <button class="btn" onclick="importSelectedStrava()">Importar seleccionadas</button>
+    </div>
+
+    <div class="compact-list">
+      ${__stravaPreview.map(a => `
+        <label class="compact-card workout" style="display:block;cursor:pointer;opacity:${a.already_imported ? .55 : 1}">
+          <div class="compact-head">
+            <div>
+              <b>${a.date} ${a.time} · ${a.sport_type || a.type}</b>
+              <small>${a.title} · ${fmt(a.minutes)} min · ${fmt(a.distance_km)} km · ${fmt(a.kcal)} kcal ${a.already_imported ? '· ya importada' : ''}</small>
+            </div>
+            <input type="checkbox" data-strava-id="${a.id}" ${a.already_imported ? 'disabled' : 'checked'}>
+          </div>
+        </label>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function importSelectedStrava(){
+  const ids = [...document.querySelectorAll('[data-strava-id]:checked')].map(x => x.dataset.stravaId);
+
+  if(!ids.length){
+    toast('No seleccionaste actividades');
+    return;
+  }
+
+  try{
+    const r = await api('/api/strava/import', {
+      method: 'POST',
+      body: JSON.stringify({
+        after_date: $('#stravaFrom').value,
+        before_date: $('#stravaTo').value,
+        ids
+      })
+    });
+
+    toast(`Importadas: ${r.imported} · duplicadas: ${r.skipped}`);
+    await load();
+    page = 'home';
+    renderNav();
+    render();
+  }catch(e){
+    toast('Strava: ' + e.message);
+  }
+}
