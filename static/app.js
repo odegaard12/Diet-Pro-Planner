@@ -612,3 +612,103 @@ async function importSelectedStrava(){
     if(typeof render === 'function' && window.state) render();
   }, 0);
 })();
+
+
+// V004_STRAVA_AUTO_SYNC_UI
+async function loadStravaAutoStatus(){
+  try{
+    const s = await api('/api/strava/auto-status');
+    const box = $('#stravaAutoStatus');
+    if(!box) return;
+    const last = s.last_message || 'Aún no sincronizado automáticamente';
+    const result = s.last_result || {};
+    box.innerHTML = `
+      <div class="status ${s.enabled ? 'ok' : 'warn'}">
+        <b>${s.enabled ? 'Auto-sync activado' : 'Auto-sync desactivado'}</b>
+        <span>${last}</span>
+      </div>
+      <p class="muted">Último resultado: ${fmt(result.imported||0)} nuevas · ${fmt(result.skipped||0)} duplicadas · ${fmt(result.received||0)} recibidas</p>
+    `;
+    const enabled = $('#stravaAutoEnabled');
+    const interval = $('#stravaAutoInterval');
+    const from = $('#stravaAutoFrom');
+    if(enabled) enabled.checked = !!s.enabled;
+    if(interval) interval.value = s.interval_minutes || 30;
+    if(from && !from.value) from.value = s.after_date || s.latest_import_date || today();
+  }catch(e){
+    const box = $('#stravaAutoStatus');
+    if(box) box.innerHTML = `<div class="empty">Auto-sync: ${e.message}</div>`;
+  }
+}
+
+async function saveStravaAutoConfig(){
+  try{
+    const r = await api('/api/strava/auto-config', {
+      method: 'POST',
+      body: JSON.stringify({
+        enabled: $('#stravaAutoEnabled').checked,
+        after_date: $('#stravaAutoFrom').value,
+        interval_minutes: $('#stravaAutoInterval').value
+      })
+    });
+    toast(r.last_message || 'Auto-sync guardado');
+    await loadStravaAutoStatus();
+  }catch(e){ toast('Auto-sync: ' + e.message); }
+}
+
+async function runStravaAutoNow(){
+  const box = $('#stravaAutoStatus');
+  if(box) box.innerHTML = '<div class="empty">Sincronizando ahora...</div>';
+  try{
+    const r = await api('/api/strava/auto-run', {method:'POST', body: JSON.stringify({})});
+    toast(r.message || `Importadas: ${r.imported}`);
+    await load();
+    page = 'integrations';
+    renderNav();
+    render();
+  }catch(e){
+    toast('Auto-sync: ' + e.message);
+    await loadStravaAutoStatus();
+  }
+}
+
+function renderIntegrations(){
+  const to = today();
+  const from = localStorage.getItem('stravaDefaultFrom') || new Date(Date.now() - 14 * 86400000).toISOString().slice(0,10);
+  const autoPreview = localStorage.getItem('stravaAutoPreview') === '1';
+
+  $('#view').innerHTML = `
+    <div class="grid cols-2">
+      <div class="card integration-card">
+        <h3>🔗 Strava</h3>
+        <p class="muted">Conecta Strava, elige fechas, revisa actividades e importa solo las que marques.</p>
+        <div id="stravaStatus" class="empty">Comprobando Strava...</div>
+        <div class="action-row"><button class="btn" onclick="connectStrava()">Conectar Strava</button></div>
+        <div class="row" style="margin-top:14px">
+          <div class="field span-4"><label>Desde</label><input id="stravaFrom" type="date" value="${from}" onchange="localStorage.setItem('stravaDefaultFrom',this.value)"></div>
+          <div class="field span-4"><label>Hasta</label><input id="stravaTo" type="date" value="${to}"></div>
+          <div class="field span-4"><label>&nbsp;</label><button class="btn secondary" onclick="previewStrava()">Buscar actividades</button></div>
+        </div>
+        <label class="check-line"><input id="autoPreviewCheck" type="checkbox" ${autoPreview?'checked':''} onchange="localStorage.setItem('stravaAutoPreview',this.checked?'1':'0')"> Cargar la lista automáticamente al abrir esta página</label>
+        <div id="stravaList" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card note-box">
+        <h3>⚙️ Auto-sync en segundo plano</h3>
+        <p>Importa nuevas actividades de Strava sin abrir la página. La Raspberry revisa Strava cada cierto tiempo.</p>
+        <div id="stravaAutoStatus" class="empty">Comprobando auto-sync...</div>
+        <div class="row" style="margin-top:12px">
+          <div class="field span-5"><label>Importar desde</label><input id="stravaAutoFrom" type="date" value="${from}"></div>
+          <div class="field span-4"><label>Cada</label><select id="stravaAutoInterval"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="60">1 hora</option><option value="180">3 horas</option></select></div>
+          <div class="field span-3"><label>&nbsp;</label><button class="btn secondary" onclick="runStravaAutoNow()">Sincronizar ahora</button></div>
+        </div>
+        <label class="check-line"><input id="stravaAutoEnabled" type="checkbox"> Sincronizar automáticamente nuevas actividades</label>
+        <div class="action-row"><button class="btn" onclick="saveStravaAutoConfig()">Guardar auto-sync</button></div>
+        <p class="muted">Sincronizado correctamente a fecha aparecerá arriba cuando termine cada revisión. No sube tokens ni datos al repo.</p>
+      </div>
+    </div>
+  `;
+
+  loadStravaStatus();
+  loadStravaAutoStatus().then(()=>{ if(autoPreview) previewStrava(); });
+}
