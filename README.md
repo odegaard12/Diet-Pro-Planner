@@ -1,23 +1,40 @@
-# Dieta Pro Planner
+# Diet Pro Planner
 
-**Versión actual:** v0.0.2
+**Current version:** v0.0.3
 
-Aplicación web local y privada para registrar peso, comidas por gramos, alimentos reutilizables, plantillas, deporte, planes e integraciones opcionales.
+Local-first web app for tracking body weight, meals by grams, reusable foods, meal templates, workouts, weekly plans and optional integrations.
 
-Pensada para ejecutarse en una Raspberry Pi con Docker y mantener los datos en local.
+Designed to run privately on a Raspberry Pi with Docker. Personal data stays local.
 
-## Funciones
+## Features
 
-- Registro de peso oficial y de referencia.
-- Comidas por alimentos guardados y gramos.
-- Plantillas cargables en una comida para cambiar solo cantidades.
-- Productos con marca, valores nutricionales y foto opcional de etiqueta.
-- Entrenos manuales y base para sincronización Strava bajo demanda.
-- SQLite local en `data/dieta.db`.
+- Official and reference weight tracking.
+- Meal logging by saved foods and grams.
+- Reusable meal templates where quantities can be adjusted before saving.
+- Product catalog with brand, nutrition values and optional local label photo.
+- Manual workout logging.
+- Strava OAuth connection.
+- Manual Strava import by date range.
+- Optional auto-load of Strava activity previews when opening the integration page.
+- Duplicate prevention for imported Strava activities.
+- Spanish/English UI toggle.
+- Local app icon and browser favicon.
+- Local SQLite database in `data/dieta.db`.
 
-## Privacidad
+## Privacy
 
-No subas `data/`, bases de datos, `.env`, tokens ni backups. El `.gitignore` ya los excluye.
+Do not commit local/private files. The repository excludes them through `.gitignore`:
+
+- `data/`
+- `*.db`
+- `*.sqlite`
+- `.env`
+- tokens
+- backups
+- ZIP files
+- local label photos
+
+Strava tokens are stored locally under `data/` and are not committed.
 
 ## Docker
 
@@ -25,13 +42,11 @@ No subas `data/`, bases de datos, `.env`, tokens ni backups. El `.gitignore` ya 
 docker compose up -d --build
 ```
 
+Default local URL:
 
-
-## Releases
-
-- `v0.0.1`: primera salida pública limpia.
-- `v0.0.2`: regla visible, limpieza visual y preparación de releases.
-
+```text
+http://localhost:8099
+```
 
 ## Strava local setup
 
@@ -50,19 +65,26 @@ ssh -N -L 8099:127.0.0.1:8099 user@raspberry-ip
 ```
 
 6. Open `http://localhost:8099`.
-7. Go to Integrations -> Strava -> Connect Strava.
+7. Go to `Integrations -> Strava -> Connect Strava`.
 
-Tokens are stored locally under `data/` and are excluded from Git.
+## Strava import workflow
 
-## Strava manual import
+No background sync is performed by default.
 
-Version `v0.0.2` adds manual Strava import:
+The integration page supports:
 
 - choose start date
 - choose end date
 - search activities
 - review activities before importing
-- select activities to import
-- avoid duplicates using the Strava activity id stored in workout notes
+- select all / select none
+- import selected activities
+- avoid duplicates
+- optionally load activity previews automatically when opening the page
+- start from the last imported Strava date
 
-No automatic background sync is performed.
+## Releases
+
+- `v0.0.1`: first clean public release.
+- `v0.0.2`: manual Strava import by date range.
+- `v0.0.3`: app icon, bilingual UI toggle and Strava auto-preview option.

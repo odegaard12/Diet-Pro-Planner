@@ -32,3 +32,36 @@
 .rule-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-6px 0 14px;background:linear-gradient(135deg,#0d6b53,#123b31);color:#fff;border-radius:22px;padding:12px 15px;box-shadow:0 12px 28px rgba(13,107,83,.18)}
 .rule-banner span{text-transform:uppercase;letter-spacing:.10em;font-size:11px;font-weight:950;color:#a7f3d0}.rule-banner strong{font-size:16px;line-height:1.2}.rule-banner small{color:#e7fff6;font-weight:750}.side-rule{background:#ffffff!important;color:#073428!important;border:0!important}.side-rule span{color:#0d6b53!important}.side-rule b{color:#073428!important}.side-rule small{color:#40554e!important}
 @media(max-width:740px){.rule-banner{align-items:flex-start;display:grid;gap:3px}.rule-banner strong{font-size:15px}}
+
+/* V003_BRAND_LANG_STRAVA_AUTO */
+.brand-logo{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  object-fit:cover;
+  box-shadow:0 10px 24px rgba(0,0,0,.22);
+  border:1px solid rgba(255,255,255,.22);
+}
+.lang-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.strava-toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top:12px;
+}
+.strava-toolbar .btn{white-space:nowrap}
+.strava-auto-row{
+  margin-top:12px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  color:var(--muted);
+  font-size:.92rem;
+}
+.strava-auto-row input{width:auto}
