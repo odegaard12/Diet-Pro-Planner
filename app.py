@@ -652,6 +652,142 @@ def api_export():
     return jsonify(build_state())
 
 
+
+# V002_STRAVA_MANUAL_IMPORT
+
+def _epoch_from_date(value: str, end: bool = False) -> int:
+    if not value:
+        return 0
+    dt = datetime.strptime(value, "%Y-%m-%d")
+    if end:
+        dt = dt.replace(hour=23, minute=59, second=59)
+    return int(dt.timestamp())
+
+
+def _strava_fetch_range(after_date: str, before_date: str) -> list[dict[str, Any]]:
+    tokens = read_strava_tokens()
+    if not tokens:
+        raise RuntimeError("Strava no conectado")
+    tokens = refresh_strava_if_needed(tokens)
+
+    after = _epoch_from_date(after_date, False)
+    before = _epoch_from_date(before_date, True) if before_date else int(time.time())
+
+    out = []
+    for page in range(1, 6):
+        r = requests.get(
+            "https://www.strava.com/api/v3/athlete/activities",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"},
+            params={"after": after, "before": before, "page": page, "per_page": 100},
+            timeout=25,
+        )
+        r.raise_for_status()
+        batch = r.json()
+        if not batch:
+            break
+        out.extend(batch)
+        if len(batch) < 100:
+            break
+    return out
+
+
+def _strava_card(a: dict[str, Any]) -> dict[str, Any]:
+    start = a.get("start_date_local") or a.get("start_date") or ""
+    sid = str(a.get("id") or "")
+    sport = a.get("sport_type") or a.get("type") or "Strava"
+    typ = a.get("type") or sport
+    title = a.get("name") or sport
+    minutes = round(float(a.get("moving_time") or a.get("elapsed_time") or 0) / 60, 1)
+    km = round(float(a.get("distance") or 0) / 1000, 2)
+    kcal = float(a.get("calories") or 0)
+    if kcal <= 0 and minutes:
+        kcal = estimate_strava_kcal(typ, minutes)
+    return {
+        "id": sid,
+        "date": start[:10],
+        "time": start[11:16] if len(start) >= 16 else "12:00",
+        "title": title,
+        "type": typ,
+        "sport_type": sport,
+        "minutes": minutes,
+        "distance_km": km,
+        "kcal": round(kcal, 1),
+        "url": f"https://www.strava.com/activities/{sid}" if sid else "",
+    }
+
+
+@app.post("/api/strava/preview")
+def api_strava_preview():
+    d = request.json or {}
+    after_date = d.get("after_date") or today_iso()
+    before_date = d.get("before_date") or today_iso()
+    try:
+        raw = _strava_fetch_range(after_date, before_date)
+        acts = [_strava_card(a) for a in raw if a.get("id")]
+
+        with con() as db:
+            for a in acts:
+                found = db.execute(
+                    "SELECT id FROM workouts WHERE notes LIKE ? LIMIT 1",
+                    (f"%id={a['id']}%",),
+                ).fetchone()
+                a["already_imported"] = bool(found)
+
+        return jsonify({"ok": True, "activities": acts, "received": len(acts)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.post("/api/strava/import")
+def api_strava_import():
+    d = request.json or {}
+    ids = {str(x) for x in d.get("ids") or []}
+    if not ids:
+        return jsonify({"error": "No seleccionaste actividades"}), 400
+
+    after_date = d.get("after_date") or today_iso()
+    before_date = d.get("before_date") or today_iso()
+
+    try:
+        raw = _strava_fetch_range(after_date, before_date)
+        imported = 0
+        skipped = 0
+
+        with con() as db:
+            for item in raw:
+                a = _strava_card(item)
+                if a["id"] not in ids:
+                    continue
+
+                notes = f"Strava · {a['title']} · id={a['id']}"
+                before = db.total_changes
+                db.execute(
+                    """
+                    INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes)
+                    VALUES(?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        a["date"],
+                        a["time"],
+                        None,
+                        a["sport_type"],
+                        a["minutes"],
+                        a["distance_km"],
+                        a["kcal"],
+                        notes,
+                    ),
+                )
+
+                if db.total_changes > before:
+                    imported += 1
+                else:
+                    skipped += 1
+
+        return jsonify({"ok": True, "imported": imported, "skipped": skipped})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
 init_db()
 
 if __name__ == "__main__":
