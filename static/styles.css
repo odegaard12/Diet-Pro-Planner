@@ -65,3 +65,30 @@
   font-size:.92rem;
 }
 .strava-auto-row input{width:auto}
+
+
+/* V006_STABLE_RULE_VISIBILITY */
+.rule-banner,
+.side-rule {
+  background: linear-gradient(135deg, rgba(11,107,85,.14), rgba(42,157,143,.18));
+  border: 1px solid rgba(11,107,85,.24);
+  box-shadow: 0 10px 28px rgba(16,24,40,.08);
+}
+.rule-banner span,
+.side-rule span {
+  display: inline-block;
+  font-weight: 800;
+  color: #075f4b;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.rule-banner strong,
+.side-rule b {
+  color: #12332b;
+  font-weight: 900;
+}
+.rule-banner small,
+.side-rule small {
+  color: #43534e;
+  font-weight: 650;
+}
