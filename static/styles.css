@@ -92,3 +92,55 @@
   color: #43534e;
   font-weight: 650;
 }
+
+/* v0.0.8 - fix visible sidebar daily rule */
+.sidebar .side-rule{
+  flex:0 0 auto !important;
+  display:grid !important;
+  gap:6px !important;
+  min-height:96px !important;
+  height:auto !important;
+  max-height:none !important;
+  overflow:visible !important;
+  white-space:normal !important;
+  line-height:1.25 !important;
+  padding:13px 14px !important;
+  border-radius:20px !important;
+}
+
+.sidebar .side-rule span,
+.sidebar .side-rule b,
+.sidebar .side-rule small{
+  display:block !important;
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  word-break:normal !important;
+  overflow-wrap:break-word !important;
+  max-width:100% !important;
+}
+
+.sidebar .side-rule span{
+  font-size:11px !important;
+  line-height:1.15 !important;
+  margin:0 !important;
+}
+
+.sidebar .side-rule b{
+  font-size:14px !important;
+  line-height:1.22 !important;
+  margin:0 !important;
+}
+
+.sidebar .side-rule small{
+  font-size:12px !important;
+  line-height:1.32 !important;
+  margin:0 !important;
+}
+
+@media(max-width:1120px){
+  .sidebar .side-rule{
+    min-height:auto !important;
+    margin-top:6px !important;
+  }
+}
