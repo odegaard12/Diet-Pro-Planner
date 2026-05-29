@@ -402,13 +402,13 @@ function renderIntegrations(){
   function stableHeader(){
     document.documentElement.lang = 'es';
     document.documentElement.dataset.lang = 'es';
-    document.title = 'Diet Pro Planner · v0.0.6';
+    document.title = 'Diet Pro Planner · v0.0.7';
     const brand = document.querySelector('.brand h1');
     if(brand) brand.textContent = 'Diet Pro Planner';
     const sub = document.querySelector('.brand p');
     if(sub) sub.textContent = 'Raspberry · local · privado';
     const eyebrow = document.querySelector('.eyebrow');
-    if(eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.6';
+    if(eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.7';
     const lang = document.querySelector('#btnLang');
     if(lang) lang.remove();
   }
