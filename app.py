@@ -665,11 +665,30 @@ def _epoch_from_date(value: str, end: bool = False) -> int:
     return int(dt.timestamp())
 
 
-def _strava_fetch_range(after_date: str, before_date: str) -> list[dict[str, Any]]:
+
+def _strava_fetch_activity_detail(access_token: str, activity_id: str) -> dict[str, Any] | None:
+    """Fetch detailed activity data so calories match the Strava activity page when available."""
+    if not activity_id:
+        return None
+    r = requests.get(
+        f"https://www.strava.com/api/v3/activities/{activity_id}",
+        headers={"Authorization": f"Bearer {access_token}"},
+        params={"include_all_efforts": "false"},
+        timeout=25,
+    )
+    if r.status_code in {401, 403, 404}:
+        return None
+    r.raise_for_status()
+    data = r.json()
+    return data if isinstance(data, dict) else None
+
+
+def _strava_fetch_range(after_date: str, before_date: str, detailed: bool = True) -> list[dict[str, Any]]:
     tokens = read_strava_tokens()
     if not tokens:
         raise RuntimeError("Strava no conectado")
     tokens = refresh_strava_if_needed(tokens)
+    access_token = tokens["access_token"]
 
     after = _epoch_from_date(after_date, False)
     before = _epoch_from_date(before_date, True) if before_date else int(time.time())
@@ -678,7 +697,7 @@ def _strava_fetch_range(after_date: str, before_date: str) -> list[dict[str, Any
     for page in range(1, 6):
         r = requests.get(
             "https://www.strava.com/api/v3/athlete/activities",
-            headers={"Authorization": f"Bearer {tokens['access_token']}"},
+            headers={"Authorization": f"Bearer {access_token}"},
             params={"after": after, "before": before, "page": page, "per_page": 100},
             timeout=25,
         )
@@ -689,7 +708,30 @@ def _strava_fetch_range(after_date: str, before_date: str) -> list[dict[str, Any
         out.extend(batch)
         if len(batch) < 100:
             break
+
+    if detailed:
+        detailed_out = []
+        for item in out:
+            sid = str(item.get("id") or "")
+            detail = None
+            if sid:
+                try:
+                    detail = _strava_fetch_activity_detail(access_token, sid)
+                except Exception:
+                    detail = None
+            if detail:
+                merged = {**item, **detail}
+                # Preserve local start fields if Strava detail omits them.
+                for k in ("start_date", "start_date_local"):
+                    if not merged.get(k) and item.get(k):
+                        merged[k] = item.get(k)
+                detailed_out.append(merged)
+            else:
+                detailed_out.append(item)
+        out = detailed_out
+
     return out
+
 
 
 def _strava_card(a: dict[str, Any]) -> dict[str, Any]:
@@ -700,9 +742,19 @@ def _strava_card(a: dict[str, Any]) -> dict[str, Any]:
     title = a.get("name") or sport
     minutes = round(float(a.get("moving_time") or a.get("elapsed_time") or 0) / 60, 1)
     km = round(float(a.get("distance") or 0) / 1000, 2)
-    kcal = float(a.get("calories") or 0)
+
+    kcal = 0.0
+    for key in ("calories", "calorie", "kcal"):
+        try:
+            val = a.get(key)
+            if val is not None and float(val) > 0:
+                kcal = float(val)
+                break
+        except Exception:
+            pass
     if kcal <= 0 and minutes:
         kcal = estimate_strava_kcal(typ, minutes)
+
     return {
         "id": sid,
         "date": start[:10],
@@ -878,11 +930,15 @@ def _strava_import_all_in_range(after_date: str, before_date: str) -> dict[str, 
                 "SELECT id FROM workouts WHERE notes LIKE ? LIMIT 1",
                 (f"%id={a['id']}%",),
             ).fetchone()
+            notes = f"Strava · {a['title']} · id={a['id']} · kcal desde detalle Strava"
             if found:
+                db.execute(
+                    "UPDATE workouts SET minutes=?, distance_km=?, kcal=?, notes=? WHERE id=?",
+                    (a["minutes"], a["distance_km"], a["kcal"], notes, found["id"]),
+                )
                 skipped += 1
                 continue
 
-            notes = f"Strava · {a['title']} · id={a['id']}"
             db.execute(
                 """
                 INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes)
