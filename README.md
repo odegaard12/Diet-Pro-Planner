@@ -1,6 +1,6 @@
 # Diet Pro Planner
 
-**Current version:** v0.0.9
+**Current version:** v0.0.10
 
 Local-first web app for tracking body weight, meals by grams, reusable foods, meal templates, workouts, weekly plans and optional integrations.
 
@@ -19,6 +19,10 @@ Designed to run privately on a Raspberry Pi with Docker. Your personal data stay
 - Curated local product catalog for common foods used in the plan.
 - Practical meal templates for breakfast, tupper meals, clean dinners, post-workout dinners and snacks.
 - Improved rule-based assistant for protein, sweets, oil, sport load and dinner choices.
+- Improved official weight chart with kg labels, trend and weekly-rate estimate.
+- Faster weight entry presets for official morning, post-breakfast, post-workout and night reference weights.
+- Smarter daily assistant rules for protein, calories, oil, sport and snack/dessert context.
+- Compact food-label helper with optional photo and pasted OCR/text parser.
 - Local SQLite database in `data/dieta.db`.
 
 ## Privacy
@@ -82,4 +86,5 @@ Tokens are stored locally under `data/` and are excluded from Git.
 - `v0.0.2`: manual Strava import by date range.
 - `v0.0.3`: branding, app icon, ES/EN toggle and Strava auto-preview.
 - `v0.0.4`: background Strava auto-sync and last-sync status.
-- `v0.0.9`: curated products, practical meal templates and improved meal assistant.
+- `v0.0.10`: curated products, practical meal templates and improved meal assistant.
+- `v0.0.10`: improved weight system, smarter assistant and compact food-label helper.

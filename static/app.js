@@ -437,13 +437,13 @@ function renderIntegrations(){
   function stableHeader(){
     document.documentElement.lang = 'es';
     document.documentElement.dataset.lang = 'es';
-    document.title = 'Diet Pro Planner · v0.0.9';
+    document.title = 'Diet Pro Planner · v0.0.10';
     const brand = document.querySelector('.brand h1');
     if(brand) brand.textContent = 'Diet Pro Planner';
     const sub = document.querySelector('.brand p');
     if(sub) sub.textContent = 'Raspberry · local · privado';
     const eyebrow = document.querySelector('.eyebrow');
-    if(eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.9';
+    if(eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.10';
     const lang = document.querySelector('#btnLang');
     if(lang) lang.remove();
   }
@@ -481,3 +481,261 @@ function renderIntegrations(){
 
   stableHeader();
 })();
+
+
+/* V010_WEIGHT_FOOD_UI_START */
+
+function normKey(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\?/g,'n')
+    .replace(/\b(etiqueta|estimado|estimada|clasico|clásico)\b/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function officialWeightsSorted(){
+  return state.weights
+    .filter(w=>w.official)
+    .sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+}
+
+function weightTrend(){
+  const ws=officialWeightsSorted();
+  if(ws.length<2) return {label:'Sin tendencia aún', cls:'warn', text:'Registra 2+ pesos oficiales de mañana.', delta:0, weekly:0};
+  const first=ws[0], last=ws.at(-1);
+  const days=Math.max(1,(new Date(last.date)-new Date(first.date))/(1000*3600*24));
+  const delta=Number(last.kg)-Number(first.kg);
+  const weekly=delta/days*7;
+  let cls='good', label='Tendencia buena';
+  if(weekly<-1.0){cls='warn';label='Bajada rápida';}
+  else if(weekly<-0.75){cls='warn';label='Bajada algo rápida';}
+  else if(weekly>-0.15 && delta<0){cls='warn';label='Bajada lenta';}
+  else if(delta>0){cls='bad';label='Subiendo';}
+  return {label,cls,text:`${fmt(delta)} kg desde ${first.date} · ${fmt(weekly)} kg/sem aprox.`,delta,weekly,first,last};
+}
+
+function weightChart(){
+  const ws=officialWeightsSorted().slice(-14);
+  if(ws.length<2){
+    return '<div class="empty">Cuando tengas 2+ pesos oficiales aparece la gráfica.</div>';
+  }
+  const vals=ws.map(w=>Number(w.kg));
+  const min=Math.min(...vals)-0.25, max=Math.max(...vals)+0.25;
+  const W=360,H=205,L=44,R=16,T=22,B=42;
+  const plotW=W-L-R, plotH=H-T-B;
+  const yFor=v=>T+(max-v)/(max-min)*plotH;
+  const xFor=i=>L+(ws.length===1?0:i*(plotW/(ws.length-1)));
+  const pts=ws.map((w,i)=>`${xFor(i)},${yFor(Number(w.kg))}`).join(' ');
+  const grid=[min,(min+max)/2,max].map(v=>`
+    <line x1="${L}" y1="${yFor(v)}" x2="${W-R}" y2="${yFor(v)}" stroke="#e3ded2" stroke-width="1"/>
+    <text x="8" y="${yFor(v)+4}" font-size="11" fill="#697670">${fmt(v)}</text>`).join('');
+  const circles=ws.map((w,i)=>{
+    const x=xFor(i), y=yFor(Number(w.kg));
+    return `<g>
+      <circle cx="${x}" cy="${y}" r="5.5" fill="#0f8a6a"/>
+      <text x="${x}" y="${y-10}" text-anchor="middle" font-size="11" font-weight="800" fill="#0b4a3b">${fmt(w.kg)}</text>
+      <title>${w.date} ${w.time}: ${fmt(w.kg)} kg</title>
+    </g>`;
+  }).join('');
+  const first=ws[0], last=ws.at(-1);
+  const tr=weightTrend();
+  return `<div class="weight-chart-wrap">
+    <svg class="chart weight-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      ${grid}
+      <polyline points="${pts}" fill="none" stroke="#0b6b55" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      ${circles}
+      <text x="${L}" y="${H-14}" font-size="11" fill="#697670">${first.date}</text>
+      <text x="${W-R}" y="${H-14}" text-anchor="end" font-size="11" fill="#697670">${last.date}</text>
+    </svg>
+    <div class="trend-row">
+      <span class="pill ${tr.cls}">${tr.label}</span>
+      <b>${tr.text}</b>
+    </div>
+  </div>`;
+}
+
+function assistantFor(d=day()){
+  const meals=byDate(state.meals,d);
+  const mt=mealTotals(meals);
+  const sport=workoutTotals(byDate(state.workouts,d));
+  const lw=latestWeight();
+  const tips=[];
+  const tr=weightTrend();
+
+  if(!lw) tips.push('Registra un peso oficial por la mañana para construir tendencia real.');
+  else if(!lw.official) tips.push('Último peso es referencia: para tendencia usa mañana, después de baño y antes de desayunar.');
+  else tips.push(`Último peso oficial: ${fmt(lw.kg)} kg. ${tr.label}: ${tr.text}.`);
+
+  if(mt.protein<80) tips.push('Proteína muy baja: prioriza pollo, huevos, atún, yogur proteico, jamón cocido extra o queso fresco batido.');
+  else if(mt.protein<120) tips.push('Proteína aceptable pero mejorable: intenta cerrar el día cerca de 130 g.');
+  else tips.push('Proteína bien cubierta hoy.');
+
+  if(mt.kcal<900) tips.push('Aún vas bajo de comida registrada: planifica comida/cena para no llegar con ansiedad.');
+  else if(mt.kcal>2300) tips.push('Kcal altas: siguiente comida limpia, sin pan, chocolate ni arroz extra.');
+  else tips.push('Balance razonable: controla aceite y raciones.');
+
+  if(mt.oil>15) tips.push('Aceite alto hoy: usa 5 g normal y 10 g máximo por plato.');
+  if(sport>900) tips.push('Día de mucho gasto: puedes meter carbohidrato controlado, pero con proteína y sin barra libre.');
+  else if(sport>300) tips.push('Buen gasto de actividad: recupera con proteína y carbohidrato medido.');
+
+  if(meals.some(m=>/snack|chocolate|galleta|piruleta/i.test((m.name||'')+' '+(m.notes||'')))) {
+    tips.push('Hubo dulce/snack: para cerrar el día, cena proteica y verdura.');
+  }
+  return tips;
+}
+
+function weightStatsCards(){
+  const all=[...state.weights].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const off=officialWeightsSorted();
+  const last=all[0], lastOff=off.at(-1);
+  const tr=weightTrend();
+  return `<div class="grid cols-3 weight-stats">
+    <div class="card metric mini-metric"><small>Último registro</small><b>${last?fmt(last.kg)+' kg':'—'}</b><small>${last?`${last.date} ${last.time} · ${last.official?'oficial':'referencia'}`:'sin datos'}</small></div>
+    <div class="card metric mini-metric"><small>Último oficial</small><b>${lastOff?fmt(lastOff.kg)+' kg':'—'}</b><small>${lastOff?`${lastOff.date} ${lastOff.time}`:'mañana, después baño'}</small></div>
+    <div class="card metric mini-metric"><small>Tendencia</small><b>${tr.weekly?fmt(tr.weekly)+' kg/sem':'—'}</b><small>${tr.label}</small></div>
+  </div>`;
+}
+
+function setWeightPreset(kind){
+  const ctx=$('#wCtx'), type=$('#wOfficial'), time=$('#wTime');
+  if(!ctx||!type)return;
+  const map={
+    official:['1','mañana, después baño, antes de desayunar'],
+    breakfast:['0','después de desayunar, referencia'],
+    sport:['0','post-entreno/post-pádel, referencia'],
+    dinner:['0','noche/después de cenar, referencia'],
+    random:['0','referencia puntual']
+  };
+  const v=map[kind]||map.random;
+  type.value=v[0];
+  ctx.value=v[1];
+  if(time && kind==='official' && !time.value) time.value='08:00';
+}
+
+function renderWeights(){
+  const all=[...state.weights].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  $('#view').innerHTML=`${weightStatsCards()}
+  <div class="grid cols-2" style="margin-top:14px">
+    <div class="card"><h3>📉 Gráfica peso oficial</h3>${weightChart()}<p class="muted">La tendencia usa solo pesos oficiales de mañana. Tarde, noche y post-entreno son referencia.</p></div>
+    <div class="card weight-form"><h3>⚖️ Registrar peso</h3>
+      <div class="preset-row">
+        <button class="ghost small" onclick="setWeightPreset('official')">Oficial mañana</button>
+        <button class="ghost small" onclick="setWeightPreset('breakfast')">Después desayuno</button>
+        <button class="ghost small" onclick="setWeightPreset('sport')">Post-entreno</button>
+        <button class="ghost small" onclick="setWeightPreset('dinner')">Noche</button>
+      </div>
+      <div class="row">
+        <div class="field span-4"><label>Fecha</label><input id="wDate" type="date" value="${today()}"></div>
+        <div class="field span-3"><label>Hora</label><input id="wTime" type="time" value="${nowHM()}"></div>
+        <div class="field span-3"><label>Kg</label><input id="wKg" type="number" step="0.01" inputmode="decimal" placeholder="84.80"></div>
+        <div class="field span-2"><label>Tipo</label><select id="wOfficial"><option value="1">Oficial</option><option value="0">Referencia</option></select></div>
+        <div class="field span-12"><label>Contexto</label><input id="wCtx" placeholder="mañana después baño, post-entreno, noche..."></div>
+      </div>
+      <button class="btn" onclick="saveWeight()">Guardar peso</button>
+      <p class="muted weight-hint">Regla: solo el peso oficial de mañana cuenta para tendencia. Los demás explican agua, comida, sal y deporte.</p>
+    </div>
+  </div>
+  <div class="section-title"><h3>Historial de peso</h3></div>
+  <div class="list">${all.map(w=>`<div class="list-card weight-history-card"><header><div><h4>${w.date} ${w.time} · ${fmt(w.kg)} kg</h4><p class="muted">${w.official?'Oficial':'Referencia'} · ${w.context||''}</p></div><button class="btn small danger" onclick="deleteWeight(${w.id})">×</button></header></div>`).join('')}</div>`;
+}
+
+function findLabelNumber(txt, labels){
+  const t=String(txt||'').replace(/\s+/g,' ');
+  for(const l of labels){
+    const re=new RegExp(l+'[^0-9]{0,45}(\\d+[\\.,]?\\d*)','i');
+    const m=t.match(re);
+    if(m) return Number(m[1].replace(',','.'));
+  }
+  return '';
+}
+
+function parseFoodLabelText(){
+  const txt=$('#labelText')?.value||'';
+  if(!txt.trim()){toast('Pega texto de la etiqueta');return}
+  const kcal=findLabelNumber(txt,['kcal','valor energetico','energía','energia']);
+  const protein=findLabelNumber(txt,['prote[ií]nas?','proteina']);
+  const carbs=findLabelNumber(txt,['hidratos de carbono','carbohidratos']);
+  const fat=findLabelNumber(txt,['grasas?','grasa total']);
+  const sugar=findLabelNumber(txt,['az[uú]cares?','azucar']);
+  const salt=findLabelNumber(txt,['sal']);
+  const portion=(txt.match(/(?:porci[oó]n|unidad|raci[oó]n|envase)[^0-9]{0,30}(\d+[,.]?\d*)\s*g/i)||txt.match(/por\s+(\d+[,.]?\d*)\s*g/i)||[])[1];
+
+  if(kcal) $('#fKcal').value=kcal;
+  if(protein) $('#fProt').value=protein;
+  if(carbs) $('#fCarbs').value=carbs;
+  if(fat) $('#fFat').value=fat;
+  if(sugar) $('#fSugar').value=sugar;
+  if(salt) $('#fSalt').value=salt;
+  if(portion) $('#fTypical').value=Number(portion.replace(',','.'));
+  $('#fSource').value=(txt.length>900?txt.slice(0,900)+'…':txt);
+  toast('Etiqueta interpretada; revisa antes de guardar');
+}
+
+function uniqueFoodsForList(){
+  const q=($('#foodFilter')?.value||'').toLowerCase();
+  const map=new Map();
+  for(const f of state.foods){
+    const hay=(f.name+' '+f.brand+' '+f.source_note+' '+f.notes).toLowerCase();
+    if(q && !hay.includes(q)) continue;
+    let k=normKey(f.name)
+      .replace('judia verde plana eliges','judia verde plana eliges')
+      .replace('jamon cocido extra','jamon cocido extra')
+      .replace('queso larsa cremoso','queso larsa cremoso')
+      .replace('galletas pequenas con chocolate','galletas pequenas con chocolate');
+    if(!map.has(k)) map.set(k,f);
+    else{
+      const old=map.get(k);
+      const score=x=>(x.purchased?4:0)+(/[áéíóúñ]/i.test(x.name)?3:0)+(x.photo_path?2:0)+(x.source_note?1:0);
+      if(score(f)>score(old)) map.set(k,f);
+    }
+  }
+  return [...map.values()].sort((a,b)=>(b.purchased-a.purchased)||a.name.localeCompare(b.name,'es'));
+}
+
+function renderFoods(){
+  selectedFoodPhoto='';
+  $('#view').innerHTML=`<div class="food-top-grid">
+    <div class="card food-form-card"><h3>🥫 Nuevo alimento</h3>
+      <div class="compact-photo-box">
+        <div><b>📷 Foto etiqueta</b><small>Opcional. Guarda la foto y pega texto/OCR para rellenar campos.</small></div>
+        <input id="fPhoto" type="file" accept="image/*" onchange="uploadFoodPhoto()">
+        <div id="photoPreview"></div>
+      </div>
+      <details class="label-helper">
+        <summary>🧠 Asistente etiqueta / OCR manual</summary>
+        <p class="muted">Haz foto con el móvil, usa copiar texto/OCR y pégalo aquí. Rellena kcal, proteína, hidratos, grasa, azúcar, sal y ración si los detecta.</p>
+        <textarea id="labelText" placeholder="Pega aquí texto de la etiqueta nutricional..." style="min-height:86px"></textarea>
+        <button class="btn small" onclick="parseFoodLabelText()">Interpretar etiqueta</button>
+      </details>
+      <div class="row">
+        <div class="field span-6"><label>Nombre</label><input id="fName" placeholder="Ej. Yogur Eroski +Proteína 120 g"></div>
+        <div class="field span-6"><label>Marca</label><input id="fBrand" placeholder="Eroski, ElPozo..."></div>
+        <div class="field span-3"><label>kcal / 100 g</label><input id="fKcal" type="number" step="0.1"></div>
+        <div class="field span-3"><label>proteína / 100 g</label><input id="fProt" type="number" step="0.1"></div>
+        <div class="field span-3"><label>hidratos</label><input id="fCarbs" type="number" step="0.1"></div>
+        <div class="field span-3"><label>grasa</label><input id="fFat" type="number" step="0.1"></div>
+        <div class="field span-3"><label>azúcar</label><input id="fSugar" type="number" step="0.1"></div>
+        <div class="field span-3"><label>sal</label><input id="fSalt" type="number" step="0.01"></div>
+        <div class="field span-3"><label>ración g</label><input id="fTypical" type="number" value="100"></div>
+        <div class="field span-3"><label>Comprado</label><select id="fPurchased"><option value="1">Sí</option><option value="0">No</option></select></div>
+        <div class="field span-12"><label>Nota etiqueta</label><textarea id="fSource" placeholder="Ej. Por unidad 120 g: 68 kcal, 10 g proteína..."></textarea></div>
+        <div class="field span-12"><label>Uso</label><input id="fNotes" placeholder="Desayuno, merienda, tupper..."></div>
+      </div>
+      <button class="btn" onclick="saveFood()">Guardar alimento</button>
+    </div>
+    <div class="card note-box compact-help"><h3>📌 Método rápido</h3><p><b>1)</b> Foto etiqueta opcional.<br><b>2)</b> Pega texto OCR si lo tienes.<br><b>3)</b> Revisa valores y guarda.</p><p class="muted">No se inventan datos: si la lectura falla, deja el campo vacío para revisar a mano.</p></div>
+  </div>
+  <div class="section-title"><div><h3>Alimentos guardados</h3><p>Lista depurada visualmente; se ocultan duplicados evidentes.</p></div><input id="foodFilter" placeholder="filtrar..." style="max-width:300px" oninput="renderFoodList()"></div>
+  <div id="foodList" class="grid cols-3"></div>`;
+  renderFoodList();
+}
+
+function renderFoodList(){
+  const foods=uniqueFoodsForList();
+  $('#foodList').innerHTML=foods.map(f=>`<div class="card food-card">${f.photo_path?`<img class="food-photo" src="${f.photo_path}" alt="foto etiqueta">`:''}<h3>${f.purchased?'✅':'🥫'} ${f.name}</h3><p class="muted">${f.brand||''}</p><div class="chips"><span class="chip">${fmt(f.kcal)} kcal/100g</span><span class="chip">${fmt(f.protein)} g prot</span><span class="chip">típico ${fmt(f.typical_g)} g</span></div><p class="source">${f.source_note||''}</p><p>${f.notes||''}</p></div>`).join('');
+}
+
+/* V010_WEIGHT_FOOD_UI_END */
+
