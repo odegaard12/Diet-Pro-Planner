@@ -1021,468 +1021,9 @@ function renderPlan(){
 
 /* DPP_UI5_PLAN_EDITOR_END */
 
-/* DPP_V012_DASHBOARD_START */
-/* Dashboard Inteligente v0.0.12-dev.
-   Render premium visual apoyado en /api/insights/today. */
 
-async function dppV012FetchInsights(d){
-  const r = await fetch(`/api/insights/today?date=${encodeURIComponent(d || day())}`);
-  if(!r.ok){
-    let msg='Error cargando insights';
-    try{ msg=(await r.json()).error || msg; }catch(e){}
-    throw new Error(msg);
-  }
-  return r.json();
-}
-
-function dppV012SemIcon(s){
-  return s === 'green' ? '??' : s === 'yellow' ? '??' : '??';
-}
-
-function dppV012StatusWord(s){
-  return s === 'green' ? 'bien' : s === 'yellow' ? 'cuidado' : 'corregir';
-}
-
-function dppV012Card(c){
-  const pct = Math.max(0, Math.min(100, Number(c.pct || 0)));
-  return `<article class="dpp-v012-card ${c.status || 'info'} ${c.kind || ''}">
-    <div class="dpp-v012-card-top">
-      <span>${c.label}</span>
-      <b>${c.value}</b>
-    </div>
-    <div class="dpp-v012-bar"><i style="width:${pct}%"></i></div>
-    <small>${c.sub || ''}</small>
-  </article>`;
-}
-
-function dppV012Advice(a){
-  const ico = a.severity === 'good' ? '?' : a.severity === 'bad' ? '??' : a.severity === 'warn' ? '??' : '??';
-  return `<li class="${a.severity || 'info'}"><span>${ico}</span><div><b>${a.title}</b><small>${a.text}</small></div></li>`;
-}
-
-function dppV012WeightBlock(ins){
-  const w = ins.weight || {};
-  const tr = w.trend || {};
-  if(w.current_kg == null){
-    return `<div class="dpp-v012-weight empty-soft">
-      <b>Sin peso todavía</b>
-      <span>Registra peso oficial por la ma?ana.</span>
-    </div>`;
-  }
-  const eta = w.eta ? ` ? objetivo estimado ${w.eta}` : '';
-  const lost = w.kg_lost == null ? '?' : fmt(w.kg_lost);
-  const rem = w.kg_remaining == null ? '?' : fmt(w.kg_remaining);
-  return `<div class="dpp-v012-weight">
-    <div>
-      <span>Peso actual</span>
-      <b>${fmt(w.current_kg)} kg</b>
-      <small>${tr.label || 'Sin tendencia'}${eta}</small>
-    </div>
-    <div class="dpp-v012-weight-mini">
-      <span><b>${lost}</b><small>kg perdidos</small></span>
-      <span><b>${rem}</b><small>kg restantes</small></span>
-      <span><b>${fmt(w.goal_kg || 80)}</b><small>objetivo</small></span>
-    </div>
-  </div>`;
-}
-
-function dppV012SportMini(ins){
-  const w = ins.week || {};
-  const todayW = ins.workouts || {};
-  return `<div class="dpp-v012-sport-mini">
-    <div><span>Hoy</span><b>${fmt(todayW.kcal || 0)} kcal</b><small>${fmt(todayW.minutes || 0)} min ? ${todayW.count || 0} sesiones</small></div>
-    <div><span>7 días</span><b>${fmt(w.kcal || 0)} kcal</b><small>${fmt(w.minutes || 0)} min ? ${w.count || 0} sesiones</small></div>
-  </div>`;
-}
-
-function dppV012RenderLoaded(ins){
-  const meals = byDate(state.meals, ins.date);
-  const workouts = byDate(state.workouts, ins.date);
-  const cards = (ins.cards || []).map(dppV012Card).join('');
-  const advice = (ins.advice || []).map(dppV012Advice).join('');
-  const sem = ins.semaphore || 'yellow';
-
-  return `
-    <section class="dpp-v012-hero ${sem}">
-      <div class="dpp-v012-hero-main">
-        <span class="dpp-v012-kicker">Dashboard ? v0.0.12-dev</span>
-        <h2>${dppV012SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
-        <p>${ins.main_action || 'Registra datos para calcular el estado del día.'}</p>
-        <div class="dpp-v012-score-row">
-          <span><b>${ins.score}</b><small>score diario</small></span>
-          <span><b>${fmt(ins.estimated_deficit || 0)}</b><small>margen kcal aprox.</small></span>
-          <span><b>${dppV012StatusWord(sem)}</b><small>semáforo</small></span>
-        </div>
-      </div>
-      <div class="dpp-v012-ring" style="--score:${Number(ins.score || 0)}">
-        <strong>${ins.score}</strong>
-        <span>/100</span>
-      </div>
-    </section>
-
-    <section class="dpp-v012-cards">
-      ${cards}
-    </section>
-
-    <section class="dpp-v012-grid">
-      <article class="card dpp-v012-panel dpp-v012-advice">
-        <div class="section-title compact-title">
-          <div>
-            <h3>Qu? hacer hoy</h3>
-            <p>Reglas calculadas con comidas, peso y deporte.</p>
-          </div>
-        </div>
-        <ul>${advice || '<li class="info"><span>??</span><div><b>Sin datos suficientes</b><small>Registra comida, peso o entreno para generar consejos.</small></div></li>'}</ul>
-      </article>
-
-      <article class="card dpp-v012-panel">
-        <div class="section-title compact-title">
-          <div>
-            <h3>Peso y objetivo</h3>
-            <p>Meta actual: 80 kg.</p>
-          </div>
-        </div>
-        ${dppV012WeightBlock(ins)}
-      </article>
-
-      <article class="card dpp-v012-panel">
-        <div class="section-title compact-title">
-          <div>
-            <h3>Deporte</h3>
-            <p>Hoy y últimos 7 días.</p>
-          </div>
-          <button class="btn small" onclick="go('sport')">+ Entreno</button>
-        </div>
-        ${dppV012SportMini(ins)}
-      </article>
-    </section>
-
-    <section class="dpp-v012-day">
-      <article class="card day-panel">
-        <div class="section-title compact-title">
-          <div><h3>Comidas</h3><p>${fmt(ins.meals?.kcal || 0)} kcal ? ${fmt(ins.meals?.protein || 0)} g proteína</p></div>
-          <button class="btn small" onclick="go('register')">+ Comida</button>
-        </div>
-        <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
-      </article>
-
-      <article class="card day-panel">
-        <div class="section-title compact-title">
-          <div><h3>Actividad del día</h3><p>${fmt(ins.workouts?.kcal || 0)} kcal</p></div>
-          <button class="btn small" onclick="go('sport')">+ Entreno</button>
-        </div>
-        <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este día.</div>'}</div>
-      </article>
-    </section>
-
-    <div class="footer-space"></div>
-  `;
-}
-
-function renderHome(){
-  const d = day();
-  $('#view').innerHTML = `
-    ${dateBar()}
-    ${quickActions()}
-    <section id="dppV012Home" class="dpp-v012-loading">
-      <div class="card">
-        <h3>Cargando dashboard inteligente...</h3>
-        <p class="muted">Calculando proteína, kcal, peso, deporte y semáforo.</p>
-      </div>
-    </section>
-  `;
-
-  dppV012FetchInsights(d).then(ins => {
-    if(day() !== d) return;
-    const box = document.querySelector('#dppV012Home');
-    if(box) box.outerHTML = `<div id="dppV012Home">${dppV012RenderLoaded(ins)}</div>`;
-  }).catch(err => {
-    const box = document.querySelector('#dppV012Home');
-    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${err.message}</p></div>`;
-  });
-}
-
-window.renderHome = renderHome;
-/* DPP_V012_DASHBOARD_END */
-
-/* DPP_V0121_COMPACT_DASHBOARD_START */
-/* Compact dashboard patch: menos repetici?n, detalles en subpaneles desplegables. */
-
-function dppV0121SemIcon(s){
-  if(s === 'green') return '&#128994;';
-  if(s === 'yellow') return '&#128993;';
-  return '&#128308;';
-}
-
-function dppV0121AdviceIcon(sev){
-  if(sev === 'good') return '&#9989;';
-  if(sev === 'bad') return '&#128680;';
-  if(sev === 'warn') return '&#9888;&#65039;';
-  return '&#128161;';
-}
-
-function dppV012Advice(a){
-  return `<li class="${a.severity || 'info'}">
-    <span>${dppV0121AdviceIcon(a.severity)}</span>
-    <div><b>${a.title}</b><small>${a.text}</small></div>
-  </li>`;
-}
-
-function dppV012Card(c){
-  const pct = Math.max(0, Math.min(100, Number(c.pct || 0)));
-  return `<article class="dpp-v012-card ${c.status || 'info'} ${c.kind || ''}">
-    <div class="dpp-v012-card-top">
-      <span>${c.label}</span>
-      <b>${c.value}</b>
-    </div>
-    <div class="dpp-v012-bar"><i style="width:${pct}%"></i></div>
-    <small>${c.sub || ''}</small>
-  </article>`;
-}
-
-function dppV012RenderLoaded(ins){
-  const meals = byDate(state.meals, ins.date);
-  const workouts = byDate(state.workouts, ins.date);
-  const cards = (ins.cards || []).map(dppV012Card).join('');
-  const advice = (ins.advice || []).map(dppV012Advice).join('');
-  const sem = ins.semaphore || 'yellow';
-
-  return `
-    <section class="dpp-v012-hero dpp-v012-hero-compact ${sem}">
-      <div class="dpp-v012-hero-main">
-        <span class="dpp-v012-kicker">Dashboard ? v0.0.12</span>
-        <h2>${dppV0121SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
-        <p>${ins.main_action || 'Registra datos para calcular el estado del día.'}</p>
-      </div>
-      <div class="dpp-v012-compact-score">
-        <span><b>${ins.score}</b><small>score</small></span>
-        <span><b>${fmt(ins.estimated_deficit || 0)}</b><small>margen kcal</small></span>
-        <span><b>${dppV012StatusWord(sem)}</b><small>estado</small></span>
-      </div>
-    </section>
-
-    <section class="dpp-v012-cards dpp-v012-cards-compact">
-      ${cards}
-    </section>
-
-    <details class="card dpp-v012-details" open>
-      <summary>
-        <span>Qu? hacer hoy</span>
-        <b>${(ins.advice || []).length} reglas activas</b>
-      </summary>
-      <div class="dpp-v012-detail-grid">
-        <article class="dpp-v012-panel-lite dpp-v012-advice">
-          <h3>Acciones recomendadas</h3>
-          <ul>${advice || '<li class="info"><span>&#128161;</span><div><b>Sin datos suficientes</b><small>Registra comida, peso o entreno para generar consejos.</small></div></li>'}</ul>
-        </article>
-        <article class="dpp-v012-panel-lite">
-          <h3>Peso y objetivo</h3>
-          ${dppV012WeightBlock(ins)}
-        </article>
-        <article class="dpp-v012-panel-lite">
-          <h3>Deporte</h3>
-          ${dppV012SportMini(ins)}
-        </article>
-      </div>
-    </details>
-
-    <details class="card dpp-v012-details">
-      <summary>
-        <span>Registros del día</span>
-        <b>${meals.length} comidas ? ${workouts.length} entrenos</b>
-      </summary>
-      <div class="dpp-v012-day dpp-v012-day-compact">
-        <article class="day-panel">
-          <div class="section-title compact-title">
-            <div><h3>Comidas</h3><p>${fmt(ins.meals?.kcal || 0)} kcal ? ${fmt(ins.meals?.protein || 0)} g proteína</p></div>
-            <button class="btn small" onclick="go('register')">+ Comida</button>
-          </div>
-          <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
-        </article>
-
-        <article class="day-panel">
-          <div class="section-title compact-title">
-            <div><h3>Actividad</h3><p>${fmt(ins.workouts?.kcal || 0)} kcal</p></div>
-            <button class="btn small" onclick="go('sport')">+ Entreno</button>
-          </div>
-          <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este día.</div>'}</div>
-        </article>
-      </div>
-    </details>
-
-    <div class="footer-space"></div>
-  `;
-}
-
-function renderHome(){
-  const d = day();
-  $('#view').innerHTML = `
-    ${dateBar()}
-    <section id="dppV012Home" class="dpp-v012-loading">
-      <div class="card">
-        <h3>Cargando dashboard inteligente...</h3>
-        <p class="muted">Calculando proteína, kcal, peso, deporte y semáforo.</p>
-      </div>
-    </section>
-  `;
-
-  dppV012FetchInsights(d).then(ins => {
-    if(day() !== d) return;
-    const box = document.querySelector('#dppV012Home');
-    if(box) box.outerHTML = `<div id="dppV012Home">${dppV012RenderLoaded(ins)}</div>`;
-  }).catch(err => {
-    const box = document.querySelector('#dppV012Home');
-    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${err.message}</p></div>`;
-  });
-}
-
-window.renderHome = renderHome;
-/* DPP_V0121_COMPACT_DASHBOARD_END */
-
-/* DPP_V0121_COMPACT_DASHBOARD_START */
-/* Compact dashboard patch: menos repetici?n, detalles en subpaneles desplegables. */
-
-function dppV0121SemIcon(s){
-  if(s === 'green') return '&#128994;';
-  if(s === 'yellow') return '&#128993;';
-  return '&#128308;';
-}
-
-function dppV0121AdviceIcon(sev){
-  if(sev === 'good') return '&#9989;';
-  if(sev === 'bad') return '&#128680;';
-  if(sev === 'warn') return '&#9888;&#65039;';
-  return '&#128161;';
-}
-
-function dppV012Advice(a){
-  return `<li class="${a.severity || 'info'}">
-    <span>${dppV0121AdviceIcon(a.severity)}</span>
-    <div><b>${a.title}</b><small>${a.text}</small></div>
-  </li>`;
-}
-
-function dppV012Card(c){
-  const pct = Math.max(0, Math.min(100, Number(c.pct || 0)));
-  return `<article class="dpp-v012-card ${c.status || 'info'} ${c.kind || ''}">
-    <div class="dpp-v012-card-top">
-      <span>${c.label}</span>
-      <b>${c.value}</b>
-    </div>
-    <div class="dpp-v012-bar"><i style="width:${pct}%"></i></div>
-    <small>${c.sub || ''}</small>
-  </article>`;
-}
-
-function dppV012RenderLoaded(ins){
-  const meals = byDate(state.meals, ins.date);
-  const workouts = byDate(state.workouts, ins.date);
-  const cards = (ins.cards || []).map(dppV012Card).join('');
-  const advice = (ins.advice || []).map(dppV012Advice).join('');
-  const sem = ins.semaphore || 'yellow';
-
-  return `
-    <section class="dpp-v012-hero dpp-v012-hero-compact ${sem}">
-      <div class="dpp-v012-hero-main">
-        <span class="dpp-v012-kicker">Dashboard ? v0.0.12</span>
-        <h2>${dppV0121SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
-        <p>${ins.main_action || 'Registra datos para calcular el estado del día.'}</p>
-      </div>
-      <div class="dpp-v012-compact-score">
-        <span><b>${ins.score}</b><small>score</small></span>
-        <span><b>${fmt(ins.estimated_deficit || 0)}</b><small>margen kcal</small></span>
-        <span><b>${dppV012StatusWord(sem)}</b><small>estado</small></span>
-      </div>
-    </section>
-
-    <section class="dpp-v012-cards dpp-v012-cards-compact">
-      ${cards}
-    </section>
-
-    <details class="card dpp-v012-details" open>
-      <summary>
-        <span>Qu? hacer hoy</span>
-        <b>${(ins.advice || []).length} reglas activas</b>
-      </summary>
-      <div class="dpp-v012-detail-grid">
-        <article class="dpp-v012-panel-lite dpp-v012-advice">
-          <h3>Acciones recomendadas</h3>
-          <ul>${advice || '<li class="info"><span>&#128161;</span><div><b>Sin datos suficientes</b><small>Registra comida, peso o entreno para generar consejos.</small></div></li>'}</ul>
-        </article>
-        <article class="dpp-v012-panel-lite">
-          <h3>Peso y objetivo</h3>
-          ${dppV012WeightBlock(ins)}
-        </article>
-        <article class="dpp-v012-panel-lite">
-          <h3>Deporte</h3>
-          ${dppV012SportMini(ins)}
-        </article>
-      </div>
-    </details>
-
-    <details class="card dpp-v012-details">
-      <summary>
-        <span>Registros del día</span>
-        <b>${meals.length} comidas ? ${workouts.length} entrenos</b>
-      </summary>
-      <div class="dpp-v012-day dpp-v012-day-compact">
-        <article class="day-panel">
-          <div class="section-title compact-title">
-            <div><h3>Comidas</h3><p>${fmt(ins.meals?.kcal || 0)} kcal ? ${fmt(ins.meals?.protein || 0)} g proteína</p></div>
-            <button class="btn small" onclick="go('register')">+ Comida</button>
-          </div>
-          <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
-        </article>
-
-        <article class="day-panel">
-          <div class="section-title compact-title">
-            <div><h3>Actividad</h3><p>${fmt(ins.workouts?.kcal || 0)} kcal</p></div>
-            <button class="btn small" onclick="go('sport')">+ Entreno</button>
-          </div>
-          <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este día.</div>'}</div>
-        </article>
-      </div>
-    </details>
-
-    <div class="footer-space"></div>
-  `;
-}
-
-function renderHome(){
-  const d = day();
-  $('#view').innerHTML = `
-    ${dateBar()}
-    <section id="dppV012Home" class="dpp-v012-loading">
-      <div class="card">
-        <h3>Cargando dashboard inteligente...</h3>
-        <p class="muted">Calculando proteína, kcal, peso, deporte y semáforo.</p>
-      </div>
-    </section>
-  `;
-
-  dppV012FetchInsights(d).then(ins => {
-    if(day() !== d) return;
-    const box = document.querySelector('#dppV012Home');
-    if(box) box.outerHTML = `<div id="dppV012Home">${dppV012RenderLoaded(ins)}</div>`;
-  }).catch(err => {
-    const box = document.querySelector('#dppV012Home');
-    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${err.message}</p></div>`;
-  });
-}
-
-window.renderHome = renderHome;
-/* DPP_V0121_COMPACT_DASHBOARD_END */
-
-/* DPP_V012_FINAL_PRODUCT_PATCH_START */
-/* Final v0.0.12 product patch:
-   - no v0.0.12.1 visible
-   - cleans corrupted chars from backend strings
-   - compact hero
-   - weight visible on main dashboard
-   - details moved to collapsible panels
-*/
-
-function dppV012CleanText(v){
+/* DPP_V012_CLEAN_DASHBOARD_START */
+function dppV012Text(v){
   return String(v ?? '')
     .replace(/prote\?na/g, 'prote\u00edna')
     .replace(/Prote\?na/g, 'Prote\u00edna')
@@ -1493,81 +1034,77 @@ function dppV012CleanText(v){
     .replace(/jam\?n/g, 'jam\u00f3n')
     .replace(/m\?ximo/g, 'm\u00e1ximo')
     .replace(/\?ltimos/g, '\u00faltimos')
-    .replace(/\?ltimo/g, '\u00faltimo')
-    .replace(/\?til/g, '\u00fatil')
     .replace(/Todav\?a/g, 'Todav\u00eda')
     .replace(/todav\?a/g, 'todav\u00eda')
-    .replace(/Dashboard inteligente \? v0\.0\.12/g, 'Dashboard ? v0.0.12')
-    .replace(/Dashboard inteligente ? v0\.0\.12/g, 'Dashboard ? v0.0.12')
-    .replace(/v0\.0\.12\.1/g, 'v0.0.12')
-    .replace(/130\?150/g, '130-150')
-    .replace(/5 g normal \? 10/g, '5 g normal ? 10')
-    .replace(/min \? /g, 'min ? ');
+    .replace(/\s\?\s/g, ' \u00b7 ')
+    .replace(/Dashboard inteligente/g, 'Dashboard')
+    .replace(/v0\.0\.12\.1/g, 'v0.0.12');
 }
 
-function dppV012ApplyVisibleVersion(){
-  document.title = 'Diet Pro Planner ? v0.0.12';
+function dppV012Version(){
+  document.title = 'Diet Pro Planner v0.0.12';
   const eyebrow = document.querySelector('.eyebrow');
-  if(eyebrow) eyebrow.textContent = 'Dieta controlada ? v0.0.12';
+  if(eyebrow) eyebrow.textContent = 'Dieta controlada v0.0.12';
   const badge = document.querySelector('#ui5Badge');
   if(badge) badge.textContent = 'v0.0.12';
 }
 
-function dppV012SemIcon(s){
+async function dppV012FetchInsights(d){
+  const r = await fetch(`/api/insights/today?date=${encodeURIComponent(d || day())}`);
+  if(!r.ok){
+    let msg = 'Error cargando dashboard';
+    try{ msg = (await r.json()).error || msg; }catch(e){}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
+function dppV012Dot(s){
   if(s === 'green') return '&#128994;';
   if(s === 'yellow') return '&#128993;';
   return '&#128308;';
 }
 
-function dppV012AdviceIcon(sev){
-  if(sev === 'good') return '&#9989;';
-  if(sev === 'bad') return '&#128680;';
-  if(sev === 'warn') return '&#9888;&#65039;';
+function dppV012AdviceIcon(s){
+  if(s === 'good') return '&#9989;';
+  if(s === 'bad') return '&#128680;';
+  if(s === 'warn') return '&#9888;&#65039;';
   return '&#128161;';
-}
-
-function dppV012StatusWord(s){
-  return s === 'green' ? 'bien' : s === 'yellow' ? 'cuidado' : 'corregir';
-}
-
-function dppV012Advice(a){
-  return `<li class="${a.severity || 'info'}">
-    <span>${dppV012AdviceIcon(a.severity)}</span>
-    <div>
-      <b>${dppV012CleanText(a.title)}</b>
-      <small>${dppV012CleanText(a.text)}</small>
-    </div>
-  </li>`;
 }
 
 function dppV012Card(c){
   const pct = Math.max(0, Math.min(100, Number(c.pct || 0)));
   return `<article class="dpp-v012-card ${c.status || 'info'} ${c.kind || ''}">
     <div class="dpp-v012-card-top">
-      <span>${dppV012CleanText(c.label)}</span>
-      <b>${dppV012CleanText(c.value)}</b>
+      <span>${dppV012Text(c.label)}</span>
+      <b>${dppV012Text(c.value)}</b>
     </div>
     <div class="dpp-v012-bar"><i style="width:${pct}%"></i></div>
-    <small>${dppV012CleanText(c.sub || '')}</small>
+    <small>${dppV012Text(c.sub || '')}</small>
   </article>`;
+}
+
+function dppV012Advice(a){
+  return `<li class="${a.severity || 'info'}">
+    <span>${dppV012AdviceIcon(a.severity)}</span>
+    <div><b>${dppV012Text(a.title)}</b><small>${dppV012Text(a.text)}</small></div>
+  </li>`;
 }
 
 function dppV012WeightMain(ins){
   const w = ins.weight || {};
   if(w.current_kg == null){
-    return `<section class="dpp-v012-weight-main">
-      <div><span>Peso</span><b>Sin dato</b><small>Registra peso oficial</small></div>
-    </section>`;
+    return `<section class="dpp-v012-weight-main"><div><span>Peso</span><b>Sin dato</b><small>Registra peso oficial</small></div></section>`;
   }
 
   const start = Number(w.start_kg || w.current_kg || 0);
   const goal = Number(w.goal_kg || 80);
   const current = Number(w.current_kg || 0);
-  const total = Math.max(0.1, start - goal);
   const lost = Math.max(0, start - current);
+  const total = Math.max(0.1, start - goal);
   const pct = Math.max(0, Math.min(100, lost / total * 100));
-  const eta = w.eta ? ` ? objetivo ${w.eta}` : '';
-  const trend = dppV012CleanText((w.trend || {}).label || 'Sin tendencia');
+  const trend = dppV012Text((w.trend || {}).label || 'Sin tendencia');
+  const eta = w.eta ? ` - objetivo ${w.eta}` : '';
 
   return `<section class="dpp-v012-weight-main">
     <div class="dpp-v012-weight-main-copy">
@@ -1586,56 +1123,48 @@ function dppV012WeightMain(ins){
   </section>`;
 }
 
-function dppV012WeightBlock(ins){
-  return dppV012WeightMain(ins);
-}
-
 function dppV012SportMini(ins){
-  const w = ins.week || {};
+  const week = ins.week || {};
   const todayW = ins.workouts || {};
   return `<div class="dpp-v012-sport-mini">
-    <div><span>Hoy</span><b>${fmt(todayW.kcal || 0)} kcal</b><small>${fmt(todayW.minutes || 0)} min ? ${todayW.count || 0} sesiones</small></div>
-    <div><span>7 d?as</span><b>${fmt(w.kcal || 0)} kcal</b><small>${fmt(w.minutes || 0)} min ? ${w.count || 0} sesiones</small></div>
+    <div><span>Hoy</span><b>${fmt(todayW.kcal || 0)} kcal</b><small>${fmt(todayW.minutes || 0)} min \u00b7 ${todayW.count || 0} sesiones</small></div>
+    <div><span>7 d\u00edas</span><b>${fmt(week.kcal || 0)} kcal</b><small>${fmt(week.minutes || 0)} min \u00b7 ${week.count || 0} sesiones</small></div>
   </div>`;
 }
 
 function dppV012RenderLoaded(ins){
   const meals = byDate(state.meals, ins.date);
   const workouts = byDate(state.workouts, ins.date);
-  const cards = (ins.cards || []).map(dppV012Card).join('');
-  const advice = (ins.advice || []).map(dppV012Advice).join('');
   const sem = ins.semaphore || 'yellow';
-  const action = dppV012CleanText(ins.main_action || 'Registra datos para calcular el estado del d?a.');
+  const cards = (ins.cards || []).filter(c => c.kind !== 'weight').map(dppV012Card).join('');
+  const advice = (ins.advice || []).map(dppV012Advice).join('');
+  const action = dppV012Text(ins.main_action || 'Registra datos para calcular el estado del d\u00eda.');
 
   return `
-    <section class="dpp-v012-hero dpp-v012-hero-final ${sem}">
+    <section class="dpp-v012-hero dpp-v012-clean-hero ${sem}">
       <div class="dpp-v012-hero-main">
-        <span class="dpp-v012-kicker">Dashboard ? v0.0.12</span>
-        <h2>${dppV012SemIcon(sem)} ${dppV012CleanText(ins.semaphore_label || 'Estado diario')}</h2>
+        <span class="dpp-v012-kicker">Dashboard v0.0.12</span>
+        <h2>${dppV012Dot(sem)} ${dppV012Text(ins.semaphore_label || 'Estado')}</h2>
         <p>${action}</p>
       </div>
-      <div class="dpp-v012-compact-score">
+      <div class="dpp-v012-score2">
         <span><b>${ins.score}</b><small>score</small></span>
         <span><b>${fmt(ins.estimated_deficit || 0)}</b><small>margen kcal</small></span>
-        <span><b>${dppV012StatusWord(sem)}</b><small>estado</small></span>
       </div>
     </section>
 
     ${dppV012WeightMain(ins)}
 
-    <section class="dpp-v012-cards dpp-v012-cards-final">
+    <section class="dpp-v012-cards dpp-v012-clean-cards">
       ${cards}
     </section>
 
     <details class="card dpp-v012-details" open>
-      <summary>
-        <span>Qu? hacer hoy</span>
-        <b>${(ins.advice || []).length} reglas</b>
-      </summary>
+      <summary><span>Qu\u00e9 hacer hoy</span><b>${(ins.advice || []).length} reglas</b></summary>
       <div class="dpp-v012-detail-grid">
         <article class="dpp-v012-panel-lite dpp-v012-advice">
           <h3>Acciones recomendadas</h3>
-          <ul>${advice || '<li class="info"><span>&#128161;</span><div><b>Sin datos suficientes</b><small>Registra comida, peso o entreno para generar consejos.</small></div></li>'}</ul>
+          <ul>${advice || '<li class="info"><span>&#128161;</span><div><b>Sin datos suficientes</b><small>Registra comida, peso o entreno.</small></div></li>'}</ul>
         </article>
         <article class="dpp-v012-panel-lite">
           <h3>Deporte</h3>
@@ -1645,71 +1174,47 @@ function dppV012RenderLoaded(ins){
     </details>
 
     <details class="card dpp-v012-details">
-      <summary>
-        <span>Registros del d?a</span>
-        <b>${meals.length} comidas ? ${workouts.length} entrenos</b>
-      </summary>
+      <summary><span>Registros del d\u00eda</span><b>${meals.length} comida${meals.length === 1 ? '' : 's'} \u00b7 ${workouts.length} entreno${workouts.length === 1 ? '' : 's'}</b></summary>
       <div class="dpp-v012-day dpp-v012-day-compact">
         <article class="day-panel">
           <div class="section-title compact-title">
-            <div><h3>Comidas</h3><p>${fmt(ins.meals?.kcal || 0)} kcal ? ${fmt(ins.meals?.protein || 0)} g prote?na</p></div>
+            <div><h3>Comidas</h3><p>${fmt(ins.meals?.kcal || 0)} kcal \u00b7 ${fmt(ins.meals?.protein || 0)} g prote\u00edna</p></div>
             <button class="btn small" onclick="go('register')">+ Comida</button>
           </div>
           <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
         </article>
-
         <article class="day-panel">
           <div class="section-title compact-title">
             <div><h3>Actividad</h3><p>${fmt(ins.workouts?.kcal || 0)} kcal</p></div>
             <button class="btn small" onclick="go('sport')">+ Entreno</button>
           </div>
-          <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este d?a.</div>'}</div>
+          <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este d\u00eda.</div>'}</div>
         </article>
       </div>
     </details>
-
     <div class="footer-space"></div>
   `;
 }
 
-function renderHome(){
+renderHome = function(){
   document.body.classList.add('dpp-v012-home');
-  dppV012ApplyVisibleVersion();
+  dppV012Version();
   const d = day();
-
-  $('#view').innerHTML = `
-    ${dateBar()}
-    <section id="dppV012Home" class="dpp-v012-loading">
-      <div class="card">
-        <h3>Cargando dashboard inteligente...</h3>
-        <p class="muted">Calculando prote?na, kcal, peso, deporte y sem?foro.</p>
-      </div>
-    </section>
-  `;
+  $('#view').innerHTML = `${dateBar()}<section id="dppV012Home" class="dpp-v012-loading"><div class="card"><h3>Cargando dashboard...</h3><p class="muted">Calculando prote\u00edna, kcal, peso y deporte.</p></div></section>`;
 
   dppV012FetchInsights(d).then(ins => {
     if(day() !== d) return;
     const box = document.querySelector('#dppV012Home');
     if(box) box.outerHTML = `<div id="dppV012Home">${dppV012RenderLoaded(ins)}</div>`;
-    dppV012ApplyVisibleVersion();
+    dppV012Version();
   }).catch(err => {
     const box = document.querySelector('#dppV012Home');
-    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${dppV012CleanText(err.message)}</p></div>`;
-    dppV012ApplyVisibleVersion();
+    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard</h3><p>${dppV012Text(err.message)}</p></div>`;
+    dppV012Version();
   });
-}
-
-if(!window.__DPP_V012_FINAL_RENDER_PATCHED__){
-  window.__DPP_V012_FINAL_RENDER_PATCHED__ = true;
-  const dppPrevRender = window.render || render;
-  window.render = function(){
-    document.body.classList.toggle('dpp-v012-home', page === 'home');
-    const out = dppPrevRender();
-    setTimeout(dppV012ApplyVisibleVersion, 0);
-    return out;
-  };
-  setInterval(dppV012ApplyVisibleVersion, 1200);
-}
+};
 
 window.renderHome = renderHome;
-/* DPP_V012_FINAL_PRODUCT_PATCH_END */
+setInterval(dppV012Version, 1200);
+/* DPP_V012_CLEAN_DASHBOARD_END */
+

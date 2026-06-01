@@ -1476,7 +1476,7 @@ def api_ocr_status():
 
 
 # DPP_V012_INSIGHTS_START
-# Dashboard inteligente v0.0.12-dev.
+# Dashboard inteligente v0.0.12.
 # Backend local-first: calcula estado diario, semáforo y consejos sin depender del render JS.
 
 from datetime import timedelta as _dpp_v012_timedelta
@@ -1846,8 +1846,8 @@ def _v012_build_insights(d: str):
     cards = [
         _v012_card("Proteína", f"{mt['protein']:.0f} g", mt["protein"] / protein_target * 100, protein_status, "objetivo 130-150 g", "protein"),
         _v012_card("Comida", f"{mt['kcal']:.0f} kcal", mt["kcal"] / max(1, kcal_target) * 100, kcal_status, f"objetivo flexible {kcal_target:.0f} kcal", "kcal"),
-        _v012_card("Aceite", f"{mt['oil_g']:.0f} g", mt["oil_g"] / targets["oil_max_g"] * 100, oil_status, "5 g normal ? 10 g máximo", "oil"),
-        _v012_card("Actividad", f"{wt['kcal']:.0f} kcal", min(100, wt["kcal"] / 900 * 100), activity_status, f"{wt['minutes']:.0f} min ? {wt['count']} sesiones", "activity"),
+        _v012_card("Aceite", f"{mt['oil_g']:.0f} g", mt["oil_g"] / targets["oil_max_g"] * 100, oil_status, "5 g normal · 10 g máximo", "oil"),
+        _v012_card("Actividad", f"{wt['kcal']:.0f} kcal", min(100, wt["kcal"] / 900 * 100), activity_status, f"{wt['minutes']:.0f} min · {wt['count']} sesiones", "activity"),
     ]
 
     if weight["current_kg"] is not None:
@@ -1898,7 +1898,7 @@ def api_v012_insights_today():
 
 @app.get("/health")
 def api_v012_health():
-    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.12-dev"})
+    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.12"})
 # DPP_V012_INSIGHTS_END
 
 init_db()
