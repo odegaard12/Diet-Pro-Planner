@@ -1021,3 +1021,186 @@ function renderPlan(){
 
 /* DPP_UI5_PLAN_EDITOR_END */
 
+/* DPP_V012_DASHBOARD_START */
+/* Dashboard Inteligente v0.0.12-dev.
+   Render premium visual apoyado en /api/insights/today. */
+
+async function dppV012FetchInsights(d){
+  const r = await fetch(`/api/insights/today?date=${encodeURIComponent(d || day())}`);
+  if(!r.ok){
+    let msg='Error cargando insights';
+    try{ msg=(await r.json()).error || msg; }catch(e){}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
+function dppV012SemIcon(s){
+  return s === 'green' ? '??' : s === 'yellow' ? '??' : '??';
+}
+
+function dppV012StatusWord(s){
+  return s === 'green' ? 'bien' : s === 'yellow' ? 'cuidado' : 'corregir';
+}
+
+function dppV012Card(c){
+  const pct = Math.max(0, Math.min(100, Number(c.pct || 0)));
+  return `<article class="dpp-v012-card ${c.status || 'info'} ${c.kind || ''}">
+    <div class="dpp-v012-card-top">
+      <span>${c.label}</span>
+      <b>${c.value}</b>
+    </div>
+    <div class="dpp-v012-bar"><i style="width:${pct}%"></i></div>
+    <small>${c.sub || ''}</small>
+  </article>`;
+}
+
+function dppV012Advice(a){
+  const ico = a.severity === 'good' ? '?' : a.severity === 'bad' ? '??' : a.severity === 'warn' ? '??' : '??';
+  return `<li class="${a.severity || 'info'}"><span>${ico}</span><div><b>${a.title}</b><small>${a.text}</small></div></li>`;
+}
+
+function dppV012WeightBlock(ins){
+  const w = ins.weight || {};
+  const tr = w.trend || {};
+  if(w.current_kg == null){
+    return `<div class="dpp-v012-weight empty-soft">
+      <b>Sin peso todav?a</b>
+      <span>Registra peso oficial por la ma?ana.</span>
+    </div>`;
+  }
+  const eta = w.eta ? ` ? objetivo estimado ${w.eta}` : '';
+  const lost = w.kg_lost == null ? '?' : fmt(w.kg_lost);
+  const rem = w.kg_remaining == null ? '?' : fmt(w.kg_remaining);
+  return `<div class="dpp-v012-weight">
+    <div>
+      <span>Peso actual</span>
+      <b>${fmt(w.current_kg)} kg</b>
+      <small>${tr.label || 'Sin tendencia'}${eta}</small>
+    </div>
+    <div class="dpp-v012-weight-mini">
+      <span><b>${lost}</b><small>kg perdidos</small></span>
+      <span><b>${rem}</b><small>kg restantes</small></span>
+      <span><b>${fmt(w.goal_kg || 80)}</b><small>objetivo</small></span>
+    </div>
+  </div>`;
+}
+
+function dppV012SportMini(ins){
+  const w = ins.week || {};
+  const todayW = ins.workouts || {};
+  return `<div class="dpp-v012-sport-mini">
+    <div><span>Hoy</span><b>${fmt(todayW.kcal || 0)} kcal</b><small>${fmt(todayW.minutes || 0)} min ? ${todayW.count || 0} sesiones</small></div>
+    <div><span>7 d?as</span><b>${fmt(w.kcal || 0)} kcal</b><small>${fmt(w.minutes || 0)} min ? ${w.count || 0} sesiones</small></div>
+  </div>`;
+}
+
+function dppV012RenderLoaded(ins){
+  const meals = byDate(state.meals, ins.date);
+  const workouts = byDate(state.workouts, ins.date);
+  const cards = (ins.cards || []).map(dppV012Card).join('');
+  const advice = (ins.advice || []).map(dppV012Advice).join('');
+  const sem = ins.semaphore || 'yellow';
+
+  return `
+    <section class="dpp-v012-hero ${sem}">
+      <div class="dpp-v012-hero-main">
+        <span class="dpp-v012-kicker">Dashboard inteligente ? v0.0.12-dev</span>
+        <h2>${dppV012SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
+        <p>${ins.main_action || 'Registra datos para calcular el estado del d?a.'}</p>
+        <div class="dpp-v012-score-row">
+          <span><b>${ins.score}</b><small>score diario</small></span>
+          <span><b>${fmt(ins.estimated_deficit || 0)}</b><small>margen kcal aprox.</small></span>
+          <span><b>${dppV012StatusWord(sem)}</b><small>sem?foro</small></span>
+        </div>
+      </div>
+      <div class="dpp-v012-ring" style="--score:${Number(ins.score || 0)}">
+        <strong>${ins.score}</strong>
+        <span>/100</span>
+      </div>
+    </section>
+
+    <section class="dpp-v012-cards">
+      ${cards}
+    </section>
+
+    <section class="dpp-v012-grid">
+      <article class="card dpp-v012-panel dpp-v012-advice">
+        <div class="section-title compact-title">
+          <div>
+            <h3>Qu? hacer hoy</h3>
+            <p>Reglas calculadas con comidas, peso y deporte.</p>
+          </div>
+        </div>
+        <ul>${advice || '<li class="info"><span>??</span><div><b>Sin datos suficientes</b><small>Registra comida, peso o entreno para generar consejos.</small></div></li>'}</ul>
+      </article>
+
+      <article class="card dpp-v012-panel">
+        <div class="section-title compact-title">
+          <div>
+            <h3>Peso y objetivo</h3>
+            <p>Meta actual: 80 kg.</p>
+          </div>
+        </div>
+        ${dppV012WeightBlock(ins)}
+      </article>
+
+      <article class="card dpp-v012-panel">
+        <div class="section-title compact-title">
+          <div>
+            <h3>Deporte</h3>
+            <p>Hoy y ?ltimos 7 d?as.</p>
+          </div>
+          <button class="btn small" onclick="go('sport')">+ Entreno</button>
+        </div>
+        ${dppV012SportMini(ins)}
+      </article>
+    </section>
+
+    <section class="dpp-v012-day">
+      <article class="card day-panel">
+        <div class="section-title compact-title">
+          <div><h3>Comidas</h3><p>${fmt(ins.meals?.kcal || 0)} kcal ? ${fmt(ins.meals?.protein || 0)} g prote?na</p></div>
+          <button class="btn small" onclick="go('register')">+ Comida</button>
+        </div>
+        <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
+      </article>
+
+      <article class="card day-panel">
+        <div class="section-title compact-title">
+          <div><h3>Actividad del d?a</h3><p>${fmt(ins.workouts?.kcal || 0)} kcal</p></div>
+          <button class="btn small" onclick="go('sport')">+ Entreno</button>
+        </div>
+        <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este d?a.</div>'}</div>
+      </article>
+    </section>
+
+    <div class="footer-space"></div>
+  `;
+}
+
+function renderHome(){
+  const d = day();
+  $('#view').innerHTML = `
+    ${dateBar()}
+    ${quickActions()}
+    <section id="dppV012Home" class="dpp-v012-loading">
+      <div class="card">
+        <h3>Cargando dashboard inteligente...</h3>
+        <p class="muted">Calculando prote?na, kcal, peso, deporte y sem?foro.</p>
+      </div>
+    </section>
+  `;
+
+  dppV012FetchInsights(d).then(ins => {
+    if(day() !== d) return;
+    const box = document.querySelector('#dppV012Home');
+    if(box) box.outerHTML = `<div id="dppV012Home">${dppV012RenderLoaded(ins)}</div>`;
+  }).catch(err => {
+    const box = document.querySelector('#dppV012Home');
+    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${err.message}</p></div>`;
+  });
+}
+
+window.renderHome = renderHome;
+/* DPP_V012_DASHBOARD_END */
