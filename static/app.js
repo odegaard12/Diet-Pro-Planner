@@ -1252,6 +1252,140 @@ function dppV012RenderLoaded(ins){
       <div class="dpp-v012-hero-main">
         <span class="dpp-v012-kicker">Dashboard inteligente ? v0.0.12.1</span>
         <h2>${dppV0121SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
+        <p>${ins.main_action || 'Registra datos para calcular el estado del día.'}</p>
+      </div>
+      <div class="dpp-v012-compact-score">
+        <span><b>${ins.score}</b><small>score</small></span>
+        <span><b>${fmt(ins.estimated_deficit || 0)}</b><small>margen kcal</small></span>
+        <span><b>${dppV012StatusWord(sem)}</b><small>estado</small></span>
+      </div>
+    </section>
+
+    <section class="dpp-v012-cards dpp-v012-cards-compact">
+      ${cards}
+    </section>
+
+    <details class="card dpp-v012-details" open>
+      <summary>
+        <span>Qu? hacer hoy</span>
+        <b>${(ins.advice || []).length} reglas activas</b>
+      </summary>
+      <div class="dpp-v012-detail-grid">
+        <article class="dpp-v012-panel-lite dpp-v012-advice">
+          <h3>Acciones recomendadas</h3>
+          <ul>${advice || '<li class="info"><span>&#128161;</span><div><b>Sin datos suficientes</b><small>Registra comida, peso o entreno para generar consejos.</small></div></li>'}</ul>
+        </article>
+        <article class="dpp-v012-panel-lite">
+          <h3>Peso y objetivo</h3>
+          ${dppV012WeightBlock(ins)}
+        </article>
+        <article class="dpp-v012-panel-lite">
+          <h3>Deporte</h3>
+          ${dppV012SportMini(ins)}
+        </article>
+      </div>
+    </details>
+
+    <details class="card dpp-v012-details">
+      <summary>
+        <span>Registros del día</span>
+        <b>${meals.length} comidas ? ${workouts.length} entrenos</b>
+      </summary>
+      <div class="dpp-v012-day dpp-v012-day-compact">
+        <article class="day-panel">
+          <div class="section-title compact-title">
+            <div><h3>Comidas</h3><p>${fmt(ins.meals?.kcal || 0)} kcal ? ${fmt(ins.meals?.protein || 0)} g proteína</p></div>
+            <button class="btn small" onclick="go('register')">+ Comida</button>
+          </div>
+          <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
+        </article>
+
+        <article class="day-panel">
+          <div class="section-title compact-title">
+            <div><h3>Actividad</h3><p>${fmt(ins.workouts?.kcal || 0)} kcal</p></div>
+            <button class="btn small" onclick="go('sport')">+ Entreno</button>
+          </div>
+          <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este día.</div>'}</div>
+        </article>
+      </div>
+    </details>
+
+    <div class="footer-space"></div>
+  `;
+}
+
+function renderHome(){
+  const d = day();
+  $('#view').innerHTML = `
+    ${dateBar()}
+    <section id="dppV012Home" class="dpp-v012-loading">
+      <div class="card">
+        <h3>Cargando dashboard inteligente...</h3>
+        <p class="muted">Calculando proteína, kcal, peso, deporte y semáforo.</p>
+      </div>
+    </section>
+  `;
+
+  dppV012FetchInsights(d).then(ins => {
+    if(day() !== d) return;
+    const box = document.querySelector('#dppV012Home');
+    if(box) box.outerHTML = `<div id="dppV012Home">${dppV012RenderLoaded(ins)}</div>`;
+  }).catch(err => {
+    const box = document.querySelector('#dppV012Home');
+    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${err.message}</p></div>`;
+  });
+}
+
+window.renderHome = renderHome;
+/* DPP_V0121_COMPACT_DASHBOARD_END */
+
+/* DPP_V0121_COMPACT_DASHBOARD_START */
+/* Compact dashboard patch: menos repetici?n, detalles en subpaneles desplegables. */
+
+function dppV0121SemIcon(s){
+  if(s === 'green') return '&#128994;';
+  if(s === 'yellow') return '&#128993;';
+  return '&#128308;';
+}
+
+function dppV0121AdviceIcon(sev){
+  if(sev === 'good') return '&#9989;';
+  if(sev === 'bad') return '&#128680;';
+  if(sev === 'warn') return '&#9888;&#65039;';
+  return '&#128161;';
+}
+
+function dppV012Advice(a){
+  return `<li class="${a.severity || 'info'}">
+    <span>${dppV0121AdviceIcon(a.severity)}</span>
+    <div><b>${a.title}</b><small>${a.text}</small></div>
+  </li>`;
+}
+
+function dppV012Card(c){
+  const pct = Math.max(0, Math.min(100, Number(c.pct || 0)));
+  return `<article class="dpp-v012-card ${c.status || 'info'} ${c.kind || ''}">
+    <div class="dpp-v012-card-top">
+      <span>${c.label}</span>
+      <b>${c.value}</b>
+    </div>
+    <div class="dpp-v012-bar"><i style="width:${pct}%"></i></div>
+    <small>${c.sub || ''}</small>
+  </article>`;
+}
+
+function dppV012RenderLoaded(ins){
+  const meals = byDate(state.meals, ins.date);
+  const workouts = byDate(state.workouts, ins.date);
+  const cards = (ins.cards || []).map(dppV012Card).join('');
+  const advice = (ins.advice || []).map(dppV012Advice).join('');
+  const sem = ins.semaphore || 'yellow';
+
+  return `
+    <section class="dpp-v012-hero dpp-v012-hero-compact ${sem}">
+      <div class="dpp-v012-hero-main">
+        <span class="dpp-v012-kicker">Dashboard inteligente ? v0.0.12.1</span>
+        <h2>${dppV0121SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
         <p>${ins.main_action || 'Registra datos para calcular el estado del d?a.'}</p>
       </div>
       <div class="dpp-v012-compact-score">
