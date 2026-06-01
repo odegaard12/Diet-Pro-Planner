@@ -753,3 +753,195 @@ html[data-ui="ui5"] .dpp-v012-kicker{
   .dpp-v012-sport-mini{grid-template-columns:1fr}
 }
 /* DPP_V012_DASHBOARD_CSS_END */
+
+/* DPP_V0121_COMPACT_DASHBOARD_CSS_START */
+
+html[data-ui="ui5"] .dpp-v012-hero-compact{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  padding:20px!important;
+  margin-bottom:12px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-hero-compact h2{
+  font-size:34px!important;
+  margin:10px 0 5px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-hero-compact p{
+  font-size:15.5px!important;
+  max-width:850px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-compact-score{
+  display:grid!important;
+  grid-template-columns:repeat(3,92px)!important;
+  gap:8px!important;
+  z-index:2!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-compact-score span{
+  display:grid!important;
+  gap:2px!important;
+  padding:10px!important;
+  border-radius:18px!important;
+  background:rgba(255,255,255,.15)!important;
+  border:1px solid rgba(255,255,255,.22)!important;
+  text-align:center!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-compact-score b{
+  color:white!important;
+  font-size:23px!important;
+  line-height:1!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-compact-score small{
+  color:rgba(255,255,255,.76)!important;
+  font-size:11px!important;
+  font-weight:900!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-cards-compact{
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin-bottom:12px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-cards-compact .dpp-v012-card{
+  min-height:104px!important;
+  padding:13px!important;
+  border-radius:22px!important;
+  gap:8px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-cards-compact .dpp-v012-card-top b{
+  font-size:24px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-cards-compact .dpp-v012-card small{
+  font-size:12px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-details{
+  margin-bottom:12px!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border-radius:26px!important;
+  background:rgba(255,255,255,.90)!important;
+  border:1px solid rgba(255,255,255,.96)!important;
+  box-shadow:0 16px 42px rgba(15,38,70,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-details summary{
+  cursor:pointer!important;
+  list-style:none!important;
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:center!important;
+  gap:12px!important;
+  padding:15px 17px!important;
+  color:#0b1726!important;
+  font-weight:950!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-details summary::-webkit-details-marker{
+  display:none!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-details summary span{
+  font-size:18px!important;
+  letter-spacing:-.02em!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-details summary b{
+  font-size:12px!important;
+  padding:7px 10px!important;
+  border-radius:999px!important;
+  color:#1d4ed8!important;
+  background:#eff6ff!important;
+  white-space:nowrap!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-details[open] summary{
+  border-bottom:1px solid rgba(31,60,90,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-detail-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr) minmax(260px,.8fr)!important;
+  gap:12px!important;
+  padding:14px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-panel-lite{
+  border-radius:22px!important;
+  background:#f8fbff!important;
+  border:1px solid rgba(31,60,90,.08)!important;
+  padding:13px!important;
+  min-width:0!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-panel-lite h3{
+  margin:0 0 10px!important;
+  font-size:17px!important;
+  color:#0b1726!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-day-compact{
+  padding:14px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-day-compact .day-panel{
+  padding:13px!important;
+  border-radius:22px!important;
+  background:#f8fbff!important;
+  border:1px solid rgba(31,60,90,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-sport-mini>div{
+  min-height:96px!important;
+  padding:13px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-weight>div:first-child{
+  padding:13px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-weight b{
+  font-size:29px!important;
+}
+
+html[data-ui="ui5"] .dpp-v012-weight-mini span{
+  padding:9px!important;
+}
+
+@media(max-width:1280px){
+  html[data-ui="ui5"] .dpp-v012-cards-compact{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+  html[data-ui="ui5"] .dpp-v012-detail-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+
+@media(max-width:900px){
+  html[data-ui="ui5"] .dpp-v012-hero-compact{
+    grid-template-columns:1fr!important;
+  }
+  html[data-ui="ui5"] .dpp-v012-compact-score{
+    grid-template-columns:repeat(3,1fr)!important;
+  }
+  html[data-ui="ui5"] .dpp-v012-cards-compact{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+
+@media(max-width:640px){
+  html[data-ui="ui5"] .dpp-v012-cards-compact{
+    grid-template-columns:1fr!important;
+  }
+  html[data-ui="ui5"] .dpp-v012-compact-score{
+    grid-template-columns:1fr!important;
+  }
+}
+/* DPP_V0121_COMPACT_DASHBOARD_CSS_END */

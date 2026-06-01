@@ -1477,7 +1477,7 @@ def api_ocr_status():
 
 # DPP_V012_INSIGHTS_START
 # Dashboard inteligente v0.0.12-dev.
-# Backend local-first: calcula estado diario, sem?foro y consejos sin depender del render JS.
+# Backend local-first: calcula estado diario, semáforo y consejos sin depender del render JS.
 
 from datetime import timedelta as _dpp_v012_timedelta
 
@@ -1610,7 +1610,7 @@ def _v012_weight_summary(db):
             trend["label"] = "Bajada inicial" if delta < 0 else "Subida inicial" if delta > 0 else "Estable"
             trend["status"] = "info"
         elif weekly < -1.0:
-            trend["label"] = "Bajada r?pida"
+            trend["label"] = "Bajada rápida"
             trend["status"] = "warn"
         elif weekly < -0.35:
             trend["label"] = "Bajada correcta"
@@ -1706,27 +1706,27 @@ def _v012_build_insights(d: str):
         advice.append({
             "severity": "info",
             "title": "Empieza registrando una comida",
-            "text": "El dashboard se vuelve ?til cuando hay comida real del d?a.",
+            "text": "El dashboard se vuelve útil cuando hay comida real del día.",
         })
 
     if mt["protein"] < 80:
-        alerts.append("Prote?na muy baja")
+        alerts.append("Proteína muy baja")
         advice.append({
             "severity": "warn",
-            "title": "Prioridad: prote?na",
-            "text": "Siguiente comida con pollo, huevos, at?n, yogur proteico, jam?n cocido extra o queso fresco batido.",
+            "title": "Prioridad: proteína",
+            "text": "Siguiente comida con pollo, huevos, atún, yogur proteico, jamón cocido extra o queso fresco batido.",
         })
     elif mt["protein"] < protein_min:
         advice.append({
             "severity": "info",
-            "title": "Prote?na aceptable, pero falta cerrar",
-            "text": "Intenta terminar el d?a cerca de 130 g sin subir aceite ni dulces.",
+            "title": "Proteína aceptable, pero falta cerrar",
+            "text": "Intenta terminar el día cerca de 130 g sin subir aceite ni dulces.",
         })
     else:
         advice.append({
             "severity": "good",
-            "title": "Prote?na bien encaminada",
-            "text": "Mant?n el cierre limpio y no recortes de m?s.",
+            "title": "Proteína bien encaminada",
+            "text": "Mantún el cierre limpio y no recortes de m?s.",
         })
 
     if mt["oil_g"] > targets["oil_bad_g"]:
@@ -1734,7 +1734,7 @@ def _v012_build_insights(d: str):
         advice.append({
             "severity": "bad",
             "title": "Aceite alto",
-            "text": "Resto del d?a con sart?n antiadherente y 0?5 g de aceite.",
+            "text": "Resto del día con sartún antiadherente y 0?5 g de aceite.",
         })
     elif mt["oil_g"] > targets["oil_max_g"]:
         advice.append({
@@ -1744,22 +1744,22 @@ def _v012_build_insights(d: str):
         })
 
     if mt["kcal"] > kcal_target + 550:
-        alerts.append("Calor?as muy altas")
+        alerts.append("Calorías muy altas")
         advice.append({
             "severity": "bad",
             "title": "Cierre de emergencia",
-            "text": "Cena muy simple: prote?na magra + verdura. Sin pan, dulce ni aceite extra.",
+            "text": "Cena muy simple: proteína magra + verdura. Sin pan, dulce ni aceite extra.",
         })
     elif mt["kcal"] > kcal_target + 250:
         advice.append({
             "severity": "warn",
             "title": "Vas algo pasado",
-            "text": "Cierra con prote?na y verdura. Evita compensar con m?s cardio si tienes hambre real.",
+            "text": "Cierra con proteína y verdura. Evita compensar con m?s cardio si tienes hambre real.",
         })
     elif mt["kcal"] < 900 and len(meals) <= 1:
         advice.append({
             "severity": "info",
-            "title": "Todav?a hay poco registrado",
+            "title": "Todavía hay poco registrado",
             "text": "Planifica comida/cena para no llegar con ansiedad por la noche.",
         })
 
@@ -1767,7 +1767,7 @@ def _v012_build_insights(d: str):
         advice.append({
             "severity": "warn",
             "title": "Dulce detectado",
-            "text": "No pasa nada: el cierre debe ser limpio, alto en prote?na y sin picoteo.",
+            "text": "No pasa nada: el cierre debe ser limpio, alto en proteína y sin picoteo.",
         })
 
     if wt["kcal"] >= 900:
@@ -1780,13 +1780,13 @@ def _v012_build_insights(d: str):
         advice.append({
             "severity": "good",
             "title": "Buen gasto de actividad",
-            "text": "Recupera con prote?na y agua; evita picoteo autom?tico.",
+            "text": "Recupera con proteína y agua; evita picoteo automático.",
         })
 
     if days_since_workout is not None and days_since_workout >= 4:
         advice.append({
             "severity": "warn",
-            "title": "Varios d?as sin entrenar",
+            "title": "Varios días sin entrenar",
             "text": "Mete una sesi?n corta: paseo largo, p?del, fuerza o bici suave.",
         })
 
@@ -1794,14 +1794,14 @@ def _v012_build_insights(d: str):
     if trend["status"] == "warn":
         advice.append({
             "severity": "warn",
-            "title": "Peso bajando r?pido",
-            "text": "No recortes prote?na. Si hay fatiga, sube un poco carbohidrato en d?as de entreno.",
+            "title": "Peso bajando rápido",
+            "text": "No recortes proteína. Si hay fatiga, sube un poco carbohidrato en días de entreno.",
         })
     elif trend["status"] == "bad":
         advice.append({
             "severity": "warn",
             "title": "Peso subiendo",
-            "text": "Revisa aceite, dulces, pan y raciones de pasta/arroz de los ?ltimos d?as.",
+            "text": "Revisa aceite, dulces, pan y raciones de pasta/arroz de los últimos días.",
         })
 
     score = 100
@@ -1825,7 +1825,7 @@ def _v012_build_insights(d: str):
 
     if score >= 78 and not alerts:
         semaphore = "green"
-        semaphore_label = "Buen d?a"
+        semaphore_label = "Buen día"
     elif score >= 55:
         semaphore = "yellow"
         semaphore_label = "Cuidado"
@@ -1833,7 +1833,7 @@ def _v012_build_insights(d: str):
         semaphore = "red"
         semaphore_label = "Exceso / corregir"
 
-    main_action = "Cierra el d?a limpio y alto en prote?na."
+    main_action = "Cierra el día limpio y alto en proteína."
     if advice:
         priority = sorted(advice, key=lambda x: {"bad": 0, "warn": 1, "info": 2, "good": 3}.get(x["severity"], 4))[0]
         main_action = priority["text"]
@@ -1844,9 +1844,9 @@ def _v012_build_insights(d: str):
     activity_status = "good" if wt["kcal"] >= 300 else "info"
 
     cards = [
-        _v012_card("Prote?na", f"{mt['protein']:.0f} g", mt["protein"] / protein_target * 100, protein_status, "objetivo 130?150 g", "protein"),
+        _v012_card("Proteína", f"{mt['protein']:.0f} g", mt["protein"] / protein_target * 100, protein_status, "objetivo 130?150 g", "protein"),
         _v012_card("Comida", f"{mt['kcal']:.0f} kcal", mt["kcal"] / max(1, kcal_target) * 100, kcal_status, f"objetivo flexible {kcal_target:.0f} kcal", "kcal"),
-        _v012_card("Aceite", f"{mt['oil_g']:.0f} g", mt["oil_g"] / targets["oil_max_g"] * 100, oil_status, "5 g normal ? 10 g m?ximo", "oil"),
+        _v012_card("Aceite", f"{mt['oil_g']:.0f} g", mt["oil_g"] / targets["oil_max_g"] * 100, oil_status, "5 g normal ? 10 g máximo", "oil"),
         _v012_card("Actividad", f"{wt['kcal']:.0f} kcal", min(100, wt["kcal"] / 900 * 100), activity_status, f"{wt['minutes']:.0f} min ? {wt['count']} sesiones", "activity"),
     ]
 
