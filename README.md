@@ -1,6 +1,6 @@
 # Diet Pro Planner
 
-**Current version:** v0.0.11
+**Current version:** v0.0.12
 
 Local-first web app for tracking body weight, meals by grams, reusable foods, meal templates, workouts, weekly plans and optional integrations.
 
@@ -22,7 +22,9 @@ Designed to run privately on a Raspberry Pi with Docker. Your personal data stay
 - UI5 blue responsive layout with redesigned sidebar, topbar, dashboard cards and daily rule cards.
 - Sport dashboard with 7-day summary and compact workout cards.
 - Editable weekly plan board with horizontal day cards.
-Intelligent v0.0.12 dashboard with daily score, semaphore, protein/kcal/oil/activity cards, 80 kg weight-goal progress and compact advice panels.
+- Intelligent v0.0.12 dashboard with daily score, semaphore, protein/kcal/oil/activity cards, 80 kg weight-goal progress and compact advice panels.
+- Backend daily insights endpoint at `/api/insights/today`.
+- UTF-8 cleanup for visible Spanish text in the v0.0.12 dashboard.
 - Local SQLite database in `data/dieta.db`.
 
 ## Privacy
@@ -93,17 +95,18 @@ Food-label OCR is local-first:
 
 ## Releases
 
-- `v0.0.1`: first clean public release.
-- `v0.0.2`: manual Strava import by date range.
-- `v0.0.3`: branding, app icon, ES/EN toggle and Strava auto-preview.
-- `v0.0.4`: background Strava auto-sync and last-sync status.
-- `v0.0.5`: safe UI translation cleanup.
-- `v0.0.6`: stable Spanish UI after removing broken translation layer.
-- `v0.0.7`: UTF-8 cleanup and Strava detailed-activity calorie import.
-- `v0.0.8`: sidebar daily-rule visibility fix.
-- `v0.0.9`: curated products, practical templates and improved assistant.
-- `v0.0.10`: improved weight system and compact food-label helper.
+- `v0.0.12`: intelligent score dashboard, backend daily insights, compact premium home, weight-goal progress and UTF-8 cleanup.
 - `v0.0.11`: UI5 redesign, OCR3 label parser, sport dashboard and editable weekly plan.
+- `v0.0.10`: improved weight system and compact food-label helper.
+- `v0.0.9`: curated products, practical templates and improved assistant.
+- `v0.0.8`: sidebar daily-rule visibility fix.
+- `v0.0.7`: UTF-8 cleanup and Strava detailed-activity calorie import.
+- `v0.0.6`: stable Spanish UI after removing broken translation layer.
+- `v0.0.5`: safe UI translation cleanup.
+- `v0.0.4`: background Strava auto-sync and last-sync status.
+- `v0.0.3`: branding, app icon, ES/EN toggle and Strava auto-preview.
+- `v0.0.2`: manual Strava import by date range.
+- `v0.0.1`: first clean public release.
 
 ## Notes
 
