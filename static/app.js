@@ -1022,55 +1022,198 @@ function renderPlan(){
 /* DPP_UI5_PLAN_EDITOR_END */
 
 
-
-
-
-
-/* DPP_V012_RECOVERY_TEXT_PATCH_START */
-function dppV012FixText(v){
+/* DPP_V012_SCORE_HOME_START */
+function dpp12Text(v){
   return String(v ?? '')
-    .replace(/prote\?na/g, 'prote?na')
-    .replace(/Prote\?na/g, 'Prote?na')
-    .replace(/sem\?foro/g, 'sem?foro')
-    .replace(/d\?a/g, 'd?a')
-    .replace(/d\?as/g, 'd?as')
-    .replace(/at\?n/g, 'at?n')
-    .replace(/jam\?n/g, 'jam?n')
-    .replace(/m\?ximo/g, 'm?ximo')
-    .replace(/\?ltimos/g, '?ltimos')
-    .replace(/Todav\?a/g, 'Todav?a')
-    .replace(/todav\?a/g, 'todav?a')
-    .replace(/ma\?ana/g, 'ma?ana')
+    .replace(/prote\?na/g, 'prote\u00edna')
+    .replace(/Prote\?na/g, 'Prote\u00edna')
+    .replace(/sem\?foro/g, 'sem\u00e1foro')
+    .replace(/d\?a/g, 'd\u00eda')
+    .replace(/d\?as/g, 'd\u00edas')
+    .replace(/at\?n/g, 'at\u00fan')
+    .replace(/jam\?n/g, 'jam\u00f3n')
+    .replace(/m\?ximo/g, 'm\u00e1ximo')
+    .replace(/\?ltimos/g, '\u00faltimos')
+    .replace(/Todav\?a/g, 'Todav\u00eda')
+    .replace(/todav\?a/g, 'todav\u00eda')
+    .replace(/ma\?ana/g, 'ma\u00f1ana')
     .replace(/v0\.0\.12\.1/g, 'v0.0.12')
     .replace(/v0\.0\.12-dev/g, 'v0.0.12')
-    .replace(/Dashboard inteligente \?/g, 'Dashboard ?')
-    .replace(/Dashboard \?/g, 'Dashboard ?')
-    .replace(/Dieta controlada \?/g, 'Dieta controlada ?')
-    .replace(/Bajada inicial \? objetivo/g, 'Bajada inicial ? objetivo')
-    .replace(/5 g normal \? 10/g, '5 g normal ? 10')
-    .replace(/min \? /g, 'min ? ')
-    .replace(/comidas \?/g, 'comidas ?')
-    .replace(/\s\?\s/g, ' ? ');
+    .replace(/Dashboard inteligente \?/g, 'Dashboard \u00b7')
+    .replace(/Dashboard \?/g, 'Dashboard \u00b7')
+    .replace(/Dieta controlada \?/g, 'Dieta controlada \u00b7')
+    .replace(/5 g normal \? 10/g, '5 g normal \u00b7 10')
+    .replace(/min \? /g, 'min \u00b7 ')
+    .replace(/\s\?\s/g, ' \u00b7 ');
 }
 
-function dppV012FixVisibleText(){
-  document.title = 'Diet Pro Planner ? v0.0.12';
-
+function dpp12Version(){
+  document.title = 'Diet Pro Planner \u00b7 v0.0.12';
   const eyebrow = document.querySelector('.eyebrow');
-  if(eyebrow) eyebrow.textContent = 'Dieta controlada ? v0.0.12';
-
+  if(eyebrow) eyebrow.textContent = 'Dieta controlada \u00b7 v0.0.12';
   const badge = document.querySelector('#ui5Badge');
   if(badge) badge.textContent = 'v0.0.12';
-
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  const nodes = [];
-  while(walker.nextNode()) nodes.push(walker.currentNode);
-  nodes.forEach(n => {
-    const fixed = dppV012FixText(n.nodeValue);
-    if(fixed !== n.nodeValue) n.nodeValue = fixed;
-  });
 }
 
-setInterval(dppV012FixVisibleText, 700);
-window.addEventListener('DOMContentLoaded', () => setTimeout(dppV012FixVisibleText, 100));
-/* DPP_V012_RECOVERY_TEXT_PATCH_END */
+async function dpp12Insights(d){
+  const r = await fetch(`/api/insights/today?date=${encodeURIComponent(d || day())}`);
+  if(!r.ok){
+    let msg='Error cargando dashboard';
+    try{ msg=(await r.json()).error || msg; }catch(e){}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
+function dpp12Dot(s){
+  return s === 'green' ? '&#128994;' : s === 'yellow' ? '&#128993;' : '&#128308;';
+}
+
+function dpp12Status(s){
+  return s === 'green' ? 'bien' : s === 'yellow' ? 'cuidado' : 'corregir';
+}
+
+function dpp12MiniCard(label, value, sub, status){
+  return `<article class="dpp12-mini ${status || 'info'}">
+    <span>${dpp12Text(label)}</span>
+    <b>${dpp12Text(value)}</b>
+    <small>${dpp12Text(sub || '')}</small>
+  </article>`;
+}
+
+function dpp12Card(c){
+  const pct = Math.max(0, Math.min(100, Number(c.pct || 0)));
+  return `<article class="dpp12-card ${c.status || 'info'}">
+    <div><span>${dpp12Text(c.label)}</span><b>${dpp12Text(c.value)}</b></div>
+    <i><em style="width:${pct}%"></em></i>
+    <small>${dpp12Text(c.sub || '')}</small>
+  </article>`;
+}
+
+function dpp12Advice(a){
+  const ico = a.severity === 'good' ? '&#9989;' : a.severity === 'bad' ? '&#128680;' : a.severity === 'warn' ? '&#9888;&#65039;' : '&#128161;';
+  return `<article class="dpp12-advice ${a.severity || 'info'}">
+    <span>${ico}</span>
+    <div><b>${dpp12Text(a.title)}</b><small>${dpp12Text(a.text)}</small></div>
+  </article>`;
+}
+
+function dpp12Weight(ins){
+  const w = ins.weight || {};
+  if(w.current_kg == null){
+    return `<section class="dpp12-weight"><div><span>Peso hacia 80 kg</span><b>--</b><small>Sin peso registrado</small></div></section>`;
+  }
+  const start = Number(w.start_kg || w.current_kg || 0);
+  const goal = Number(w.goal_kg || 80);
+  const current = Number(w.current_kg || 0);
+  const total = Math.max(0.1, start - goal);
+  const lost = Math.max(0, start - current);
+  const pct = Math.max(0, Math.min(100, lost / total * 100));
+  const trend = dpp12Text((w.trend || {}).label || 'Sin tendencia');
+  const eta = w.eta ? ` \u00b7 objetivo ${w.eta}` : '';
+
+  return `<section class="dpp12-weight">
+    <div class="dpp12-weight-main">
+      <span>Peso hacia 80 kg</span>
+      <b>${fmt(current)} kg</b>
+      <small>${trend}${eta}</small>
+    </div>
+    <div class="dpp12-weight-progress">
+      <i><em style="width:${pct}%"></em></i>
+      <div>
+        <span><b>${fmt(w.kg_lost ?? lost)}</b><small>kg perdidos</small></span>
+        <span><b>${fmt(w.kg_remaining ?? Math.max(0,current-goal))}</b><small>kg restantes</small></span>
+        <span><b>${fmt(goal)}</b><small>objetivo</small></span>
+      </div>
+    </div>
+  </section>`;
+}
+
+function dpp12Sport(ins){
+  const w = ins.week || {};
+  const t = ins.workouts || {};
+  return `<div class="dpp12-sport">
+    <article><span>Hoy</span><b>${fmt(t.kcal || 0)} kcal</b><small>${fmt(t.minutes || 0)} min \u00b7 ${t.count || 0} sesiones</small></article>
+    <article><span>7 d\u00edas</span><b>${fmt(w.kcal || 0)} kcal</b><small>${fmt(w.minutes || 0)} min \u00b7 ${w.count || 0} sesiones</small></article>
+  </div>`;
+}
+
+function dpp12RenderHome(ins){
+  const meals = byDate(state.meals, ins.date);
+  const workouts = byDate(state.workouts, ins.date);
+  const sem = ins.semaphore || 'yellow';
+  const cards = (ins.cards || []).filter(c => c.kind !== 'weight').map(dpp12Card).join('');
+  const advice = (ins.advice || []).map(dpp12Advice).join('');
+  const scoreSub = `${dpp12Status(sem)} \u00b7 ${fmt(ins.estimated_deficit || 0)} kcal margen`;
+
+  return `
+    ${dateBar()}
+
+    <section class="dpp12-hero ${sem}">
+      <div>
+        <span class="dpp12-kicker">Dashboard v0.0.12</span>
+        <h2>${dpp12Dot(sem)} ${dpp12Text(ins.semaphore_label || 'Estado')}</h2>
+        <p>${dpp12Text(ins.main_action || '')}</p>
+      </div>
+      <div class="dpp12-score">
+        <b>${ins.score}</b>
+        <small>${scoreSub}</small>
+      </div>
+    </section>
+
+    ${dpp12Weight(ins)}
+
+    <section class="dpp12-cards">${cards}</section>
+
+    <section class="dpp12-grid">
+      <article class="card dpp12-panel">
+        <header><h3>Qu\u00e9 hacer hoy</h3><span>${(ins.advice || []).length} reglas</span></header>
+        <div class="dpp12-advice-list">${advice}</div>
+      </article>
+
+      <article class="card dpp12-panel">
+        <header><h3>Deporte</h3><button class="btn small" onclick="go('sport')">+ Entreno</button></header>
+        ${dpp12Sport(ins)}
+      </article>
+    </section>
+
+    <details class="card dpp12-details">
+      <summary><span>Peso oficial y registros</span><b>${meals.length} comida${meals.length===1?'':'s'} \u00b7 ${workouts.length} entreno${workouts.length===1?'':'s'}</b></summary>
+      <div class="dpp12-records">
+        <section>
+          <h3>Peso oficial</h3>
+          ${weightChart()}
+        </section>
+        <section>
+          <h3>Comidas</h3>
+          <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
+        </section>
+        <section>
+          <h3>Actividad</h3>
+          <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este d\u00eda.</div>'}</div>
+        </section>
+      </div>
+    </details>
+    <div class="footer-space"></div>
+  `;
+}
+
+renderHome = function(){
+  document.body.classList.add('dpp12-home');
+  dpp12Version();
+  const d = day();
+  $('#view').innerHTML = `${dateBar()}<div class="card"><h3>Cargando dashboard...</h3><p class="muted">Calculando score, peso, comida y deporte.</p></div>`;
+  dpp12Insights(d).then(ins => {
+    if(day() !== d) return;
+    $('#view').innerHTML = dpp12RenderHome(ins);
+    dpp12Version();
+  }).catch(err => {
+    $('#view').innerHTML = `${dateBar()}<div class="card note-box"><h3>No pude cargar el dashboard</h3><p>${dpp12Text(err.message)}</p></div>`;
+    dpp12Version();
+  });
+};
+
+window.renderHome = renderHome;
+setInterval(dpp12Version, 1000);
+/* DPP_V012_SCORE_HOME_END */
+
