@@ -93,7 +93,7 @@
   font-weight: 650;
 }
 
-/* v0.0.11 - fix visible sidebar daily rule */
+/* v0.0.12 - fix visible sidebar daily rule */
 .sidebar .side-rule{
   flex:0 0 auto !important;
   display:grid !important;
@@ -342,3 +342,371 @@ html[data-ui="ui5"] .ui5-plan-json textarea{min-height:150px!important;max-heigh
 @media(max-width:1120px){html[data-ui="ui5"] .ui5-plan-hero2{grid-template-columns:1fr!important}html[data-ui="ui5"] .ui5-plan-stats{grid-template-columns:repeat(3,1fr)!important}}
 @media(max-width:740px){html[data-ui="ui5"] .ui5-plan-stats{grid-template-columns:1fr!important}html[data-ui="ui5"] .ui5-edit-plan-board{grid-template-columns:1fr!important}}
 /* DPP_UI5_PLAN_EDITOR_CSS_END */
+
+
+/* DPP_V012_SCORE_HOME_CSS_START */
+html[data-ui="ui5"] body.dpp12-home .global-cta,
+html[data-ui="ui5"] body.dpp12-home .quick-actions{display:none!important}
+
+html[data-ui="ui5"] .dpp12-hero{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 168px!important;
+  gap:18px!important;
+  align-items:center!important;
+  padding:22px!important;
+  margin-bottom:12px!important;
+  min-height:174px!important;
+  border-radius:34px!important;
+  color:white!important;
+  background:radial-gradient(circle at 88% 0%,rgba(245,158,11,.42),transparent 34%),linear-gradient(135deg,#12376f 0%,#2563eb 62%,#0ea5e9 100%)!important;
+  box-shadow:0 24px 70px rgba(15,38,70,.18)!important;
+  overflow:hidden!important;
+}
+
+html[data-ui="ui5"] .dpp12-kicker{
+  display:inline-flex!important;
+  max-width:230px!important;
+  padding:7px 10px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.14)!important;
+  border:1px solid rgba(255,255,255,.22)!important;
+  color:#dbeafe!important;
+  font-size:10px!important;
+  font-weight:1000!important;
+  letter-spacing:.08em!important;
+  text-transform:uppercase!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+html[data-ui="ui5"] .dpp12-hero h2{
+  margin:10px 0 8px!important;
+  font-size:38px!important;
+  line-height:1.02!important;
+  color:white!important;
+  letter-spacing:-.055em!important;
+}
+
+html[data-ui="ui5"] .dpp12-hero p{
+  margin:0!important;
+  max-width:760px!important;
+  color:rgba(255,255,255,.92)!important;
+  font-size:16px!important;
+  line-height:1.36!important;
+  font-weight:850!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:2!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+}
+
+html[data-ui="ui5"] .dpp12-score{
+  justify-self:end!important;
+  display:grid!important;
+  place-items:center!important;
+  width:146px!important;
+  height:146px!important;
+  border-radius:30px!important;
+  background:rgba(255,255,255,.18)!important;
+  border:1px solid rgba(255,255,255,.28)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16)!important;
+  text-align:center!important;
+  padding:14px!important;
+}
+
+html[data-ui="ui5"] .dpp12-score b{
+  color:white!important;
+  font-size:46px!important;
+  line-height:.9!important;
+  letter-spacing:-.06em!important;
+}
+
+html[data-ui="ui5"] .dpp12-score small{
+  color:rgba(255,255,255,.84)!important;
+  font-size:12px!important;
+  line-height:1.25!important;
+  font-weight:950!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight{
+  display:grid!important;
+  grid-template-columns:260px minmax(0,1fr)!important;
+  gap:16px!important;
+  align-items:center!important;
+  padding:15px 18px!important;
+  margin-bottom:12px!important;
+  border-radius:28px!important;
+  background:rgba(255,255,255,.95)!important;
+  border:1px solid rgba(255,255,255,.96)!important;
+  box-shadow:0 14px 38px rgba(15,38,70,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-main span,
+html[data-ui="ui5"] .dpp12-card span,
+html[data-ui="ui5"] .dpp12-sport span{
+  color:#2563eb!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+  font-size:11px!important;
+  font-weight:1000!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-main b{
+  display:block!important;
+  color:#0b1726!important;
+  font-size:34px!important;
+  line-height:1!important;
+  letter-spacing:-.055em!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-main small{
+  color:#5b6f89!important;
+  font-weight:850!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-progress{
+  display:grid!important;
+  gap:10px!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-progress > i{
+  display:block!important;
+  height:12px!important;
+  border-radius:999px!important;
+  background:#e8effa!important;
+  overflow:hidden!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-progress > i em{
+  display:block!important;
+  height:100%!important;
+  border-radius:999px!important;
+  background:linear-gradient(90deg,#2563eb,#0ea5e9)!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-progress > div{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-progress span{
+  display:grid!important;
+  gap:2px!important;
+  padding:10px 12px!important;
+  border-radius:18px!important;
+  background:#f8fbff!important;
+  border:1px solid rgba(31,60,90,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-progress b{
+  color:#0b1726!important;
+  font-size:21px!important;
+  line-height:1!important;
+}
+
+html[data-ui="ui5"] .dpp12-weight-progress small{
+  color:#5b6f89!important;
+  font-size:11px!important;
+  font-weight:900!important;
+}
+
+html[data-ui="ui5"] .dpp12-cards{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:12px!important;
+  margin-bottom:12px!important;
+}
+
+html[data-ui="ui5"] .dpp12-card{
+  display:grid!important;
+  gap:10px!important;
+  min-height:112px!important;
+  padding:15px!important;
+  border-radius:24px!important;
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid rgba(31,60,90,.10)!important;
+  box-shadow:0 14px 38px rgba(15,38,70,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp12-card b{
+  display:block!important;
+  color:#0b1726!important;
+  font-size:27px!important;
+  line-height:1!important;
+}
+
+html[data-ui="ui5"] .dpp12-card i{
+  display:block!important;
+  height:9px!important;
+  border-radius:999px!important;
+  background:#e8effa!important;
+  overflow:hidden!important;
+}
+
+html[data-ui="ui5"] .dpp12-card i em{
+  display:block!important;
+  height:100%!important;
+  border-radius:999px!important;
+  background:#2563eb!important;
+}
+
+html[data-ui="ui5"] .dpp12-card.good i em{background:#10b981!important}
+html[data-ui="ui5"] .dpp12-card.warn i em{background:#f59e0b!important}
+html[data-ui="ui5"] .dpp12-card.bad i em{background:#ef4444!important}
+
+html[data-ui="ui5"] .dpp12-card small{
+  color:#53677f!important;
+  font-weight:850!important;
+}
+
+html[data-ui="ui5"] .dpp12-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr)!important;
+  gap:12px!important;
+  margin-bottom:12px!important;
+}
+
+html[data-ui="ui5"] .dpp12-panel{
+  border-radius:28px!important;
+  background:rgba(255,255,255,.95)!important;
+  border:1px solid rgba(255,255,255,.96)!important;
+  box-shadow:0 14px 38px rgba(15,38,70,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp12-panel header{
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:center!important;
+  gap:10px!important;
+  margin-bottom:12px!important;
+}
+
+html[data-ui="ui5"] .dpp12-panel header h3{
+  margin:0!important;
+}
+
+html[data-ui="ui5"] .dpp12-panel header span{
+  padding:7px 10px!important;
+  border-radius:999px!important;
+  background:#eff6ff!important;
+  color:#1d4ed8!important;
+  font-weight:950!important;
+  font-size:12px!important;
+}
+
+html[data-ui="ui5"] .dpp12-advice-list{
+  display:grid!important;
+  gap:10px!important;
+}
+
+html[data-ui="ui5"] .dpp12-advice{
+  display:grid!important;
+  grid-template-columns:34px minmax(0,1fr)!important;
+  gap:10px!important;
+  align-items:start!important;
+  padding:11px!important;
+  border-radius:18px!important;
+  background:#f8fbff!important;
+  border:1px solid rgba(31,60,90,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp12-advice > span{
+  display:grid!important;
+  place-items:center!important;
+  width:34px!important;
+  height:34px!important;
+  border-radius:13px!important;
+  background:#eff6ff!important;
+}
+
+html[data-ui="ui5"] .dpp12-advice b,
+html[data-ui="ui5"] .dpp12-advice small{
+  display:block!important;
+}
+
+html[data-ui="ui5"] .dpp12-advice small{
+  margin-top:3px!important;
+  color:#53677f!important;
+  line-height:1.35!important;
+}
+
+html[data-ui="ui5"] .dpp12-sport{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+
+html[data-ui="ui5"] .dpp12-sport article{
+  display:grid!important;
+  gap:5px!important;
+  padding:14px!important;
+  border-radius:20px!important;
+  background:#f8fbff!important;
+  border:1px solid rgba(31,60,90,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp12-sport b{
+  color:#0b1726!important;
+  font-size:25px!important;
+  line-height:1!important;
+}
+
+html[data-ui="ui5"] .dpp12-sport small{
+  color:#53677f!important;
+  font-weight:850!important;
+}
+
+html[data-ui="ui5"] .dpp12-details{
+  border-radius:28px!important;
+  overflow:hidden!important;
+  background:rgba(255,255,255,.95)!important;
+  border:1px solid rgba(255,255,255,.96)!important;
+  box-shadow:0 14px 38px rgba(15,38,70,.08)!important;
+}
+
+html[data-ui="ui5"] .dpp12-details summary{
+  cursor:pointer!important;
+  list-style:none!important;
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:center!important;
+  padding:15px 17px!important;
+  font-weight:950!important;
+}
+
+html[data-ui="ui5"] .dpp12-details summary::-webkit-details-marker{display:none!important}
+
+html[data-ui="ui5"] .dpp12-details summary b{
+  padding:7px 10px!important;
+  border-radius:999px!important;
+  background:#eff6ff!important;
+  color:#1d4ed8!important;
+  font-size:12px!important;
+}
+
+html[data-ui="ui5"] .dpp12-records{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(280px,.8fr) minmax(280px,.8fr)!important;
+  gap:12px!important;
+  padding:14px!important;
+  border-top:1px solid rgba(31,60,90,.08)!important;
+}
+
+@media(max-width:1180px){
+  html[data-ui="ui5"] .dpp12-grid,
+  html[data-ui="ui5"] .dpp12-records,
+  html[data-ui="ui5"] .dpp12-weight{grid-template-columns:1fr!important}
+  html[data-ui="ui5"] .dpp12-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+
+@media(max-width:760px){
+  html[data-ui="ui5"] .dpp12-hero{grid-template-columns:1fr!important}
+  html[data-ui="ui5"] .dpp12-score{justify-self:start!important;width:100%!important;height:auto!important}
+  html[data-ui="ui5"] .dpp12-cards,
+  html[data-ui="ui5"] .dpp12-weight-progress > div,
+  html[data-ui="ui5"] .dpp12-sport{grid-template-columns:1fr!important}
+}
+/* DPP_V012_SCORE_HOME_CSS_END */
+
