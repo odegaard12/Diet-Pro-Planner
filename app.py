@@ -1844,7 +1844,7 @@ def _v012_build_insights(d: str):
     activity_status = "good" if wt["kcal"] >= 300 else "info"
 
     cards = [
-        _v012_card("Proteína", f"{mt['protein']:.0f} g", mt["protein"] / protein_target * 100, protein_status, "objetivo 130?150 g", "protein"),
+        _v012_card("Proteína", f"{mt['protein']:.0f} g", mt["protein"] / protein_target * 100, protein_status, "objetivo 130-150 g", "protein"),
         _v012_card("Comida", f"{mt['kcal']:.0f} kcal", mt["kcal"] / max(1, kcal_target) * 100, kcal_status, f"objetivo flexible {kcal_target:.0f} kcal", "kcal"),
         _v012_card("Aceite", f"{mt['oil_g']:.0f} g", mt["oil_g"] / targets["oil_max_g"] * 100, oil_status, "5 g normal ? 10 g máximo", "oil"),
         _v012_card("Actividad", f"{wt['kcal']:.0f} kcal", min(100, wt["kcal"] / 900 * 100), activity_status, f"{wt['minutes']:.0f} min ? {wt['count']} sesiones", "activity"),

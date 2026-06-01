@@ -464,13 +464,13 @@ function renderIntegrations(){
   function stableHeader(){
     document.documentElement.lang = 'es';
     document.documentElement.dataset.lang = 'es';
-    document.title = 'Diet Pro Planner · v0.0.11';
+    document.title = 'Diet Pro Planner · v0.0.12';
     const brand = document.querySelector('.brand h1');
     if(brand) brand.textContent = 'Diet Pro Planner';
     const sub = document.querySelector('.brand p');
     if(sub) sub.textContent = 'Raspberry · local · privado';
     const eyebrow = document.querySelector('.eyebrow');
-    if(eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.11';
+    if(eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.12';
     const lang = document.querySelector('#btnLang');
     if(lang) lang.remove();
   }
@@ -535,7 +535,7 @@ function assistantFor(d=day()){const meals=byDate(state.meals,d),workouts=byDate
 function ui5Progress(label,value,pct,sub,tone='good'){return `<article class="ui5-progress ${tone}"><div><span>${label}</span><b>${value}</b></div><i><em style="width:${Math.max(4,Math.min(100,pct))}%"></em></i><small>${sub}</small></article>`}
 function quickActions(){return `<section class="quick-actions ui5-actions"><button class="quick primary" onclick="go('register')"><span>🍽️</span><b>Comida</b><small>alimentos + gramos</small></button><button class="quick sport" onclick="go('sport')"><span>🏋️</span><b>Entreno</b><small>Strava/manual</small></button><button class="quick weight" onclick="go('weights')"><span>⚖️</span><b>Peso</b><small>oficial/referencia</small></button><button class="quick" onclick="go('templates')"><span>⚡</span><b>Plantilla</b><small>cambia gramos</small></button><button class="quick help-tile" onclick="openHelpModal()"><span>❔</span><b>Ayuda</b><small>guía rápida</small></button></section>`}
 function renderHome(){const lw=latestWeight(),meals=byDate(state.meals),workouts=byDate(state.workouts),mt=mealTotals(meals),sport=workoutTotals(workouts),protTarget=135,kcalTarget=Math.max(1500,1900+Math.min(sport,900)*.35),tr=ui5Trend(); $('#view').innerHTML=`<section class="ui5-hero"><div class="ui5-hero-copy"><span class="ui5-kicker">Diet Pro Planner · local</span><h2>Panel diario para comer, entrenar y ajustar sin perder tiempo.</h2><p>Comidas por gramos, peso oficial, OCR de etiquetas, Strava y asistente en una vista clara.</p><div class="ui5-pills"><span><small>Peso</small><b>${lw?fmt(lw.kg)+' kg':'—'}</b></span><span><small>Proteína</small><b>${fmt(mt.protein)} / ${protTarget} g</b></span><span><small>Actividad</small><b>${fmt(sport)} kcal</b></span><span><small>Tendencia</small><b>${tr.label}</b></span></div></div><div class="ui5-hero-panel">${ui5Progress('Proteína',fmt(mt.protein)+' g',mt.protein/protTarget*100,'Objetivo 130–150 g',mt.protein>=120?'good':'warn')}${ui5Progress('Comida',fmt(mt.kcal)+' kcal',mt.kcal/kcalTarget*100,'Objetivo flexible '+fmt(kcalTarget)+' kcal aprox.',mt.kcal>2300?'bad':'good')}${ui5Progress('Actividad',fmt(sport)+' kcal',Math.min(100,sport/10),sport?'Actividad registrada':'Sin entrenos hoy',sport>900?'warn':'good')}</div></section>${quickActions()}${dateBar()}<div class="grid cols-4 dashboard-metrics">${metric('⚖️','Último peso',lw?`${fmt(lw.kg)} kg`:'—',lw?`${lw.date} ${lw.time} · ${lw.official?'oficial':'referencia'}`:'sin datos')}${metric('🍽️','Comido',fmt(mt.kcal),'kcal estimadas')}${metric('💪','Proteína',`${fmt(mt.protein)} g`,'objetivo 130–150 g')}${metric('🔥','Actividad',fmt(sport),'kcal del día seleccionado')}</div><div class="grid cols-2 home-main" style="margin-top:14px"><div class="card assistant compact-assistant"><h3>🤖 Asistente</h3><ul>${assistantFor().map(x=>`<li>${x}</li>`).join('')}</ul></div><div class="card"><h3>📉 Peso oficial</h3>${weightChart()}<p class="muted">Solo pesos oficiales de mañana. Con pocos días no extrapolamos kg/semana.</p></div></div><div class="day-columns"><section class="card day-panel"><div class="section-title compact-title"><div><h3>🍽️ Comidas</h3><p>${fmt(mt.kcal)} kcal · ${fmt(mt.protein)} g prot.</p></div><button class="btn small" onclick="go('register')">+ Comida</button></div><div class="compact-list">${meals.length?meals.map(mealCardCompact).join(''):'<div class="empty">Sin comidas.</div>'}</div></section><section class="card day-panel"><div class="section-title compact-title"><div><h3>🏋️ Actividad</h3><p>${fmt(sport)} kcal</p></div><button class="btn small" onclick="go('sport')">+ Entreno</button></div><div class="compact-list">${workouts.length?workouts.map(workoutCardCompact).join(''):'<div class="empty">Sin entrenos para este día.</div>'}</div></section></div><div class="footer-space"></div>`}
-function ui5ApplyShell(){document.documentElement.dataset.ui='ui5'; const e=document.querySelector('.eyebrow'); if(e)e.textContent='Dieta controlada · v0.0.11'; const r=document.querySelector('.rule-banner'); if(r&&r.dataset.ui5!=='1'){r.dataset.ui5='1';r.innerHTML=`<article class="ui5-rule protein"><span>Proteína</span><b>130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b>5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>`} const sr=document.querySelector('.sidebar .side-rule'); if(sr&&sr.dataset.ui5!=='1'){sr.dataset.ui5='1';sr.innerHTML='<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'} if(!document.getElementById('ui5Badge')){const b=document.createElement('div');b.id='ui5Badge';b.className='ui5-badge';b.textContent='v0.0.11';document.querySelector('.topbar')?.appendChild(b)} if(!document.getElementById('floatingHelp')){const h=document.createElement('button');h.id='floatingHelp';h.className='floating-help';h.textContent='?';h.onclick=openHelpModal;h.title='Ayuda';document.body.appendChild(h)}}
+function ui5ApplyShell(){document.documentElement.dataset.ui='ui5'; const e=document.querySelector('.eyebrow'); if(e)e.textContent='Dieta controlada · v0.0.12'; const r=document.querySelector('.rule-banner'); if(r&&r.dataset.ui5!=='1'){r.dataset.ui5='1';r.innerHTML=`<article class="ui5-rule protein"><span>Proteína</span><b>130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b>5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>`} const sr=document.querySelector('.sidebar .side-rule'); if(sr&&sr.dataset.ui5!=='1'){sr.dataset.ui5='1';sr.innerHTML='<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'} if(!document.getElementById('ui5Badge')){const b=document.createElement('div');b.id='ui5Badge';b.className='ui5-badge';b.textContent='v0.0.12';document.querySelector('.topbar')?.appendChild(b)} if(!document.getElementById('floatingHelp')){const h=document.createElement('button');h.id='floatingHelp';h.className='floating-help';h.textContent='?';h.onclick=openHelpModal;h.title='Ayuda';document.body.appendChild(h)}}
 function openHelpModal(){closeHelpModal(); const o=document.createElement('div');o.id='helpOverlay';o.className='help-overlay';o.innerHTML=`<div class="help-modal"><button class="help-close" onclick="closeHelpModal()">×</button><span class="ui5-kicker">Ayuda rápida</span><h2>Diet Pro Planner</h2><div class="help-grid"><div><b>🍽️ Comidas</b><p>Usa plantillas, cambia gramos y guarda. Pasta/arroz siempre en seco.</p></div><div><b>⚖️ Peso</b><p>Oficial por la mañana. Post-comida, noche o post-entreno son referencia.</p></div><div><b>📷 OCR</b><p>Sube foto de etiqueta. Tesseract intenta leerla. Revisa valores antes de guardar.</p></div><div><b>🏋️ Strava</b><p>Importa por ID y evita duplicados. Auto-sync queda igual.</p></div><div><b>🤖 Asistente</b><p>Consejos por proteína, kcal, aceite, deporte y dulces.</p></div><div><b>🔐 Privacidad</b><p>Esta prueba es local. No sube DB, tokens, .env ni fotos al repo.</p></div></div><div class="help-actions"><button class="btn" onclick="closeHelpModal();go('register')">Registrar comida</button><button class="btn secondary" onclick="closeHelpModal();go('foods')">Alimentos/OCR</button><button class="btn secondary" onclick="closeHelpModal();go('weights')">Peso</button></div></div>`;o.onclick=e=>{if(e.target.id==='helpOverlay')closeHelpModal()};document.body.appendChild(o)}
 function closeHelpModal(){document.getElementById('helpOverlay')?.remove()}
 if(!window.__DPP_UI5_PATCHED__){window.__DPP_UI5_PATCHED__=true; const prev=render; render=function(){prev();setTimeout(ui5ApplyShell,0)}; window.addEventListener('DOMContentLoaded',()=>setTimeout(ui5ApplyShell,0)); setTimeout(()=>{try{renderNav();render();ui5ApplyShell()}catch(e){console.error(e)}},250); setInterval(ui5ApplyShell,3000)}
@@ -1105,7 +1105,7 @@ function dppV012RenderLoaded(ins){
   return `
     <section class="dpp-v012-hero ${sem}">
       <div class="dpp-v012-hero-main">
-        <span class="dpp-v012-kicker">Dashboard inteligente ? v0.0.12-dev</span>
+        <span class="dpp-v012-kicker">Dashboard ? v0.0.12-dev</span>
         <h2>${dppV012SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
         <p>${ins.main_action || 'Registra datos para calcular el estado del día.'}</p>
         <div class="dpp-v012-score-row">
@@ -1250,7 +1250,7 @@ function dppV012RenderLoaded(ins){
   return `
     <section class="dpp-v012-hero dpp-v012-hero-compact ${sem}">
       <div class="dpp-v012-hero-main">
-        <span class="dpp-v012-kicker">Dashboard inteligente ? v0.0.12.1</span>
+        <span class="dpp-v012-kicker">Dashboard ? v0.0.12</span>
         <h2>${dppV0121SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
         <p>${ins.main_action || 'Registra datos para calcular el estado del día.'}</p>
       </div>
@@ -1384,9 +1384,9 @@ function dppV012RenderLoaded(ins){
   return `
     <section class="dpp-v012-hero dpp-v012-hero-compact ${sem}">
       <div class="dpp-v012-hero-main">
-        <span class="dpp-v012-kicker">Dashboard inteligente ? v0.0.12.1</span>
+        <span class="dpp-v012-kicker">Dashboard ? v0.0.12</span>
         <h2>${dppV0121SemIcon(sem)} ${ins.semaphore_label || 'Estado diario'}</h2>
-        <p>${ins.main_action || 'Registra datos para calcular el estado del d?a.'}</p>
+        <p>${ins.main_action || 'Registra datos para calcular el estado del día.'}</p>
       </div>
       <div class="dpp-v012-compact-score">
         <span><b>${ins.score}</b><small>score</small></span>
@@ -1412,6 +1412,230 @@ function dppV012RenderLoaded(ins){
         <article class="dpp-v012-panel-lite">
           <h3>Peso y objetivo</h3>
           ${dppV012WeightBlock(ins)}
+        </article>
+        <article class="dpp-v012-panel-lite">
+          <h3>Deporte</h3>
+          ${dppV012SportMini(ins)}
+        </article>
+      </div>
+    </details>
+
+    <details class="card dpp-v012-details">
+      <summary>
+        <span>Registros del día</span>
+        <b>${meals.length} comidas ? ${workouts.length} entrenos</b>
+      </summary>
+      <div class="dpp-v012-day dpp-v012-day-compact">
+        <article class="day-panel">
+          <div class="section-title compact-title">
+            <div><h3>Comidas</h3><p>${fmt(ins.meals?.kcal || 0)} kcal ? ${fmt(ins.meals?.protein || 0)} g proteína</p></div>
+            <button class="btn small" onclick="go('register')">+ Comida</button>
+          </div>
+          <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
+        </article>
+
+        <article class="day-panel">
+          <div class="section-title compact-title">
+            <div><h3>Actividad</h3><p>${fmt(ins.workouts?.kcal || 0)} kcal</p></div>
+            <button class="btn small" onclick="go('sport')">+ Entreno</button>
+          </div>
+          <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este día.</div>'}</div>
+        </article>
+      </div>
+    </details>
+
+    <div class="footer-space"></div>
+  `;
+}
+
+function renderHome(){
+  const d = day();
+  $('#view').innerHTML = `
+    ${dateBar()}
+    <section id="dppV012Home" class="dpp-v012-loading">
+      <div class="card">
+        <h3>Cargando dashboard inteligente...</h3>
+        <p class="muted">Calculando proteína, kcal, peso, deporte y semáforo.</p>
+      </div>
+    </section>
+  `;
+
+  dppV012FetchInsights(d).then(ins => {
+    if(day() !== d) return;
+    const box = document.querySelector('#dppV012Home');
+    if(box) box.outerHTML = `<div id="dppV012Home">${dppV012RenderLoaded(ins)}</div>`;
+  }).catch(err => {
+    const box = document.querySelector('#dppV012Home');
+    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${err.message}</p></div>`;
+  });
+}
+
+window.renderHome = renderHome;
+/* DPP_V0121_COMPACT_DASHBOARD_END */
+
+/* DPP_V012_FINAL_PRODUCT_PATCH_START */
+/* Final v0.0.12 product patch:
+   - no v0.0.12.1 visible
+   - cleans corrupted chars from backend strings
+   - compact hero
+   - weight visible on main dashboard
+   - details moved to collapsible panels
+*/
+
+function dppV012CleanText(v){
+  return String(v ?? '')
+    .replace(/prote\?na/g, 'prote\u00edna')
+    .replace(/Prote\?na/g, 'Prote\u00edna')
+    .replace(/sem\?foro/g, 'sem\u00e1foro')
+    .replace(/d\?a/g, 'd\u00eda')
+    .replace(/d\?as/g, 'd\u00edas')
+    .replace(/at\?n/g, 'at\u00fan')
+    .replace(/jam\?n/g, 'jam\u00f3n')
+    .replace(/m\?ximo/g, 'm\u00e1ximo')
+    .replace(/\?ltimos/g, '\u00faltimos')
+    .replace(/\?ltimo/g, '\u00faltimo')
+    .replace(/\?til/g, '\u00fatil')
+    .replace(/Todav\?a/g, 'Todav\u00eda')
+    .replace(/todav\?a/g, 'todav\u00eda')
+    .replace(/Dashboard inteligente \? v0\.0\.12/g, 'Dashboard ? v0.0.12')
+    .replace(/Dashboard inteligente ? v0\.0\.12/g, 'Dashboard ? v0.0.12')
+    .replace(/v0\.0\.12\.1/g, 'v0.0.12')
+    .replace(/130\?150/g, '130-150')
+    .replace(/5 g normal \? 10/g, '5 g normal ? 10')
+    .replace(/min \? /g, 'min ? ');
+}
+
+function dppV012ApplyVisibleVersion(){
+  document.title = 'Diet Pro Planner ? v0.0.12';
+  const eyebrow = document.querySelector('.eyebrow');
+  if(eyebrow) eyebrow.textContent = 'Dieta controlada ? v0.0.12';
+  const badge = document.querySelector('#ui5Badge');
+  if(badge) badge.textContent = 'v0.0.12';
+}
+
+function dppV012SemIcon(s){
+  if(s === 'green') return '&#128994;';
+  if(s === 'yellow') return '&#128993;';
+  return '&#128308;';
+}
+
+function dppV012AdviceIcon(sev){
+  if(sev === 'good') return '&#9989;';
+  if(sev === 'bad') return '&#128680;';
+  if(sev === 'warn') return '&#9888;&#65039;';
+  return '&#128161;';
+}
+
+function dppV012StatusWord(s){
+  return s === 'green' ? 'bien' : s === 'yellow' ? 'cuidado' : 'corregir';
+}
+
+function dppV012Advice(a){
+  return `<li class="${a.severity || 'info'}">
+    <span>${dppV012AdviceIcon(a.severity)}</span>
+    <div>
+      <b>${dppV012CleanText(a.title)}</b>
+      <small>${dppV012CleanText(a.text)}</small>
+    </div>
+  </li>`;
+}
+
+function dppV012Card(c){
+  const pct = Math.max(0, Math.min(100, Number(c.pct || 0)));
+  return `<article class="dpp-v012-card ${c.status || 'info'} ${c.kind || ''}">
+    <div class="dpp-v012-card-top">
+      <span>${dppV012CleanText(c.label)}</span>
+      <b>${dppV012CleanText(c.value)}</b>
+    </div>
+    <div class="dpp-v012-bar"><i style="width:${pct}%"></i></div>
+    <small>${dppV012CleanText(c.sub || '')}</small>
+  </article>`;
+}
+
+function dppV012WeightMain(ins){
+  const w = ins.weight || {};
+  if(w.current_kg == null){
+    return `<section class="dpp-v012-weight-main">
+      <div><span>Peso</span><b>Sin dato</b><small>Registra peso oficial</small></div>
+    </section>`;
+  }
+
+  const start = Number(w.start_kg || w.current_kg || 0);
+  const goal = Number(w.goal_kg || 80);
+  const current = Number(w.current_kg || 0);
+  const total = Math.max(0.1, start - goal);
+  const lost = Math.max(0, start - current);
+  const pct = Math.max(0, Math.min(100, lost / total * 100));
+  const eta = w.eta ? ` ? objetivo ${w.eta}` : '';
+  const trend = dppV012CleanText((w.trend || {}).label || 'Sin tendencia');
+
+  return `<section class="dpp-v012-weight-main">
+    <div class="dpp-v012-weight-main-copy">
+      <span>Peso hacia 80 kg</span>
+      <b>${fmt(current)} kg</b>
+      <small>${trend}${eta}</small>
+    </div>
+    <div class="dpp-v012-weight-main-bar">
+      <i style="width:${pct}%"></i>
+      <div>
+        <span><b>${fmt(w.kg_lost ?? lost)}</b><small>kg perdidos</small></span>
+        <span><b>${fmt(w.kg_remaining ?? Math.max(0, current - goal))}</b><small>kg restantes</small></span>
+        <span><b>${fmt(goal)}</b><small>objetivo</small></span>
+      </div>
+    </div>
+  </section>`;
+}
+
+function dppV012WeightBlock(ins){
+  return dppV012WeightMain(ins);
+}
+
+function dppV012SportMini(ins){
+  const w = ins.week || {};
+  const todayW = ins.workouts || {};
+  return `<div class="dpp-v012-sport-mini">
+    <div><span>Hoy</span><b>${fmt(todayW.kcal || 0)} kcal</b><small>${fmt(todayW.minutes || 0)} min ? ${todayW.count || 0} sesiones</small></div>
+    <div><span>7 d?as</span><b>${fmt(w.kcal || 0)} kcal</b><small>${fmt(w.minutes || 0)} min ? ${w.count || 0} sesiones</small></div>
+  </div>`;
+}
+
+function dppV012RenderLoaded(ins){
+  const meals = byDate(state.meals, ins.date);
+  const workouts = byDate(state.workouts, ins.date);
+  const cards = (ins.cards || []).map(dppV012Card).join('');
+  const advice = (ins.advice || []).map(dppV012Advice).join('');
+  const sem = ins.semaphore || 'yellow';
+  const action = dppV012CleanText(ins.main_action || 'Registra datos para calcular el estado del d?a.');
+
+  return `
+    <section class="dpp-v012-hero dpp-v012-hero-final ${sem}">
+      <div class="dpp-v012-hero-main">
+        <span class="dpp-v012-kicker">Dashboard ? v0.0.12</span>
+        <h2>${dppV012SemIcon(sem)} ${dppV012CleanText(ins.semaphore_label || 'Estado diario')}</h2>
+        <p>${action}</p>
+      </div>
+      <div class="dpp-v012-compact-score">
+        <span><b>${ins.score}</b><small>score</small></span>
+        <span><b>${fmt(ins.estimated_deficit || 0)}</b><small>margen kcal</small></span>
+        <span><b>${dppV012StatusWord(sem)}</b><small>estado</small></span>
+      </div>
+    </section>
+
+    ${dppV012WeightMain(ins)}
+
+    <section class="dpp-v012-cards dpp-v012-cards-final">
+      ${cards}
+    </section>
+
+    <details class="card dpp-v012-details" open>
+      <summary>
+        <span>Qu? hacer hoy</span>
+        <b>${(ins.advice || []).length} reglas</b>
+      </summary>
+      <div class="dpp-v012-detail-grid">
+        <article class="dpp-v012-panel-lite dpp-v012-advice">
+          <h3>Acciones recomendadas</h3>
+          <ul>${advice || '<li class="info"><span>&#128161;</span><div><b>Sin datos suficientes</b><small>Registra comida, peso o entreno para generar consejos.</small></div></li>'}</ul>
         </article>
         <article class="dpp-v012-panel-lite">
           <h3>Deporte</h3>
@@ -1449,7 +1673,10 @@ function dppV012RenderLoaded(ins){
 }
 
 function renderHome(){
+  document.body.classList.add('dpp-v012-home');
+  dppV012ApplyVisibleVersion();
   const d = day();
+
   $('#view').innerHTML = `
     ${dateBar()}
     <section id="dppV012Home" class="dpp-v012-loading">
@@ -1464,11 +1691,25 @@ function renderHome(){
     if(day() !== d) return;
     const box = document.querySelector('#dppV012Home');
     if(box) box.outerHTML = `<div id="dppV012Home">${dppV012RenderLoaded(ins)}</div>`;
+    dppV012ApplyVisibleVersion();
   }).catch(err => {
     const box = document.querySelector('#dppV012Home');
-    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${err.message}</p></div>`;
+    if(box) box.innerHTML = `<div class="card note-box"><h3>No pude cargar el dashboard inteligente</h3><p>${dppV012CleanText(err.message)}</p></div>`;
+    dppV012ApplyVisibleVersion();
   });
 }
 
+if(!window.__DPP_V012_FINAL_RENDER_PATCHED__){
+  window.__DPP_V012_FINAL_RENDER_PATCHED__ = true;
+  const dppPrevRender = window.render || render;
+  window.render = function(){
+    document.body.classList.toggle('dpp-v012-home', page === 'home');
+    const out = dppPrevRender();
+    setTimeout(dppV012ApplyVisibleVersion, 0);
+    return out;
+  };
+  setInterval(dppV012ApplyVisibleVersion, 1200);
+}
+
 window.renderHome = renderHome;
-/* DPP_V0121_COMPACT_DASHBOARD_END */
+/* DPP_V012_FINAL_PRODUCT_PATCH_END */
