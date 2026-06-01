@@ -22,6 +22,7 @@ Designed to run privately on a Raspberry Pi with Docker. Your personal data stay
 - UI5 blue responsive layout with redesigned sidebar, topbar, dashboard cards and daily rule cards.
 - Sport dashboard with 7-day summary and compact workout cards.
 - Editable weekly plan board with horizontal day cards.
+Intelligent v0.0.12 dashboard with daily score, semaphore, protein/kcal/oil/activity cards, 80 kg weight-goal progress and compact advice panels.
 - Local SQLite database in `data/dieta.db`.
 
 ## Privacy
