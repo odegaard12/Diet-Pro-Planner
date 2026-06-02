@@ -7,6 +7,13 @@ Local-first web app for tracking body weight, meals by grams, reusable foods, me
 Designed to run privately on a Raspberry Pi with Docker. Your personal data stays local.
 
 ## Features
+Confidence-aware nutrition analysis that separates good formulation from estimated/composite food uncertainty.
+
+Local heuristic meal planner that suggests clean, light or post-training meal options from available foods.
+
+Unified Food Intelligence dashboard with score, confidence, weight progress, protein, energy, oil, training and next-action panel.
+
+- Food Intelligence v0.0.13 with daily analysis, confidence labels, local meal suggestions and a unified dashboard powered by `/api/food-intel/day`, `/api/food-intel/meal-plan` and `/api/food-intel/health`.
 
 - Official and reference weight tracking.
 - Meal logging by saved foods and grams.
@@ -94,6 +101,7 @@ Food-label OCR is local-first:
 - repeated image reads can use local OCR cache.
 
 ## Releases
+v0.0.13: Food Intelligence dashboard, daily analysis, confidence labels, local heuristic meal planner and unified premium home.
 
 - `v0.0.12`: intelligent score dashboard, backend daily insights, compact premium home, weight-goal progress and UTF-8 cleanup.
 - `v0.0.11`: UI5 redesign, OCR3 label parser, sport dashboard and editable weekly plan.
