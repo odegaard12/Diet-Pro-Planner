@@ -2210,6 +2210,11 @@ def _fi_confidence_day(items):
 
     score = weighted / kcal_total if kcal_total else 0.0
 
+    # Si hay alimentos estimados o compuestos, no vendemos falsa precisión.
+    # El día puede estar bien formulado, pero la confianza de datos baja a media.
+    if estimated:
+        score = min(score, 0.79)
+
     if score >= 0.90:
         label = "exacta"
     elif score >= 0.80:
@@ -2246,7 +2251,7 @@ def _fi_score_day(totals, meals, workouts, planned_workout=None):
             "score": None,
             "semaphore": "insufficient",
             "label": "Base insuficiente",
-            "main_action": "Registra al menos 2 comidas o 600 kcal para analizar el dia.",
+            "main_action": "Registra al menos 2 comidas o 600 kcal para analizar el día.",
             "rules": {},
             "recommendations": ["Registra comida real antes de valorar si vas bien o mal."],
             "kcal_target": targets["kcal_base_target"],
@@ -2274,7 +2279,7 @@ def _fi_score_day(totals, meals, workouts, planned_workout=None):
     rules["protein"] = {
         "score": round(p_score, 1),
         "status": "ok" if p_score >= 27 else "watch" if p_score >= 20 else "bad",
-        "message": "Proteina en objetivo" if p_score >= 27 else "Falta proteina util",
+        "message": "Proteína en objetivo" if p_score >= 27 else "Falta proteína útil",
     }
 
     if -450 <= kcal_margin <= 350:
@@ -2287,24 +2292,24 @@ def _fi_score_day(totals, meals, workouts, planned_workout=None):
     rules["energy"] = {
         "score": round(e_score, 1),
         "status": "ok" if e_score >= 16 else "watch" if e_score >= 10 else "bad",
-        "message": "Energia ajustada" if e_score >= 16 else "Energia a vigilar",
+        "message": "Energía ajustada" if e_score >= 16 else "Energía a vigilar",
         "target_kcal": kcal_target,
         "margin_kcal": round(kcal_margin),
     }
 
     if training_today:
         if protein >= 120 and carbs >= 140:
-            t_score = 15
-            t_msg = "Bien alineado con entreno"
+            t_score = 15 if workout_totals["count"] > 0 else 14
+            t_msg = "Bien alineado con entreno real" if workout_totals["count"] > 0 else "Bien alineado con entreno planificado"
         elif protein >= 100 and carbs >= 90:
             t_score = 10
             t_msg = "Aceptable para entreno"
         else:
             t_score = 5
-            t_msg = "Entreno con combustible o recuperacion justos"
+            t_msg = "Entreno con combustible o recuperación justos"
     else:
-        t_score = 10
-        t_msg = "Dia sin entreno real registrado"
+        t_score = 8
+        t_msg = "Sin entreno real registrado"
 
     rules["training_alignment"] = {
         "score": t_score,
@@ -2360,7 +2365,7 @@ def _fi_score_day(totals, meals, workouts, planned_workout=None):
     rules["salt"] = {
         "score": s_score,
         "status": "ok" if s_score >= 5 else "watch" if s_score >= 1 else "bad",
-        "message": "Sal correcta" if s_score >= 5 else "Sal alta: posible retencion de agua",
+        "message": "Sal correcta" if s_score >= 5 else "Sal alta: posible retención de agua",
     }
 
     fv_terms = ["platano", "plátano", "guisantes", "judia", "judía", "verdura", "patata", "manzana", "naranja", "champi"]
@@ -2383,7 +2388,7 @@ def _fi_score_day(totals, meals, workouts, planned_workout=None):
 
     if score >= 80:
         sem = "green"
-        label = "Buen dia"
+        label = "Buen día"
     elif score >= 60:
         sem = "yellow"
         label = "Cuidado"
@@ -2393,17 +2398,17 @@ def _fi_score_day(totals, meals, workouts, planned_workout=None):
 
     recs = []
     if protein < 130:
-        recs.append("Cierra con 20-30 g de proteina: merluza, huevo, jamon, atun, Alpro o yogur proteico.")
+        recs.append("Cierra con 20-30 g de proteína: merluza, huevo, jamón, atún, Alpro o yogur proteico.")
     if kcal_margin > 450 and training_today:
-        recs.append("No recortes mas: respeta la comida post-entreno.")
+        recs.append("No recortes más: respeta la comida post-entreno.")
     if kcal_margin < -250:
         recs.append("Cierre limpio: sin Pepsi normal, dulce ni aceite extra.")
     if salt > 5:
-        recs.append("Bebe agua y no interpretes el peso de manana como grasa.")
+        recs.append("Bebe agua y no interpretes el peso de mañana como grasa.")
     if extra_hits:
-        recs.append("No anadas mas extras hoy: " + ", ".join(extra_hits) + ".")
+        recs.append("No añadas más extras hoy: " + ", ".join(extra_hits) + ".")
     if not recs:
-        recs.append("Mantén el plan actual; no anadas extras.")
+        recs.append("Mantén el plan actual; no añadas extras.")
 
     return {
         "score": score,
@@ -2451,6 +2456,15 @@ def api_food_intel_day():
     d = request.args.get("date") or payload.get("date") or _fi_date.today().isoformat()
     planned_workout = payload.get("planned_workout")
 
+    # Soporte GET:
+    # /api/food-intel/day?date=2026-06-02&planned_workout=1&planned_minutes=105&planned_sport=Funcional
+    if not planned_workout and request.args.get("planned_workout"):
+        planned_workout = {
+            "sport": request.args.get("planned_sport") or "Entreno planificado",
+            "duration_min": _fi_float(request.args.get("planned_minutes"), 0.0),
+            "intensity": request.args.get("planned_intensity") or "moderate",
+        }
+
     return jsonify(_fi_build_day(d, planned_workout=planned_workout))
 
 @app.route("/api/food-intel/health")
@@ -2461,6 +2475,7 @@ def api_food_intel_health():
         "version": "v0.0.13-dev",
         "endpoints": [
             "/api/food-intel/day",
+            "/api/food-intel/meal-plan",
             "/api/food-intel/health",
         ],
     })
@@ -2606,7 +2621,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
         elif "alpro" in lname or "yogur" in lname:
             grams_p = 250
 
-        items = [_fimp_item(protein_food, grams_p, "ancla de proteina")]
+        items = [_fimp_item(protein_food, grams_p, "ancla de proteína")]
         if carb_food:
             lname_c = _fimp_norm(carb_food.get("name"))
             grams_c = 300 if training_today and ("patata" in lname_c or "guisantes" in lname_c) else 250
@@ -2626,7 +2641,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
         options.append(_fimp_plan_option(
             "Opcion limpia y segura",
             items,
-            "Prioriza proteina, controla aceite y mantiene la energia dentro del objetivo.",
+            "Prioriza proteína, controla aceite y mantiene la energía dentro del objetivo.",
             "alta" if protein_food and carb_food else "media",
         ))
 
@@ -2640,7 +2655,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
             items.append(_fimp_item(carb_food, 300, "hidrato post-entreno"))
 
         if alpro:
-            items.append(_fimp_item(alpro, 250, "proteina facil post-entreno"))
+            items.append(_fimp_item(alpro, 250, "proteína fácil post-entreno"))
         elif protein_food and protein_food.get("id") not in [x.get("food_id") for x in items]:
             items.append(_fimp_item(protein_food, 150, "refuerzo de proteina"))
 
@@ -2648,7 +2663,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
             options.append(_fimp_plan_option(
                 "Opcion post-entreno",
                 items,
-                "Pensada para recuperar tras entreno: hidrato medido + proteina.",
+                "Pensada para recuperar tras entreno: hidrato medido + proteína.",
                 "media",
             ))
 
@@ -2658,7 +2673,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
         grams_p = 200
         if "huevo" in _fimp_norm(protein_food.get("name")):
             grams_p = 120
-        items.append(_fimp_item(protein_food, grams_p, "cerrar proteina"))
+        items.append(_fimp_item(protein_food, grams_p, "cerrar proteína"))
     if gelatina:
         items.append(_fimp_item(gelatina, 100, "postre bajo en kcal"))
     elif volume_food and volume_food.get("id") not in [x.get("food_id") for x in items]:
@@ -2667,7 +2682,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
         options.append(_fimp_plan_option(
             "Opcion ligera",
             items,
-            "Para cerrar el dia sin pasarte si ya llevas suficiente energia.",
+            "Para cerrar el día sin pasarte si ya llevas suficiente energía.",
             "media",
         ))
 
