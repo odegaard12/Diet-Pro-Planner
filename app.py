@@ -2468,5 +2468,265 @@ def api_food_intel_health():
 # DPP_FOOD_INTEL_CORE_END
 
 
+
+
+# DPP_FOOD_INTEL_MEAL_PLAN_START
+# v0.0.13-dev - Food Intelligence Meal Planner
+# Backend only. Uses local foods + day analysis. No UI changes.
+
+def _fimp_norm(v):
+    return _fi_clean_text(str(v or "")).lower().strip()
+
+def _fimp_foods(db):
+    if not _fi_has_table(db, "foods"):
+        return []
+    return _fi_get_rows(db, "foods", "", (), "name ASC")
+
+def _fimp_match_food(foods, wanted):
+    w = _fimp_norm(wanted)
+    if not w:
+        return None
+
+    # Exact / contains match.
+    for f in foods:
+        name = _fimp_norm(f.get("name"))
+        brand = _fimp_norm(f.get("brand"))
+        if w == name or w in name or name in w or w in brand:
+            return f
+
+    # Token match.
+    wt = [x for x in w.replace("/", " ").replace("+", " ").split() if len(x) >= 3]
+    best = None
+    best_score = 0
+    for f in foods:
+        hay = _fimp_norm((f.get("name") or "") + " " + (f.get("brand") or ""))
+        score = sum(1 for x in wt if x in hay)
+        if score > best_score:
+            best_score = score
+            best = f
+
+    return best if best_score else None
+
+def _fimp_food_macro(food, grams):
+    return {
+        "kcal": _fi_round(_fi_float(food.get("kcal")) * grams / 100.0, 1),
+        "protein": _fi_round(_fi_float(food.get("protein")) * grams / 100.0, 1),
+        "carbs": _fi_round(_fi_float(food.get("carbs")) * grams / 100.0, 1),
+        "fat": _fi_round(_fi_float(food.get("fat")) * grams / 100.0, 1),
+        "sugar": _fi_round(_fi_float(food.get("sugar")) * grams / 100.0, 1),
+        "salt": _fi_round(_fi_float(food.get("salt")) * grams / 100.0, 1),
+    }
+
+def _fimp_sum_items(items):
+    total = {"kcal": 0, "protein": 0, "carbs": 0, "fat": 0, "sugar": 0, "salt": 0}
+    for it in items:
+        m = it.get("macros", {})
+        for k in total:
+            total[k] += _fi_float(m.get(k), 0)
+    return {k: _fi_round(v, 1) for k, v in total.items()}
+
+def _fimp_item(food, grams, reason=""):
+    return {
+        "food_id": food.get("id"),
+        "food_name": _fi_clean_text(food.get("name")),
+        "grams": _fi_round(grams, 1),
+        "macros": _fimp_food_macro(food, grams),
+        "reason": reason,
+    }
+
+def _fimp_pick(foods, names):
+    for n in names:
+        f = _fimp_match_food(foods, n)
+        if f:
+            return f
+    return None
+
+def _fimp_plan_option(title, items, why, confidence_label="media"):
+    totals = _fimp_sum_items(items)
+    return {
+        "title": title,
+        "items": items,
+        "totals": totals,
+        "why": why,
+        "confidence": {
+            "label": confidence_label,
+            "score": 0.80 if confidence_label == "alta" else 0.68 if confidence_label == "media" else 0.55,
+        },
+    }
+
+def _fimp_make_options(date_value, meal, available_foods, training_today, current_day):
+    with con() as db:
+        foods = _fimp_foods(db)
+
+    available = available_foods or []
+    lower_available = [_fimp_norm(x) for x in available]
+
+    def allowed(food):
+        if not lower_available:
+            return True
+        name = _fimp_norm(food.get("name"))
+        brand = _fimp_norm(food.get("brand"))
+        return any(x in name or name in x or x in brand for x in lower_available)
+
+    foods_allowed = [f for f in foods if allowed(f)]
+    if not foods_allowed:
+        foods_allowed = foods
+
+    summary = current_day.get("summary", {})
+    analysis = current_day.get("analysis", {})
+    kcal_target = _fi_float(analysis.get("kcal_target"), 1900)
+    kcal_now = _fi_float(summary.get("kcal"), 0)
+    protein_now = _fi_float(summary.get("protein"), 0)
+
+    protein_remaining = max(0, 130 - protein_now)
+    kcal_remaining = max(0, kcal_target - kcal_now)
+
+    protein_food = _fimp_pick(foods_allowed, [
+        "merluza", "pollo", "atun", "atún", "huevo", "jamon", "jamón", "alpro", "yogur", "queso fresco"
+    ])
+    carb_food = _fimp_pick(foods_allowed, [
+        "patata", "pasta", "arroz", "pan", "platano", "plátano", "guisantes"
+    ])
+    volume_food = _fimp_pick(foods_allowed, [
+        "guisantes", "judia", "judía", "verdura", "gelatina", "champi"
+    ])
+    alpro = _fimp_pick(foods_allowed, ["alpro", "batido proteico"])
+    gelatina = _fimp_pick(foods_allowed, ["gelatina"])
+
+    options = []
+
+    # Option 1: clean protein meal
+    if protein_food:
+        grams_p = 250
+        lname = _fimp_norm(protein_food.get("name"))
+        if "huevo" in lname:
+            grams_p = 120
+        elif "jamon" in lname or "jamón" in lname:
+            grams_p = 100
+        elif "alpro" in lname or "yogur" in lname:
+            grams_p = 250
+
+        items = [_fimp_item(protein_food, grams_p, "ancla de proteina")]
+        if carb_food:
+            lname_c = _fimp_norm(carb_food.get("name"))
+            grams_c = 300 if training_today and ("patata" in lname_c or "guisantes" in lname_c) else 250
+            if "pasta" in lname_c:
+                grams_c = 300 if training_today else 220
+            if "pan" in lname_c:
+                grams_c = 45
+            if "platano" in lname_c or "plátano" in lname_c:
+                grams_c = 120
+            items.append(_fimp_item(carb_food, grams_c, "hidrato ajustado al dia"))
+        if volume_food and volume_food.get("id") not in [x.get("food_id") for x in items]:
+            grams_v = 150
+            if "gelatina" in _fimp_norm(volume_food.get("name")):
+                grams_v = 100
+            items.append(_fimp_item(volume_food, grams_v, "volumen/saciedad"))
+
+        options.append(_fimp_plan_option(
+            "Opcion limpia y segura",
+            items,
+            "Prioriza proteina, controla aceite y mantiene la energia dentro del objetivo.",
+            "alta" if protein_food and carb_food else "media",
+        ))
+
+    # Option 2: post-workout / training meal
+    if training_today:
+        items = []
+        pasta = _fimp_pick(foods_allowed, ["pasta mezclada", "pasta"])
+        if pasta:
+            items.append(_fimp_item(pasta, 300, "post-entreno con hidrato"))
+        elif carb_food:
+            items.append(_fimp_item(carb_food, 300, "hidrato post-entreno"))
+
+        if alpro:
+            items.append(_fimp_item(alpro, 250, "proteina facil post-entreno"))
+        elif protein_food and protein_food.get("id") not in [x.get("food_id") for x in items]:
+            items.append(_fimp_item(protein_food, 150, "refuerzo de proteina"))
+
+        if items:
+            options.append(_fimp_plan_option(
+                "Opcion post-entreno",
+                items,
+                "Pensada para recuperar tras entreno: hidrato medido + proteina.",
+                "media",
+            ))
+
+    # Option 3: light close
+    items = []
+    if protein_food:
+        grams_p = 200
+        if "huevo" in _fimp_norm(protein_food.get("name")):
+            grams_p = 120
+        items.append(_fimp_item(protein_food, grams_p, "cerrar proteina"))
+    if gelatina:
+        items.append(_fimp_item(gelatina, 100, "postre bajo en kcal"))
+    elif volume_food and volume_food.get("id") not in [x.get("food_id") for x in items]:
+        items.append(_fimp_item(volume_food, 120, "volumen sin subir mucho kcal"))
+    if items:
+        options.append(_fimp_plan_option(
+            "Opcion ligera",
+            items,
+            "Para cerrar el dia sin pasarte si ya llevas suficiente energia.",
+            "media",
+        ))
+
+    # Rank options by how close they get to remaining needs without overdoing.
+    for opt in options:
+        t = opt["totals"]
+        protein_after = protein_now + _fi_float(t.get("protein"), 0)
+        kcal_after = kcal_now + _fi_float(t.get("kcal"), 0)
+        protein_gap = abs(140 - protein_after)
+        kcal_gap = abs(kcal_target - kcal_after)
+        opt["fit_score"] = max(0, round(100 - protein_gap * 1.2 - kcal_gap / 35, 0))
+
+    options = sorted(options, key=lambda x: x.get("fit_score", 0), reverse=True)
+
+    return {
+        "date": date_value,
+        "meal": meal,
+        "training_today": bool(training_today),
+        "current": {
+            "kcal": _fi_round(kcal_now, 1),
+            "protein": _fi_round(protein_now, 1),
+            "kcal_target": _fi_round(kcal_target, 0),
+            "kcal_remaining": _fi_round(kcal_remaining, 0),
+            "protein_remaining_to_130": _fi_round(protein_remaining, 1),
+        },
+        "available_foods_used": available,
+        "options": options[:3],
+        "rules": [
+            "protein_first",
+            "training_allows_more_carbs",
+            "avoid_liquid_calories",
+            "estimated_foods_lower_confidence",
+        ],
+    }
+
+@app.route("/api/food-intel/meal-plan", methods=["POST"])
+def api_food_intel_meal_plan():
+    payload = request.get_json(silent=True) or {}
+    d = payload.get("date") or _fi_date.today().isoformat()
+    meal = payload.get("meal") or payload.get("slot") or "next"
+    available_foods = payload.get("available_foods") or payload.get("inventory") or []
+    training_today = bool(payload.get("training_today") or payload.get("planned_workout"))
+
+    current_day = _fi_build_day(d, planned_workout=payload.get("planned_workout") if training_today else None)
+    return jsonify({
+        "ok": True,
+        "version": "v0.0.13-dev-food-intel",
+        "engine": "heuristic_local",
+        "plan": _fimp_make_options(d, meal, available_foods, training_today, current_day),
+        "day_analysis": {
+            "score": current_day.get("analysis", {}).get("score"),
+            "semaphore": current_day.get("analysis", {}).get("semaphore"),
+            "confidence": current_day.get("confidence", {}),
+            "summary": current_day.get("summary", {}),
+        },
+    })
+
+# DPP_FOOD_INTEL_MEAL_PLAN_END
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))
