@@ -1246,7 +1246,13 @@ setInterval(dpp12Version, 1000);
       .replace(/energia/g,'energía')
       .replace(/manana/g,'mañana')
       .replace(/Opcion/g,'Opción')
-      .replace(/dia/g,'día')
+      .replace(/\bdia\b/g,'día')
+      .replace(/\bDia\b/g,'Día')
+      .replace(/medía/g,'media')
+      .replace(/atun/g,'atún')
+      .replace(/jamon/g,'jamón')
+      .replace(/platano/g,'plátano')
+      
       .replace(/m\?s/g,'más')
       .replace(/Mantún/g,'Mantén');
   }
