@@ -1245,3 +1245,108 @@ html[data-ui="ui5"] .fi13-suggestions ul{
 
 /* DPP_FI_SINGLE_HOME_COMPACT_NEXT_END */
 
+
+/* DPP_FI_HORIZONTAL_ACTION_ROW_START */
+
+/* La fila principal pasa a ser vertical:
+   1) Qué hacer ahora full width
+   2) Peso oficial full width */
+html[data-ui="ui5"] .fi13-main-grid{
+  grid-template-columns:1fr!important;
+  gap:12px!important;
+  align-items:start!important;
+}
+
+/* Panel de acción horizontal completo */
+html[data-ui="ui5"] .fi13-next{
+  display:grid!important;
+  grid-template-columns:minmax(260px,.9fr) minmax(280px,1.2fr) auto!important;
+  gap:14px!important;
+  align-items:center!important;
+  padding:16px 18px!important;
+}
+
+html[data-ui="ui5"] .fi13-next header{
+  margin:0!important;
+  display:block!important;
+}
+
+html[data-ui="ui5"] .fi13-next header > div{
+  min-width:0!important;
+}
+
+html[data-ui="ui5"] .fi13-next h3{
+  margin:0 0 4px!important;
+  font-size:20px!important;
+}
+
+html[data-ui="ui5"] .fi13-next header p{
+  margin:0!important;
+  font-size:13px!important;
+  color:#5b6f89!important;
+  font-weight:850!important;
+}
+
+/* Recomendaciones en horizontal tipo chip */
+html[data-ui="ui5"] .fi13-next > ul{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin:0!important;
+  padding:0!important;
+  list-style:none!important;
+  min-width:0!important;
+}
+
+html[data-ui="ui5"] .fi13-next > ul li{
+  display:inline-flex!important;
+  align-items:center!important;
+  padding:9px 12px!important;
+  border-radius:999px!important;
+  background:#eff6ff!important;
+  color:#1e3a8a!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  line-height:1.2!important;
+  max-width:100%!important;
+}
+
+/* Botón a la derecha */
+html[data-ui="ui5"] .fi13-next .btn.small{
+  justify-self:end!important;
+  white-space:nowrap!important;
+  padding:10px 14px!important;
+  border-radius:999px!important;
+}
+
+/* Si aparecen sugerencias, debajo a ancho completo */
+html[data-ui="ui5"] .fi13-next .fi13-suggestions{
+  grid-column:1 / -1!important;
+  margin-top:2px!important;
+}
+
+html[data-ui="ui5"] .fi13-next .fi13-suggestions article{
+  padding:10px!important;
+  border-radius:16px!important;
+}
+
+/* Gráfica ocupa toda la fila siguiente */
+html[data-ui="ui5"] .fi13-main-grid > .fi13-panel:not(.fi13-next){
+  width:100%!important;
+}
+
+/* Responsive */
+@media(max-width:1100px){
+  html[data-ui="ui5"] .fi13-next{
+    grid-template-columns:1fr!important;
+    align-items:start!important;
+  }
+
+  html[data-ui="ui5"] .fi13-next .btn.small{
+    justify-self:start!important;
+  }
+}
+
+/* DPP_FI_HORIZONTAL_ACTION_ROW_END */
+
