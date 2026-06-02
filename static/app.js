@@ -1442,3 +1442,236 @@ setInterval(dpp12Version, 1000);
 })();
 /* DPP_FOOD_INTEL_CARD_END */
 
+
+/* DPP_FOOD_INTEL_CARD_LATE_START */
+/* Late independent mount: survives later renderHome redefinitions. */
+(function(){
+  if(window.__DPP_FOOD_INTEL_LATE_MOUNT__) return;
+  window.__DPP_FOOD_INTEL_LATE_MOUNT__ = true;
+
+  const CARD_ID = 'dppFoodIntelCard';
+
+  function esc(v){
+    return String(v ?? '').replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function fmt(v, digits){
+    const n = Number(v || 0);
+    try{
+      return n.toLocaleString('es-ES', {maximumFractionDigits: digits ?? 0});
+    }catch(e){
+      return String(Math.round(n));
+    }
+  }
+
+  function clean(v){
+    return String(v ?? '')
+      .replace(/Buen dia/g, 'Buen d\u00eda')
+      .replace(/Proteina/g, 'Prote\u00edna')
+      .replace(/proteina/g, 'prote\u00edna')
+      .replace(/Energia/g, 'Energ\u00eda')
+      .replace(/energia/g, 'energ\u00eda')
+      .replace(/manana/g, 'ma\u00f1ana')
+      .replace(/Opcion/g, 'Opci\u00f3n')
+      .replace(/dia/g, 'd\u00eda');
+  }
+
+  function currentDate(){
+    try{
+      if(typeof day === 'function') return day();
+    }catch(e){}
+    return new Date().toISOString().slice(0,10);
+  }
+
+  function isHomeView(){
+    const view = document.querySelector('#view');
+    if(!view) return false;
+    const txt = view.innerText || '';
+    return (
+      txt.includes('Dashboard v0.0.12') ||
+      txt.includes('D\u00eda de hoy') ||
+      txt.includes('Día de hoy') ||
+      txt.includes('Peso hacia 80 kg') ||
+      txt.includes('Qu\u00e9 hacer hoy') ||
+      txt.includes('Qué hacer hoy')
+    );
+  }
+
+  async function getIntel(d){
+    const r = await fetch(`/api/food-intel/day?date=${encodeURIComponent(d)}`);
+    if(!r.ok) throw new Error('food-intel/day failed');
+    return await r.json();
+  }
+
+  async function getMealPlan(d){
+    const r = await fetch('/api/food-intel/meal-plan', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        date:d,
+        meal:'next',
+        available_foods:[],
+        training_today:false
+      })
+    });
+    if(!r.ok) throw new Error('food-intel/meal-plan failed');
+    return await r.json();
+  }
+
+  function ruleClass(rule){
+    if(!rule) return 'info';
+    if(rule.status === 'ok') return 'ok';
+    if(rule.status === 'watch') return 'watch';
+    return 'bad';
+  }
+
+  function cardHtml(data){
+    const a = data.analysis || {};
+    const summary = data.summary || {};
+    const conf = data.confidence || {};
+    const rules = a.rules || {};
+    const protein = rules.protein || {};
+    const energy = rules.energy || {};
+    const training = rules.training_alignment || {};
+    const salt = rules.salt || {};
+
+    return `
+      <section id="${CARD_ID}" class="dpp-fi-card ${esc(a.semaphore || 'green')}">
+        <div class="dpp-fi-head">
+          <div>
+            <span class="dpp-fi-kicker">Inteligencia del d\u00eda · v0.0.13-dev</span>
+            <h3>${esc(clean(a.label || 'An\u00e1lisis'))}</h3>
+            <p>${esc(clean(a.main_action || 'Analizando comida, deporte y confianza de datos.'))}</p>
+          </div>
+          <div class="dpp-fi-score">
+            <b>${a.score == null ? '--' : esc(a.score)}</b>
+            <small>score</small>
+          </div>
+        </div>
+
+        <div class="dpp-fi-grid">
+          <article class="${ruleClass(protein)}">
+            <span>Prote\u00edna</span>
+            <b>${fmt(summary.protein,1)} g</b>
+            <small>${esc(clean(protein.message || ''))}</small>
+          </article>
+          <article class="${ruleClass(energy)}">
+            <span>Energ\u00eda</span>
+            <b>${fmt(a.kcal_margin,0)} kcal</b>
+            <small>margen vs objetivo</small>
+          </article>
+          <article class="${ruleClass(training)}">
+            <span>Entreno</span>
+            <b>${esc(clean(training.status || 'info'))}</b>
+            <small>${esc(clean(training.message || ''))}</small>
+          </article>
+          <article class="${ruleClass(salt)}">
+            <span>Confianza</span>
+            <b>${esc(clean(conf.label || 'media'))}</b>
+            <small>${esc((conf.reasons || []).slice(0,1).join(' · ') || 'datos locales')}</small>
+          </article>
+        </div>
+
+        <div class="dpp-fi-actions">
+          <button class="btn small" id="dppFiSuggestBtn">Sugerir siguiente comida</button>
+          <small id="dppFiSuggestStatus">Motor local heur\u00edstico · sin enviar datos fuera</small>
+        </div>
+        <div id="dppFiSuggestions" class="dpp-fi-suggestions"></div>
+      </section>
+    `;
+  }
+
+  function suggestionsHtml(payload){
+    const options = (((payload || {}).plan || {}).options || []).slice(0,3);
+    if(!options.length){
+      return '<div class="dpp-fi-empty">No hay propuesta suficiente con los alimentos actuales.</div>';
+    }
+
+    return options.map(function(opt){
+      const totals = opt.totals || {};
+      const items = (opt.items || []).map(function(it){
+        return `<li>${esc(clean(it.food_name))} · ${fmt(it.grams,0)} g</li>`;
+      }).join('');
+
+      return `
+        <article>
+          <div>
+            <b>${esc(clean(opt.title || 'Opci\u00f3n'))}</b>
+            <small>${fmt(totals.kcal,0)} kcal · ${fmt(totals.protein,1)} g prote\u00edna · fit ${esc(opt.fit_score ?? '--')}</small>
+          </div>
+          <ul>${items}</ul>
+          <p>${esc(clean(opt.why || ''))}</p>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function bindSuggest(d){
+    const btn = document.querySelector('#dppFiSuggestBtn');
+    const status = document.querySelector('#dppFiSuggestStatus');
+    const box = document.querySelector('#dppFiSuggestions');
+
+    if(!btn || !box || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+
+    btn.addEventListener('click', async function(){
+      try{
+        btn.disabled = true;
+        if(status) status.textContent = 'Calculando opciones...';
+        const payload = await getMealPlan(d);
+        box.innerHTML = suggestionsHtml(payload);
+        if(status) status.textContent = 'Propuestas generadas por motor local';
+      }catch(e){
+        if(status) status.textContent = 'No pude generar sugerencias';
+      }finally{
+        btn.disabled = false;
+      }
+    });
+  }
+
+  async function mount(){
+    try{
+      if(!isHomeView()) return;
+      if(document.querySelector('#' + CARD_ID)) return;
+
+      const view = document.querySelector('#view');
+      if(!view) return;
+
+      const d = currentDate();
+      const data = await getIntel(d);
+
+      if(!isHomeView()) return;
+      if(document.querySelector('#' + CARD_ID)) return;
+
+      const datebar = view.querySelector('.datebar');
+      if(datebar){
+        datebar.insertAdjacentHTML('afterend', cardHtml(data));
+      }else{
+        view.insertAdjacentHTML('afterbegin', cardHtml(data));
+      }
+
+      bindSuggest(d);
+    }catch(e){}
+  }
+
+  let timer = null;
+  function schedule(){
+    clearTimeout(timer);
+    timer = setTimeout(mount, 120);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(mount, 300);
+    setTimeout(mount, 900);
+    setTimeout(mount, 1800);
+  });
+
+  const observer = new MutationObserver(schedule);
+  observer.observe(document.body, {childList:true, subtree:true});
+
+  setInterval(mount, 1200);
+})();
+/* DPP_FOOD_INTEL_CARD_LATE_END */
+
