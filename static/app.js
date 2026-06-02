@@ -1414,7 +1414,7 @@ setInterval(dpp12Version, 1000);
     try{
       const data = await fetchIntel(d);
       if(!canShow()) return;
-      if(document.querySelector('#' + CARD_ID)) return;
+      if(document.querySelector('#' + CARD_ID)) { hideLegacyDashboardHero(); return; }
       view.insertAdjacentHTML('afterbegin', renderCard(data));
       await attachSuggest(d);
     }catch(e){
@@ -1476,6 +1476,18 @@ setInterval(dpp12Version, 1000);
       .replace(/manana/g, 'ma\u00f1ana')
       .replace(/Opcion/g, 'Opci\u00f3n')
       .replace(/dia/g, 'd\u00eda');
+  }
+
+
+  function hideLegacyDashboardHero(){
+    const root = document.querySelector('#view');
+    const intel = document.querySelector('#dppFoodIntelCard');
+    if(!root || !intel) return;
+
+    const legacyHero = root.querySelector('.dpp-v012-hero');
+    if(legacyHero){
+      legacyHero.style.display = 'none';
+    }
   }
 
   function currentDate(){
@@ -1634,7 +1646,7 @@ setInterval(dpp12Version, 1000);
   async function mount(){
     try{
       if(!isHomeView()) return;
-      if(document.querySelector('#' + CARD_ID)) return;
+      if(document.querySelector('#' + CARD_ID)) { hideLegacyDashboardHero(); return; }
 
       const view = document.querySelector('#view');
       if(!view) return;
@@ -1643,7 +1655,7 @@ setInterval(dpp12Version, 1000);
       const data = await getIntel(d);
 
       if(!isHomeView()) return;
-      if(document.querySelector('#' + CARD_ID)) return;
+      if(document.querySelector('#' + CARD_ID)) { hideLegacyDashboardHero(); return; }
 
       const datebar = view.querySelector('.datebar');
       if(datebar){
@@ -1652,7 +1664,7 @@ setInterval(dpp12Version, 1000);
         view.insertAdjacentHTML('afterbegin', cardHtml(data));
       }
 
-      bindSuggest(d);
+      bindSuggest(d); hideLegacyDashboardHero();
     }catch(e){}
   }
 
