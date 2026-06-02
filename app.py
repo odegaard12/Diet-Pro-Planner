@@ -1898,7 +1898,7 @@ def api_v012_insights_today():
 
 @app.get("/health")
 def api_v012_health():
-    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.12"})
+    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.13"})
 # DPP_V012_INSIGHTS_END
 
 init_db()
@@ -1907,7 +1907,7 @@ start_strava_auto_thread()
 
 
 # DPP_FOOD_INTEL_CORE_START
-# v0.0.13-dev - Food Intelligence Core
+# v0.0.13 - Food Intelligence Core
 # Backend only. No UI changes.
 
 from flask import request, jsonify
@@ -2434,7 +2434,7 @@ def _fi_build_day(d, planned_workout=None):
     return {
         "ok": True,
         "date": d,
-        "version": "v0.0.13-dev-food-intel",
+        "version": "v0.0.13-food-intel",
         "summary": totals,
         "meals_count": len(meals),
         "items_count": len(items),
@@ -2472,7 +2472,7 @@ def api_food_intel_health():
     return jsonify({
         "ok": True,
         "module": "food-intelligence",
-        "version": "v0.0.13-dev",
+        "version": "v0.0.13",
         "endpoints": [
             "/api/food-intel/day",
             "/api/food-intel/meal-plan",
@@ -2486,7 +2486,7 @@ def api_food_intel_health():
 
 
 # DPP_FOOD_INTEL_MEAL_PLAN_START
-# v0.0.13-dev - Food Intelligence Meal Planner
+# v0.0.13 - Food Intelligence Meal Planner
 # Backend only. Uses local foods + day analysis. No UI changes.
 
 def _fimp_norm(v):
@@ -2729,7 +2729,7 @@ def api_food_intel_meal_plan():
     current_day = _fi_build_day(d, planned_workout=payload.get("planned_workout") if training_today else None)
     return jsonify({
         "ok": True,
-        "version": "v0.0.13-dev-food-intel",
+        "version": "v0.0.13-food-intel",
         "engine": "heuristic_local",
         "plan": _fimp_make_options(d, meal, available_foods, training_today, current_day),
         "day_analysis": {
