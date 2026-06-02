@@ -1904,5 +1904,569 @@ def api_v012_health():
 init_db()
 start_strava_auto_thread()
 
+
+
+# DPP_FOOD_INTEL_CORE_START
+# v0.0.13-dev - Food Intelligence Core
+# Backend only. No UI changes.
+
+from flask import request, jsonify
+from datetime import date as _fi_date
+import sqlite3 as _fi_sqlite3
+
+DPP_FOOD_INTEL_TARGETS = {
+    "protein_low_g": 120.0,
+    "protein_target_min_g": 130.0,
+    "protein_target_max_g": 150.0,
+    "kcal_base_target": 1900.0,
+    "sport_bonus_factor": 0.35,
+    "max_sport_bonus_kcal": 900.0,
+    "oil_normal_g": 5.0,
+    "oil_max_g": 10.0,
+    "oil_bad_g": 15.0,
+}
+
+def _fi_qident(name):
+    return '"' + str(name).replace('"', '""') + '"'
+
+def _fi_float(v, default=0.0):
+    try:
+        if v is None or v == "":
+            return default
+        return float(v)
+    except Exception:
+        return default
+
+def _fi_round(v, nd=1):
+    try:
+        return round(float(v), nd)
+    except Exception:
+        return 0
+
+def _fi_dicts(cur):
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+def _fi_cols(db, table):
+    try:
+        return [r[1] for r in db.execute(f"PRAGMA table_info({_fi_qident(table)})").fetchall()]
+    except Exception:
+        return []
+
+def _fi_has_table(db, table):
+    row = db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    ).fetchone()
+    return row is not None
+
+def _fi_clean_text(v):
+    return str(v or "").replace("prote?na", "proteína").replace("d?a", "día").replace("caf?", "café").replace("pl?tano", "plátano").replace("jam?n", "jamón").replace("at?n", "atún").replace("Estimaci?n", "Estimación").replace("peque?as", "pequeñas")
+
+def _fi_get_rows(db, table, where="", params=(), order=""):
+    if not _fi_has_table(db, table):
+        return []
+    sql = f"SELECT * FROM {_fi_qident(table)}"
+    if where:
+        sql += " WHERE " + where
+    if order:
+        sql += " ORDER BY " + order
+    return _fi_dicts(db.execute(sql, params))
+
+def _fi_find_food(db, item):
+    if not _fi_has_table(db, "foods"):
+        return None
+
+    food_cols = _fi_cols(db, "foods")
+    item_cols = set(item.keys())
+
+    if "food_id" in item_cols and item.get("food_id") and "id" in food_cols:
+        rows = _fi_get_rows(db, "foods", f"{_fi_qident('id')}=?", (item.get("food_id"),))
+        if rows:
+            return rows[0]
+
+    name = item.get("food_name") or item.get("name") or item.get("food") or ""
+    if name and "name" in food_cols:
+        rows = _fi_get_rows(db, "foods", f"{_fi_qident('name')}=?", (name,))
+        if rows:
+            return rows[0]
+
+        rows = _fi_get_rows(db, "foods", f"LOWER({_fi_qident('name')})=LOWER(?)", (name,))
+        if rows:
+            return rows[0]
+
+    return None
+
+def _fi_item_name(item, food):
+    return _fi_clean_text(
+        item.get("food_name")
+        or item.get("name")
+        or item.get("food")
+        or (food or {}).get("name")
+        or "Alimento"
+    )
+
+def _fi_item_grams(item, food):
+    for key in ["grams", "g", "quantity_g", "amount_g"]:
+        if key in item and item.get(key) not in (None, ""):
+            return _fi_float(item.get(key), 0.0)
+    if food and food.get("typical_g") not in (None, ""):
+        return _fi_float(food.get("typical_g"), 0.0)
+    return 0.0
+
+def _fi_macro_from_food(food, grams, macro):
+    if not food or macro not in food:
+        return 0.0
+    return _fi_float(food.get(macro), 0.0) * grams / 100.0
+
+def _fi_macro_from_item(item, macro):
+    if macro in item and item.get(macro) not in (None, ""):
+        return _fi_float(item.get(macro), 0.0)
+    return 0.0
+
+def _fi_item_macros(item, food, grams):
+    if food:
+        return {
+            "kcal": _fi_macro_from_food(food, grams, "kcal"),
+            "protein": _fi_macro_from_food(food, grams, "protein"),
+            "carbs": _fi_macro_from_food(food, grams, "carbs"),
+            "fat": _fi_macro_from_food(food, grams, "fat"),
+            "sugar": _fi_macro_from_food(food, grams, "sugar"),
+            "salt": _fi_macro_from_food(food, grams, "salt"),
+        }
+
+    return {
+        "kcal": _fi_macro_from_item(item, "kcal"),
+        "protein": _fi_macro_from_item(item, "protein"),
+        "carbs": _fi_macro_from_item(item, "carbs"),
+        "fat": _fi_macro_from_item(item, "fat"),
+        "sugar": _fi_macro_from_item(item, "sugar"),
+        "salt": _fi_macro_from_item(item, "salt"),
+    }
+
+def _fi_confidence(item, food, grams):
+    text = " ".join([
+        _fi_clean_text(_fi_item_name(item, food)).lower(),
+        _fi_clean_text((food or {}).get("brand", "")).lower(),
+        _fi_clean_text((food or {}).get("source_note", "")).lower(),
+        _fi_clean_text((food or {}).get("notes", "")).lower(),
+    ])
+
+    if "barcode" in text or "codigo" in text or "etiqueta" in text or "ocr" in text:
+        source = 0.90
+        source_label = "local_label_or_ocr"
+    elif any(x in text for x in ["estim", "casero", "mezclad", "gofre", "helado", "churrasco", "asador"]):
+        source = 0.55
+        source_label = "estimated_or_composite"
+    elif food:
+        source = 0.82
+        source_label = "local_food"
+    else:
+        source = 0.45
+        source_label = "manual_unknown"
+
+    quantity = 1.00 if grams > 0 else 0.50
+
+    completeness_fields = ["kcal", "protein", "carbs", "fat", "sugar", "salt"]
+    if food:
+        present = sum(1 for x in completeness_fields if food.get(x) not in (None, ""))
+    else:
+        present = sum(1 for x in completeness_fields if item.get(x) not in (None, ""))
+    completeness = 1.00 if present >= 6 else 0.85 if present >= 4 else 0.70
+
+    score = 0.55 * source + 0.30 * quantity + 0.15 * completeness
+
+    if score >= 0.90:
+        label = "exacta"
+    elif score >= 0.80:
+        label = "alta"
+    elif score >= 0.60:
+        label = "media"
+    else:
+        label = "baja"
+
+    return {
+        "score": round(score, 3),
+        "label": label,
+        "source_label": source_label,
+        "quantity_score": quantity,
+        "completeness_score": completeness,
+    }
+
+def _fi_day_meals(db, d):
+    meals = _fi_get_rows(db, "meals", f"{_fi_qident('date')}=?", (d,), "time ASC, id ASC")
+    if not meals:
+        return []
+
+    item_cols = _fi_cols(db, "meal_items")
+    has_items = _fi_has_table(db, "meal_items") and "meal_id" in item_cols
+
+    out = []
+    for m in meals:
+        meal_id = m.get("id")
+        items = _fi_get_rows(db, "meal_items", f"{_fi_qident('meal_id')}=?", (meal_id,), "id ASC") if has_items and meal_id is not None else []
+
+        item_out = []
+        totals = {"kcal": 0, "protein": 0, "carbs": 0, "fat": 0, "sugar": 0, "salt": 0}
+        oil_g = 0.0
+        flags = []
+
+        for it in items:
+            food = _fi_find_food(db, it)
+            grams = _fi_item_grams(it, food)
+            name = _fi_item_name(it, food)
+            macros = _fi_item_macros(it, food, grams)
+            conf = _fi_confidence(it, food, grams)
+
+            for k in totals:
+                totals[k] += macros.get(k, 0.0)
+
+            lower = name.lower()
+            if "aceite" in lower:
+                oil_g += grams
+
+            if any(x in lower for x in ["pepsi normal", "gofre", "helado", "galleta", "chocolate", "tirma", "piruleta"]):
+                flags.append("extra_or_sweet")
+
+            if conf["label"] in ("media", "baja"):
+                flags.append("estimated_or_low_confidence")
+
+            item_out.append({
+                "name": name,
+                "grams": _fi_round(grams, 1),
+                "macros": {k: _fi_round(v, 1) for k, v in macros.items()},
+                "confidence": conf,
+            })
+
+        out.append({
+            "id": meal_id,
+            "date": m.get("date"),
+            "time": m.get("time"),
+            "name": _fi_clean_text(m.get("name", "Comida")),
+            "notes": _fi_clean_text(m.get("notes", "")),
+            "items": item_out,
+            "totals": {k: _fi_round(v, 1) for k, v in totals.items()},
+            "oil_g": _fi_round(oil_g, 1),
+            "flags": sorted(set(flags)),
+        })
+
+    return out
+
+def _fi_day_workouts(db, d):
+    if not _fi_has_table(db, "workouts"):
+        return []
+    cols = _fi_cols(db, "workouts")
+    if "date" not in cols:
+        return []
+    return _fi_get_rows(db, "workouts", f"{_fi_qident('date')}=?", (d,), "time ASC, id ASC")
+
+def _fi_sum_day(meals):
+    totals = {"kcal": 0, "protein": 0, "carbs": 0, "fat": 0, "sugar": 0, "salt": 0}
+    oil_g = 0.0
+    items = []
+
+    for m in meals:
+        for k in totals:
+            totals[k] += _fi_float(m["totals"].get(k), 0.0)
+        oil_g += _fi_float(m.get("oil_g"), 0.0)
+        items.extend(m.get("items", []))
+
+    totals["oil_g"] = oil_g
+    return {k: _fi_round(v, 1) for k, v in totals.items()}, items
+
+def _fi_workout_totals(workouts):
+    kcal = 0.0
+    minutes = 0.0
+    count = len(workouts)
+
+    for w in workouts:
+        kcal += _fi_float(w.get("kcal") or w.get("calories") or w.get("energy"), 0.0)
+        minutes += _fi_float(w.get("minutes") or w.get("duration_min"), 0.0)
+
+    return {
+        "count": count,
+        "kcal": _fi_round(kcal, 1),
+        "minutes": _fi_round(minutes, 1),
+    }
+
+def _fi_confidence_day(items):
+    if not items:
+        return {"score": 0.0, "label": "sin_datos", "reasons": ["Sin alimentos registrados"]}
+
+    weighted = 0.0
+    kcal_total = 0.0
+    low = 0
+    estimated = 0
+
+    for it in items:
+        kcal = max(1.0, _fi_float(it.get("macros", {}).get("kcal"), 0.0))
+        conf = it.get("confidence", {})
+        weighted += kcal * _fi_float(conf.get("score"), 0.0)
+        kcal_total += kcal
+        if conf.get("label") in ("media", "baja"):
+            low += 1
+        if conf.get("source_label") == "estimated_or_composite":
+            estimated += 1
+
+    score = weighted / kcal_total if kcal_total else 0.0
+
+    if score >= 0.90:
+        label = "exacta"
+    elif score >= 0.80:
+        label = "alta"
+    elif score >= 0.60:
+        label = "media"
+    else:
+        label = "baja"
+
+    reasons = []
+    if estimated:
+        reasons.append(f"{estimated} alimentos estimados o compuestos")
+    if low:
+        reasons.append(f"{low} alimentos con confianza media/baja")
+    if not reasons:
+        reasons.append("Mayoria de alimentos trazables por gramos y macros")
+
+    return {"score": round(score, 3), "label": label, "reasons": reasons}
+
+def _fi_score_day(totals, meals, workouts, planned_workout=None):
+    targets = DPP_FOOD_INTEL_TARGETS
+    kcal = _fi_float(totals.get("kcal"), 0.0)
+    protein = _fi_float(totals.get("protein"), 0.0)
+    carbs = _fi_float(totals.get("carbs"), 0.0)
+    oil = _fi_float(totals.get("oil_g"), 0.0)
+    salt = _fi_float(totals.get("salt"), 0.0)
+    sugar = _fi_float(totals.get("sugar"), 0.0)
+
+    workout_totals = _fi_workout_totals(workouts)
+    training_today = workout_totals["count"] > 0 or bool(planned_workout)
+
+    if len(meals) < 2 or kcal < 600:
+        return {
+            "score": None,
+            "semaphore": "insufficient",
+            "label": "Base insuficiente",
+            "main_action": "Registra al menos 2 comidas o 600 kcal para analizar el dia.",
+            "rules": {},
+            "recommendations": ["Registra comida real antes de valorar si vas bien o mal."],
+            "kcal_target": targets["kcal_base_target"],
+            "kcal_margin": _fi_round(targets["kcal_base_target"] - kcal, 0),
+        }
+
+    sport_bonus = min(workout_totals["kcal"], targets["max_sport_bonus_kcal"]) * targets["sport_bonus_factor"]
+    if planned_workout and workout_totals["kcal"] == 0:
+        sport_bonus = max(sport_bonus, 150.0)
+
+    kcal_target = round(targets["kcal_base_target"] + sport_bonus)
+    kcal_margin = kcal_target - kcal
+
+    rules = {}
+
+    if protein <= 0:
+        p_score = 0
+    elif targets["protein_target_min_g"] <= protein <= 160:
+        p_score = 30
+    elif protein < targets["protein_target_min_g"]:
+        p_score = max(0, 30 * protein / targets["protein_target_min_g"])
+    else:
+        p_score = max(15, 30 - (protein - 160) * 0.20)
+
+    rules["protein"] = {
+        "score": round(p_score, 1),
+        "status": "ok" if p_score >= 27 else "watch" if p_score >= 20 else "bad",
+        "message": "Proteina en objetivo" if p_score >= 27 else "Falta proteina util",
+    }
+
+    if -450 <= kcal_margin <= 350:
+        e_score = 20
+    elif kcal_margin > 350:
+        e_score = max(0, 20 - ((kcal_margin - 350) / 40))
+    else:
+        e_score = max(0, 20 - ((abs(kcal_margin) - 450) / 40))
+
+    rules["energy"] = {
+        "score": round(e_score, 1),
+        "status": "ok" if e_score >= 16 else "watch" if e_score >= 10 else "bad",
+        "message": "Energia ajustada" if e_score >= 16 else "Energia a vigilar",
+        "target_kcal": kcal_target,
+        "margin_kcal": round(kcal_margin),
+    }
+
+    if training_today:
+        if protein >= 120 and carbs >= 140:
+            t_score = 15
+            t_msg = "Bien alineado con entreno"
+        elif protein >= 100 and carbs >= 90:
+            t_score = 10
+            t_msg = "Aceptable para entreno"
+        else:
+            t_score = 5
+            t_msg = "Entreno con combustible o recuperacion justos"
+    else:
+        t_score = 10
+        t_msg = "Dia sin entreno real registrado"
+
+    rules["training_alignment"] = {
+        "score": t_score,
+        "status": "ok" if t_score >= 10 else "watch",
+        "message": t_msg,
+    }
+
+    if oil <= 5:
+        o_score = 10
+    elif oil <= 10:
+        o_score = 7
+    elif oil <= 15:
+        o_score = 3
+    else:
+        o_score = 0
+
+    rules["oil"] = {
+        "score": o_score,
+        "status": "ok" if o_score >= 7 else "watch" if o_score >= 3 else "bad",
+        "message": "Aceite controlado" if o_score >= 7 else "Aceite alto",
+    }
+
+    text_blob = " ".join([
+        m.get("name", "") + " " + m.get("notes", "") + " " + " ".join([it.get("name", "") for it in m.get("items", [])])
+        for m in meals
+    ]).lower()
+
+    extra_hits = [x for x in ["pepsi normal", "gofre", "helado", "galleta", "chocolate", "tirma", "piruleta"] if x in text_blob]
+
+    if not extra_hits:
+        x_score = 10
+    elif len(extra_hits) == 1:
+        x_score = 7
+    else:
+        x_score = 3
+
+    rules["extras"] = {
+        "score": x_score,
+        "status": "ok" if x_score >= 7 else "watch" if x_score >= 4 else "bad",
+        "message": "Sin extras relevantes" if not extra_hits else "Extras detectados: " + ", ".join(extra_hits),
+        "hits": extra_hits,
+    }
+
+    if salt <= 4:
+        s_score = 5
+    elif salt <= 6:
+        s_score = 3
+    elif salt <= 8:
+        s_score = 1
+    else:
+        s_score = 0
+
+    rules["salt"] = {
+        "score": s_score,
+        "status": "ok" if s_score >= 5 else "watch" if s_score >= 1 else "bad",
+        "message": "Sal correcta" if s_score >= 5 else "Sal alta: posible retencion de agua",
+    }
+
+    fv_terms = ["platano", "plátano", "guisantes", "judia", "judía", "verdura", "patata", "manzana", "naranja", "champi"]
+    fv_hits = [x for x in fv_terms if x in text_blob]
+
+    if len(set(fv_hits)) >= 2:
+        f_score = 10
+    elif fv_hits:
+        f_score = 5
+    else:
+        f_score = 0
+
+    rules["fruit_veg_fiber"] = {
+        "score": f_score,
+        "status": "ok" if f_score >= 5 else "watch",
+        "message": "Fruta/verdura suficiente" if f_score >= 10 else "Fruta/verdura mejorable",
+    }
+
+    score = round(sum(_fi_float(v.get("score"), 0.0) for v in rules.values()))
+
+    if score >= 80:
+        sem = "green"
+        label = "Buen dia"
+    elif score >= 60:
+        sem = "yellow"
+        label = "Cuidado"
+    else:
+        sem = "red"
+        label = "Corregir"
+
+    recs = []
+    if protein < 130:
+        recs.append("Cierra con 20-30 g de proteina: merluza, huevo, jamon, atun, Alpro o yogur proteico.")
+    if kcal_margin > 450 and training_today:
+        recs.append("No recortes mas: respeta la comida post-entreno.")
+    if kcal_margin < -250:
+        recs.append("Cierre limpio: sin Pepsi normal, dulce ni aceite extra.")
+    if salt > 5:
+        recs.append("Bebe agua y no interpretes el peso de manana como grasa.")
+    if extra_hits:
+        recs.append("No anadas mas extras hoy: " + ", ".join(extra_hits) + ".")
+    if not recs:
+        recs.append("Mantén el plan actual; no anadas extras.")
+
+    return {
+        "score": score,
+        "semaphore": sem,
+        "label": label,
+        "main_action": recs[0],
+        "rules": rules,
+        "recommendations": recs,
+        "kcal_target": kcal_target,
+        "kcal_margin": round(kcal_margin),
+    }
+
+def _fi_build_day(d, planned_workout=None):
+    with con() as db:
+        meals = _fi_day_meals(db, d)
+        workouts = _fi_day_workouts(db, d)
+
+    totals, items = _fi_sum_day(meals)
+    confidence = _fi_confidence_day(items)
+    workout_totals = _fi_workout_totals(workouts)
+    score = _fi_score_day(totals, meals, workouts, planned_workout)
+
+    return {
+        "ok": True,
+        "date": d,
+        "version": "v0.0.13-dev-food-intel",
+        "summary": totals,
+        "meals_count": len(meals),
+        "items_count": len(items),
+        "workouts": workout_totals,
+        "confidence": confidence,
+        "analysis": score,
+        "meals": meals,
+    }
+
+@app.route("/api/food-intel/day", methods=["GET", "POST"])
+def api_food_intel_day():
+    payload = {}
+    if request.method == "POST":
+        try:
+            payload = request.get_json(silent=True) or {}
+        except Exception:
+            payload = {}
+
+    d = request.args.get("date") or payload.get("date") or _fi_date.today().isoformat()
+    planned_workout = payload.get("planned_workout")
+
+    return jsonify(_fi_build_day(d, planned_workout=planned_workout))
+
+@app.route("/api/food-intel/health")
+def api_food_intel_health():
+    return jsonify({
+        "ok": True,
+        "module": "food-intelligence",
+        "version": "v0.0.13-dev",
+        "endpoints": [
+            "/api/food-intel/day",
+            "/api/food-intel/health",
+        ],
+    })
+
+# DPP_FOOD_INTEL_CORE_END
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))
