@@ -1,0 +1,541 @@
+{
+  "db": "/home/odegaard12/Diet-Pro-Planner/data/dieta.db",
+  "tables": {
+    "exercises": {
+      "count": 9,
+      "columns": [
+        "id",
+        "name",
+        "met",
+        "kcal_per_min",
+        "notes"
+      ]
+    },
+    "foods": {
+      "count": 54,
+      "columns": [
+        "id",
+        "name",
+        "brand",
+        "kcal",
+        "protein",
+        "carbs",
+        "fat",
+        "sugar",
+        "salt",
+        "typical_g",
+        "purchased",
+        "source_note",
+        "notes",
+        "created_at",
+        "photo_path"
+      ]
+    },
+    "meal_items": {
+      "count": 99,
+      "columns": [
+        "id",
+        "meal_id",
+        "food_id",
+        "food_name",
+        "grams",
+        "kcal",
+        "protein",
+        "carbs",
+        "fat",
+        "sugar",
+        "salt"
+      ]
+    },
+    "meals": {
+      "count": 36,
+      "columns": [
+        "id",
+        "date",
+        "time",
+        "name",
+        "notes"
+      ]
+    },
+    "plans": {
+      "count": 3,
+      "columns": [
+        "id",
+        "name",
+        "payload",
+        "created_at"
+      ]
+    },
+    "sqlite_sequence": {
+      "count": 8,
+      "columns": [
+        "name",
+        "seq"
+      ]
+    },
+    "templates": {
+      "count": 16,
+      "columns": [
+        "id",
+        "name",
+        "notes",
+        "kind",
+        "payload"
+      ]
+    },
+    "weights": {
+      "count": 5,
+      "columns": [
+        "id",
+        "date",
+        "time",
+        "kg",
+        "official",
+        "context"
+      ]
+    },
+    "workouts": {
+      "count": 13,
+      "columns": [
+        "id",
+        "date",
+        "time",
+        "exercise_id",
+        "name",
+        "minutes",
+        "distance_km",
+        "kcal",
+        "notes"
+      ]
+    }
+  },
+  "foods": {
+    "exists": true,
+    "count": 54,
+    "columns": [
+      "id",
+      "name",
+      "brand",
+      "kcal",
+      "protein",
+      "carbs",
+      "fat",
+      "sugar",
+      "salt",
+      "typical_g",
+      "purchased",
+      "source_note",
+      "notes",
+      "created_at",
+      "photo_path"
+    ],
+    "missing_macro_samples": [],
+    "estimated_samples": [
+      {
+        "id": 6,
+        "name": "Jamón cocido extra ElPozo 85%",
+        "brand": "ElPozo",
+        "kcal": 105.0,
+        "protein": 18.5,
+        "carbs": 2.0,
+        "fat": 2.5,
+        "sugar": 1.0,
+        "salt": 1.8,
+        "typical_g": 80.0,
+        "purchased": 1,
+        "source_note": "Foto frontal: 85% carne, bajo en grasa. Valores estimados hasta ver etiqueta trasera completa.",
+        "notes": "Complemento rápido. Ración 70–90 g.",
+        "created_at": "2026-05-27 12:38:10",
+        "photo_path": ""
+      },
+      {
+        "id": 19,
+        "name": "Patata + guisantes guisados",
+        "brand": "Preparación casera",
+        "kcal": 80.0,
+        "protein": 3.0,
+        "carbs": 15.0,
+        "fat": 0.5,
+        "sugar": 1.5,
+        "salt": 0.2,
+        "typical_g": 300.0,
+        "purchased": 1,
+        "source_note": "Estimado; registrar aceite aparte si lo lleva.",
+        "notes": "Restos. Si lleva aceite, añade aceite separado.",
+        "created_at": "2026-05-27 12:38:10",
+        "photo_path": ""
+      },
+      {
+        "id": 20,
+        "name": "Lentejas guisadas",
+        "brand": "Casa",
+        "kcal": 125.0,
+        "protein": 7.1,
+        "carbs": 18.0,
+        "fat": 2.5,
+        "sugar": 2.0,
+        "salt": 0.4,
+        "typical_g": 300.0,
+        "purchased": 1,
+        "source_note": "Estimación; si tienen chorizo, registrar chorizo aparte.",
+        "notes": "300–350 g, sin pan ni repetir.",
+        "created_at": "2026-05-27 12:38:10",
+        "photo_path": ""
+      },
+      {
+        "id": 417,
+        "name": "Barrita Tirma estimada",
+        "brand": "Tirma",
+        "kcal": 520.0,
+        "protein": 6.0,
+        "carbs": 62.0,
+        "fat": 29.0,
+        "sugar": 48.0,
+        "salt": 0.25,
+        "typical_g": 21.0,
+        "purchased": 1,
+        "source_note": "Estimación provisional hasta meter etiqueta real.",
+        "notes": "Registro estimado; ajustar etiqueta si hace falta.",
+        "created_at": "2026-05-28 13:04:51",
+        "photo_path": ""
+      },
+      {
+        "id": 471,
+        "name": "Judia verde plana Eliges",
+        "brand": "Eliges",
+        "kcal": 44.0,
+        "protein": 2.0,
+        "carbs": 7.0,
+        "fat": 0.2,
+        "sugar": 2.2,
+        "salt": 0.03,
+        "typical_g": 250.0,
+        "purchased": 1,
+        "source_note": "Bolsa: 250 g = 110 kcal.",
+        "notes": "Valor desde etiqueta/foto o estimación.",
+        "created_at": "2026-05-29 07:52:15",
+        "photo_path": ""
+      },
+      {
+        "id": 473,
+        "name": "Jamon cocido extra etiqueta",
+        "brand": "Eroski/extra",
+        "kcal": 98.0,
+        "protein": 18.5,
+        "carbs": 0.3,
+        "fat": 2.5,
+        "sugar": 0.3,
+        "salt": 1.9,
+        "typical_g": 80.0,
+        "purchased": 1,
+        "source_note": "Etiqueta: 98 kcal y 18.5 g proteína por 100 g.",
+        "notes": "Valor desde etiqueta/foto o estimación.",
+        "created_at": "2026-05-29 07:52:15",
+        "photo_path": ""
+      },
+      {
+        "id": 474,
+        "name": "Queso Larsa clasico cremoso",
+        "brand": "Larsa",
+        "kcal": 352.0,
+        "protein": 24.0,
+        "carbs": 1.0,
+        "fat": 28.0,
+        "sugar": 1.0,
+        "salt": 1.5,
+        "typical_g": 10.0,
+        "purchased": 1,
+        "source_note": "Etiqueta: 352 kcal/100 g.",
+        "notes": "Valor desde etiqueta/foto o estimación.",
+        "created_at": "2026-05-29 07:52:15",
+        "photo_path": ""
+      },
+      {
+        "id": 475,
+        "name": "Chocolate onzas estimado",
+        "brand": "Estimado",
+        "kcal": 550.0,
+        "protein": 6.0,
+        "carbs": 55.0,
+        "fat": 34.0,
+        "sugar": 50.0,
+        "salt": 0.05,
+        "typical_g": 20.0,
+        "purchased": 1,
+        "source_note": "4 onzas estimadas como 20 g.",
+        "notes": "Snack dulce estimado.",
+        "created_at": "2026-05-29 07:52:15",
+        "photo_path": ""
+      },
+      {
+        "id": 476,
+        "name": "Piruleta estimada",
+        "brand": "Estimado",
+        "kcal": 390.0,
+        "protein": 0.0,
+        "carbs": 98.0,
+        "fat": 0.0,
+        "sugar": 90.0,
+        "salt": 0.0,
+        "typical_g": 10.0,
+        "purchased": 1,
+        "source_note": "Piruleta pequeña estimada 10 g.",
+        "notes": "Snack puntual.",
+        "created_at": "2026-05-29 07:52:15",
+        "photo_path": ""
+      },
+      {
+        "id": 477,
+        "name": "Galletas peque?as con chocolate estimadas",
+        "brand": "Estimado",
+        "kcal": 480.0,
+        "protein": 6.0,
+        "carbs": 65.0,
+        "fat": 22.0,
+        "sugar": 32.0,
+        "salt": 0.5,
+        "typical_g": 18.0,
+        "purchased": 1,
+        "source_note": "3 galletas peque?as estimadas 18 g.",
+        "notes": "Valor desde etiqueta/foto o estimación.",
+        "created_at": "2026-05-29 07:52:15",
+        "photo_path": ""
+      }
+    ]
+  },
+  "daily": {
+    "meals": {
+      "exists": true,
+      "count": 36,
+      "columns": [
+        "id",
+        "date",
+        "time",
+        "name",
+        "notes"
+      ],
+      "last_14_days": 36,
+      "recent_samples": [
+        {
+          "id": 54,
+          "date": "2026-06-02",
+          "time": "21:30",
+          "name": "Cena",
+          "notes": "PLAN_0206_CENA_V1 - Post-entreno: pasta mezclada y batido Alpro."
+        },
+        {
+          "id": 53,
+          "date": "2026-06-02",
+          "time": "17:45",
+          "name": "Merienda",
+          "notes": "PLAN_0206_MERIENDA_V1 - Pre-entreno: platano y gelatina 0."
+        },
+        {
+          "id": 52,
+          "date": "2026-06-02",
+          "time": "14:30",
+          "name": "Comida",
+          "notes": "PLAN_0206_COMIDA_V1 - Merluza con patata, guisantes y aceite medido."
+        },
+        {
+          "id": 51,
+          "date": "2026-06-02",
+          "time": "09:15",
+          "name": "Desayuno",
+          "notes": "PLAN_0206_DESAYUNO_V1 - Tostada de jamon cocido y huevo."
+        },
+        {
+          "id": 50,
+          "date": "2026-06-01",
+          "time": "21:00",
+          "name": "Postre",
+          "notes": "Medio gofre Desseo con media bola de helado. Estimacion realista."
+        }
+      ]
+    },
+    "workouts": {
+      "exists": true,
+      "count": 13,
+      "columns": [
+        "id",
+        "date",
+        "time",
+        "exercise_id",
+        "name",
+        "minutes",
+        "distance_km",
+        "kcal",
+        "notes"
+      ],
+      "last_14_days": 13,
+      "recent_samples": [
+        {
+          "id": 28,
+          "date": "2026-06-01",
+          "time": "20:33",
+          "exercise_id": null,
+          "name": "Walk",
+          "minutes": 55.5,
+          "distance_km": 3.85,
+          "kcal": 362.0,
+          "notes": "Strava · Caminata de noche · id=18747698949"
+        },
+        {
+          "id": 23,
+          "date": "2026-05-30",
+          "time": "09:46",
+          "exercise_id": null,
+          "name": "Walk",
+          "minutes": 56.5,
+          "distance_km": 3.62,
+          "kcal": 532.0,
+          "notes": "Strava · Desfile Fuerzas Armadas Vigo - 1 · id=18721680318"
+        },
+        {
+          "id": 22,
+          "date": "2026-05-30",
+          "time": "14:04",
+          "exercise_id": null,
+          "name": "Walk",
+          "minutes": 41.9,
+          "distance_km": 2.71,
+          "kcal": 233.0,
+          "notes": "Strava · Desfile Fuerzas Armadas Vigo - 2 · id=18721679864"
+        },
+        {
+          "id": 21,
+          "date": "2026-05-31",
+          "time": "11:08",
+          "exercise_id": null,
+          "name": "Workout",
+          "minutes": 83.4,
+          "distance_km": 0.0,
+          "kcal": 991.0,
+          "notes": "Strava · Pádel · id=18727077385"
+        },
+        {
+          "id": 20,
+          "date": "2026-05-31",
+          "time": "14:06",
+          "exercise_id": null,
+          "name": "Ride",
+          "minutes": 33.0,
+          "distance_km": 10.11,
+          "kcal": 505.0,
+          "notes": "Strava · Bici montaña · id=18729631723"
+        }
+      ]
+    },
+    "weights": {
+      "exists": true,
+      "count": 5,
+      "columns": [
+        "id",
+        "date",
+        "time",
+        "kg",
+        "official",
+        "context"
+      ],
+      "last_14_days": 5,
+      "recent_samples": [
+        {
+          "id": 20,
+          "date": "2026-06-02",
+          "time": "08:00",
+          "kg": 84.55,
+          "official": 1,
+          "context": "mañana al levantarme"
+        },
+        {
+          "id": 19,
+          "date": "2026-06-01",
+          "time": "09:00",
+          "kg": 84.3,
+          "official": 1,
+          "context": "ayunas, mañana, peso oficial"
+        },
+        {
+          "id": 18,
+          "date": "2026-05-29",
+          "time": "09:03",
+          "kg": 84.8,
+          "official": 1,
+          "context": ""
+        },
+        {
+          "id": 17,
+          "date": "2026-05-28",
+          "time": "08:22",
+          "kg": 85.6,
+          "official": 1,
+          "context": ""
+        },
+        {
+          "id": 12,
+          "date": "2026-05-27",
+          "time": "09:15",
+          "kg": 86.7,
+          "official": 1,
+          "context": "miércoles mañana, después baño, peso oficial inicial"
+        }
+      ]
+    }
+  },
+  "broken_text_samples": [
+    {
+      "table": "foods",
+      "column": "name",
+      "rowid": 477,
+      "value": "Galletas peque?as con chocolate estimadas"
+    },
+    {
+      "table": "foods",
+      "column": "source_note",
+      "rowid": 477,
+      "value": "3 galletas peque?as estimadas 18 g."
+    },
+    {
+      "table": "foods",
+      "column": "source_note",
+      "rowid": 836,
+      "value": "Estimaci?n churrasco/asador."
+    },
+    {
+      "table": "foods",
+      "column": "source_note",
+      "rowid": 837,
+      "value": "Patatas de comida libre; estimaci?n."
+    },
+    {
+      "table": "foods",
+      "column": "notes",
+      "rowid": 836,
+      "value": "Estimaci?n churrasco/asador."
+    },
+    {
+      "table": "foods",
+      "column": "notes",
+      "rowid": 837,
+      "value": "Patatas de comida libre; estimaci?n."
+    },
+    {
+      "table": "meal_items",
+      "column": "food_name",
+      "rowid": 100,
+      "value": "Galletas peque?as con chocolate estimadas"
+    },
+    {
+      "table": "meals",
+      "column": "notes",
+      "rowid": 37,
+      "value": "3 galletas peque?as con algo de chocolate."
+    },
+    {
+      "table": "meals",
+      "column": "notes",
+      "rowid": 42,
+      "value": "Churrasco con patatas hasta quedar lleno. Estimaci?n generosa."
+    }
+  ]
+}
