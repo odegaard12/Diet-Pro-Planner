@@ -1217,3 +1217,290 @@ window.renderHome = renderHome;
 setInterval(dpp12Version, 1000);
 /* DPP_V012_SCORE_HOME_END */
 
+
+/* DPP_FI_SINGLE_HOME_START */
+/* v0.0.13-dev · Single premium home powered by Food Intelligence. */
+
+(function(){
+  if(window.__DPP_FI_SINGLE_HOME__) return;
+  window.__DPP_FI_SINGLE_HOME__ = true;
+
+  function fiEsc(v){
+    return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function fiFmt(v, digits=1){
+    try{
+      return Number(v || 0).toLocaleString('es-ES', {maximumFractionDigits:digits});
+    }catch(e){
+      return String(v ?? '');
+    }
+  }
+
+  function fiClean(v){
+    return String(v ?? '')
+      .replace(/Buen dia/g,'Buen día')
+      .replace(/Proteina/g,'Proteína')
+      .replace(/proteina/g,'proteína')
+      .replace(/Energia/g,'Energía')
+      .replace(/energia/g,'energía')
+      .replace(/manana/g,'mañana')
+      .replace(/Opcion/g,'Opción')
+      .replace(/\bdia\b/g,'día')
+      .replace(/\bDia\b/g,'Día')
+      .replace(/medía/g,'media')
+      .replace(/atun/g,'atún')
+      .replace(/jamon/g,'jamón')
+      .replace(/platano/g,'plátano')
+      
+      .replace(/m\?s/g,'más')
+      .replace(/Mantún/g,'Mantén');
+  }
+
+  async function fiApi(path, opts){
+    const r = await fetch(path, opts || {});
+    if(!r.ok) throw new Error('Error cargando inteligencia');
+    return await r.json();
+  }
+
+  async function fiDay(d){
+    return fiApi(`/api/food-intel/day?date=${encodeURIComponent(d)}`);
+  }
+
+  async function fiMealPlan(d){
+    return fiApi('/api/food-intel/meal-plan', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        date:d,
+        meal:'next',
+        training_today:false,
+        available_foods:[]
+      })
+    });
+  }
+
+  function fiLatestWeight(){
+    try{return latestWeight();}catch(e){return null;}
+  }
+
+  function fiWeightBlock(){
+    const lw = fiLatestWeight();
+    const goal = 80;
+    const current = Number(lw?.kg || 0);
+    const start = 86.7;
+    const lost = Math.max(0, start - current);
+    const remaining = Math.max(0, current - goal);
+    const pct = Math.max(0, Math.min(100, lost / Math.max(.1, start - goal) * 100));
+
+    if(!lw){
+      return `
+        <section class="fi13-weight">
+          <div><span>Peso hacia 80 kg</span><b>Sin dato</b><small>Registra peso oficial</small></div>
+        </section>`;
+    }
+
+    return `
+      <section class="fi13-weight">
+        <div class="fi13-weight-main">
+          <span>Peso hacia 80 kg</span>
+          <b>${fiFmt(current,2)} kg</b>
+          <small>${fiEsc(lw.date || '')} · ${lw.official ? 'oficial' : 'referencia'}</small>
+        </div>
+        <div class="fi13-weight-progress">
+          <i><em style="width:${pct}%"></em></i>
+          <div>
+            <span><b>${fiFmt(lost,1)}</b><small>kg perdidos</small></span>
+            <span><b>${fiFmt(remaining,1)}</b><small>kg restantes</small></span>
+            <span><b>${goal}</b><small>objetivo</small></span>
+          </div>
+        </div>
+      </section>`;
+  }
+
+  function fiMetric(label, value, sub, tone){
+    return `
+      <article class="fi13-metric ${tone || 'ok'}">
+        <span>${fiEsc(label)}</span>
+        <b>${fiEsc(value)}</b>
+        <small>${fiEsc(fiClean(sub || ''))}</small>
+      </article>`;
+  }
+
+  function fiRecommendations(data){
+    const recs = ((data.analysis || {}).recommendations || []).slice(0,3);
+    if(!recs.length) return '<li>Sin alertas relevantes.</li>';
+    return recs.map(x => `<li>${fiEsc(fiClean(x))}</li>`).join('');
+  }
+
+  function fiMealSummary(){
+    const meals = byDate(state.meals);
+    const workouts = byDate(state.workouts);
+    const mt = mealTotals(meals);
+    const sport = workoutTotals(workouts);
+
+    return `
+      <section class="fi13-lower-grid">
+        <article class="card fi13-panel">
+          <header>
+            <div>
+              <h3>Comidas registradas</h3>
+              <p>${fiFmt(mt.kcal,1)} kcal · ${fiFmt(mt.protein,1)} g proteína</p>
+            </div>
+            <button class="btn small" onclick="go('register')">+ Comida</button>
+          </header>
+          <div class="compact-list">${meals.length ? meals.map(mealCardCompact).join('') : '<div class="empty">Sin comidas.</div>'}</div>
+        </article>
+
+        <article class="card fi13-panel">
+          <header>
+            <div>
+              <h3>Actividad</h3>
+              <p>${fiFmt(sport,1)} kcal</p>
+            </div>
+            <button class="btn small" onclick="go('sport')">+ Entreno</button>
+          </header>
+          <div class="compact-list">${workouts.length ? workouts.map(workoutCardCompact).join('') : '<div class="empty">Sin entrenos para este día.</div>'}</div>
+        </article>
+      </section>`;
+  }
+
+  function fiSuggestionsHtml(payload){
+    const opts = (((payload || {}).plan || {}).options || []).slice(0,3);
+    if(!opts.length) return '<div class="empty">No hay sugerencias suficientes.</div>';
+
+    return opts.map(opt => {
+      const t = opt.totals || {};
+      const items = (opt.items || []).map(it => `<li>${fiEsc(fiClean(it.food_name))} · ${fiFmt(it.grams,0)} g</li>`).join('');
+      return `
+        <article>
+          <div>
+            <b>${fiEsc(fiClean(opt.title || 'Opción'))}</b>
+            <small>${fiFmt(t.kcal,0)} kcal · ${fiFmt(t.protein,1)} g proteína · fit ${fiEsc(opt.fit_score ?? '--')}</small>
+          </div>
+          <ul>${items}</ul>
+          <p>${fiEsc(fiClean(opt.why || ''))}</p>
+        </article>`;
+    }).join('');
+  }
+
+  function fiHomeHtml(data){
+    const a = data.analysis || {};
+    const rules = a.rules || {};
+    const summary = data.summary || {};
+    const conf = data.confidence || {};
+    const meals = byDate(state.meals);
+    const workouts = byDate(state.workouts);
+
+    const protein = rules.protein || {};
+    const energy = rules.energy || {};
+    const oil = rules.oil || {};
+    const activity = rules.training_alignment || {};
+    const salt = rules.salt || {};
+
+    return `
+      ${dateBar()}
+
+      <section class="fi13-hero ${fiEsc(a.semaphore || 'green')}">
+        <div>
+          <span class="fi13-kicker">Inteligencia del día · v0.0.13-dev</span>
+          <h2>${fiEsc(fiClean(a.label || 'Análisis'))}</h2>
+          <p>${fiEsc(fiClean(a.main_action || 'Analizando día.'))}</p>
+          <div class="fi13-hero-tags">
+            <span>Confianza ${fiEsc(fiClean(conf.label || 'media'))}</span>
+            <span>${fiEsc((conf.reasons || []).slice(0,1).join(' · ') || 'datos locales')}</span>
+          </div>
+        </div>
+        <div class="fi13-score">
+          <b>${a.score == null ? '--' : fiEsc(a.score)}</b>
+          <small>score</small>
+        </div>
+      </section>
+
+      ${fiWeightBlock()}
+
+      <section class="fi13-metrics">
+        ${fiMetric('Proteína', `${fiFmt(summary.protein,1)} g`, protein.message || 'objetivo 130-150 g', protein.status === 'ok' ? 'ok' : 'watch')}
+        ${fiMetric('Energía', `${fiFmt(a.kcal_margin,0)} kcal`, 'margen vs objetivo', energy.status === 'ok' ? 'ok' : 'watch')}
+        ${fiMetric('Aceite', `${fiFmt(summary.oil_g,1)} g`, oil.message || 'aceite medido', oil.status === 'ok' ? 'ok' : 'watch')}
+        ${fiMetric('Entreno', `${fiFmt((data.workouts || {}).kcal,0)} kcal`, activity.message || 'sin entreno', activity.status === 'ok' ? 'ok' : 'watch')}
+      </section>
+
+      <section class="fi13-main-grid">
+        <article class="card fi13-panel fi13-next">
+          <header>
+            <div>
+              <h3>Qué hacer ahora</h3>
+              <p>${meals.length} comidas · ${workouts.length} entrenos · sal ${salt.status === 'watch' ? 'a vigilar' : 'ok'}</p>
+            </div>
+            <button id="fi13SuggestBtn" class="btn small">Sugerir comida</button>
+          </header>
+          <ul>${fiRecommendations(data)}</ul>
+          <div id="fi13Suggestions" class="fi13-suggestions"></div>
+        </article>
+
+        <article class="card fi13-panel">
+          <header><div><h3>Peso oficial</h3><p>Lecturas recientes</p></div></header>
+          ${weightChart()}
+        </article>
+      </section>
+
+      ${fiMealSummary()}
+
+      <div class="footer-space"></div>`;
+  }
+
+  async function fiRenderHome(){
+    document.body.classList.add('fi13-home');
+    const d = day();
+
+    $('#view').innerHTML = `
+      ${dateBar()}
+      <section class="card fi13-loading">
+        <h3>Cargando inteligencia del día.</h3>
+        <p class="muted">Calculando comida, peso, deporte, confianza y recomendaciones.</p>
+      </section>`;
+
+    try{
+      const data = await fiDay(d);
+      if(day() !== d) return;
+      $('#view').innerHTML = fiHomeHtml(data);
+
+      const btn = document.querySelector('#fi13SuggestBtn');
+      if(btn){
+        btn.onclick = async function(){
+          const box = document.querySelector('#fi13Suggestions');
+          btn.disabled = true;
+          btn.textContent = 'Calculando...';
+          try{
+            const payload = await fiMealPlan(d);
+            if(box) box.innerHTML = fiSuggestionsHtml(payload);
+          }catch(e){
+            if(box) box.innerHTML = '<div class="empty">No pude generar sugerencias.</div>';
+          }finally{
+            btn.disabled = false;
+            btn.textContent = 'Sugerir comida';
+          }
+        };
+      }
+    }catch(e){
+      $('#view').innerHTML = `
+        ${dateBar()}
+        <section class="card note-box">
+          <h3>No pude cargar Food Intelligence</h3>
+          <p>${fiEsc(e.message || 'Error')}</p>
+        </section>`;
+    }
+  }
+
+  renderHome = fiRenderHome;
+  window.renderHome = fiRenderHome;
+
+  const prevRender = window.render || render;
+  window.render = function(){
+    document.body.classList.toggle('fi13-home', page === 'home');
+    return prevRender();
+  };
+})();
+/* DPP_FI_SINGLE_HOME_END */
+

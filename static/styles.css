@@ -710,3 +710,643 @@ html[data-ui="ui5"] .dpp12-records{
 }
 /* DPP_V012_SCORE_HOME_CSS_END */
 
+
+/* DPP_FOOD_INTEL_CARD_CSS_START */
+
+html[data-ui="ui5"] .dpp-fi-card{
+  margin:0 0 14px;
+  padding:16px;
+  border-radius:28px;
+  background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(239,246,255,.95));
+  border:1px solid rgba(255,255,255,.96);
+  box-shadow:0 16px 44px rgba(15,38,70,.10);
+}
+
+html[data-ui="ui5"] .dpp-fi-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 86px;
+  gap:12px;
+  align-items:center;
+}
+
+html[data-ui="ui5"] .dpp-fi-kicker{
+  display:inline-flex;
+  padding:6px 9px;
+  border-radius:999px;
+  background:#eff6ff;
+  color:#1d4ed8;
+  font-size:10px;
+  font-weight:1000;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+html[data-ui="ui5"] .dpp-fi-card h3{
+  margin:9px 0 4px;
+  color:#0b1726;
+  font-size:24px;
+  line-height:1;
+  letter-spacing:-.04em;
+}
+
+html[data-ui="ui5"] .dpp-fi-card p{
+  margin:0;
+  color:#53677f;
+  font-weight:850;
+  line-height:1.35;
+}
+
+html[data-ui="ui5"] .dpp-fi-score{
+  display:grid;
+  place-items:center;
+  text-align:center;
+  width:82px;
+  height:82px;
+  border-radius:24px;
+  background:#0f62fe;
+  color:white;
+}
+
+html[data-ui="ui5"] .dpp-fi-score b{
+  color:white;
+  font-size:32px;
+  line-height:1;
+}
+
+html[data-ui="ui5"] .dpp-fi-score small{
+  color:rgba(255,255,255,.78);
+  font-weight:950;
+}
+
+html[data-ui="ui5"] .dpp-fi-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin-top:12px;
+}
+
+html[data-ui="ui5"] .dpp-fi-grid article{
+  display:grid;
+  gap:3px;
+  padding:10px;
+  border-radius:18px;
+  background:#fff;
+  border:1px solid rgba(31,60,90,.08);
+  min-width:0;
+}
+
+html[data-ui="ui5"] .dpp-fi-grid article.ok{background:#ecfdf5}
+html[data-ui="ui5"] .dpp-fi-grid article.watch{background:#fffbeb}
+html[data-ui="ui5"] .dpp-fi-grid article.bad{background:#fef2f2}
+
+html[data-ui="ui5"] .dpp-fi-grid span{
+  color:#2563eb;
+  font-size:11px;
+  font-weight:1000;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+html[data-ui="ui5"] .dpp-fi-grid b{
+  color:#0b1726;
+  font-size:19px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+html[data-ui="ui5"] .dpp-fi-grid small{
+  color:#53677f;
+  font-size:11px;
+  font-weight:850;
+  line-height:1.25;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+html[data-ui="ui5"] .dpp-fi-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:12px;
+}
+
+html[data-ui="ui5"] .dpp-fi-actions small{
+  color:#53677f;
+  font-weight:850;
+}
+
+html[data-ui="ui5"] .dpp-fi-suggestions{
+  display:grid;
+  gap:8px;
+  margin-top:10px;
+}
+
+html[data-ui="ui5"] .dpp-fi-suggestions article{
+  padding:10px;
+  border-radius:18px;
+  background:#f8fbff;
+  border:1px solid rgba(31,60,90,.08);
+}
+
+html[data-ui="ui5"] .dpp-fi-suggestions b{
+  color:#0b1726;
+}
+
+html[data-ui="ui5"] .dpp-fi-suggestions small,
+html[data-ui="ui5"] .dpp-fi-suggestions p,
+html[data-ui="ui5"] .dpp-fi-suggestions li,
+html[data-ui="ui5"] .dpp-fi-empty{
+  color:#53677f;
+  font-weight:800;
+}
+
+html[data-ui="ui5"] .dpp-fi-suggestions ul{
+  margin:7px 0;
+  padding-left:18px;
+}
+
+@media(max-width:980px){
+  html[data-ui="ui5"] .dpp-fi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:640px){
+  html[data-ui="ui5"] .dpp-fi-head,
+  html[data-ui="ui5"] .dpp-fi-grid{grid-template-columns:1fr}
+  html[data-ui="ui5"] .dpp-fi-score{width:100%;height:auto;min-height:72px}
+  html[data-ui="ui5"] .dpp-fi-actions{align-items:flex-start;flex-direction:column}
+}
+
+/* DPP_FOOD_INTEL_CARD_CSS_END */
+
+
+/* DPP_FI_SINGLE_HOME_CSS_START */
+
+html[data-ui="ui5"] body.fi13-home .rule-banner,
+html[data-ui="ui5"] body.fi13-home .global-cta{
+  display:none!important;
+}
+
+html[data-ui="ui5"] .fi13-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 118px;
+  gap:18px;
+  align-items:center;
+  padding:22px;
+  margin-bottom:14px;
+  border-radius:34px;
+  color:#fff;
+  background:radial-gradient(circle at 85% 0%,rgba(34,197,94,.32),transparent 34%),linear-gradient(135deg,#113b78,#2563eb 62%,#0ea5e9);
+  box-shadow:0 24px 70px rgba(15,38,70,.16);
+}
+
+html[data-ui="ui5"] .fi13-hero.yellow,
+html[data-ui="ui5"] .fi13-hero.insufficient{
+  background:radial-gradient(circle at 85% 0%,rgba(245,158,11,.34),transparent 34%),linear-gradient(135deg,#102a56,#2563eb 58%,#f59e0b);
+}
+
+html[data-ui="ui5"] .fi13-kicker{
+  display:inline-flex;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.14);
+  color:#dbeafe;
+  font-size:10px;
+  font-weight:1000;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+html[data-ui="ui5"] .fi13-hero h2{
+  margin:12px 0 6px;
+  color:#fff;
+  font-size:42px;
+  line-height:1;
+  letter-spacing:-.055em;
+}
+
+html[data-ui="ui5"] .fi13-hero p{
+  margin:0;
+  max-width:760px;
+  color:rgba(255,255,255,.88);
+  font-size:17px;
+  font-weight:900;
+  line-height:1.35;
+}
+
+html[data-ui="ui5"] .fi13-hero-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+
+html[data-ui="ui5"] .fi13-hero-tags span{
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.14);
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+}
+
+html[data-ui="ui5"] .fi13-score{
+  display:grid;
+  place-items:center;
+  text-align:center;
+  min-height:112px;
+  border-radius:28px;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.25);
+}
+
+html[data-ui="ui5"] .fi13-score b{
+  color:#fff;
+  font-size:42px;
+  line-height:1;
+}
+
+html[data-ui="ui5"] .fi13-score small{
+  color:rgba(255,255,255,.8);
+  font-weight:950;
+}
+
+html[data-ui="ui5"] .fi13-weight{
+  display:grid;
+  grid-template-columns:260px minmax(0,1fr);
+  gap:14px;
+  align-items:center;
+  margin-bottom:12px;
+  padding:16px;
+  border-radius:28px;
+  background:rgba(255,255,255,.94);
+  border:1px solid rgba(255,255,255,.96);
+  box-shadow:0 14px 38px rgba(15,38,70,.08);
+}
+
+html[data-ui="ui5"] .fi13-weight-main span,
+html[data-ui="ui5"] .fi13-metric span{
+  color:#2563eb;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-size:11px;
+  font-weight:1000;
+}
+
+html[data-ui="ui5"] .fi13-weight-main b{
+  display:block;
+  margin-top:4px;
+  color:#0b1726;
+  font-size:34px;
+  line-height:1;
+  letter-spacing:-.055em;
+}
+
+html[data-ui="ui5"] .fi13-weight-main small{
+  color:#53677f;
+  font-weight:850;
+}
+
+html[data-ui="ui5"] .fi13-weight-progress{
+  display:grid;
+  gap:10px;
+}
+
+html[data-ui="ui5"] .fi13-weight-progress > i{
+  height:13px;
+  border-radius:999px;
+  background:#e8effa;
+  overflow:hidden;
+}
+
+html[data-ui="ui5"] .fi13-weight-progress > i em{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#2563eb,#0ea5e9);
+}
+
+html[data-ui="ui5"] .fi13-weight-progress > div{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+
+html[data-ui="ui5"] .fi13-weight-progress span,
+html[data-ui="ui5"] .fi13-metric{
+  padding:11px;
+  border-radius:18px;
+  background:#f8fbff;
+  border:1px solid rgba(31,60,90,.08);
+}
+
+html[data-ui="ui5"] .fi13-weight-progress b{
+  display:block;
+  color:#0b1726;
+  font-size:22px;
+  line-height:1;
+}
+
+html[data-ui="ui5"] .fi13-weight-progress small{
+  color:#53677f;
+  font-size:11px;
+  font-weight:900;
+}
+
+html[data-ui="ui5"] .fi13-metrics{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:12px;
+}
+
+html[data-ui="ui5"] .fi13-metric{
+  display:grid;
+  gap:5px;
+  min-height:94px;
+}
+
+html[data-ui="ui5"] .fi13-metric.ok{
+  background:#ecfdf5;
+}
+
+html[data-ui="ui5"] .fi13-metric.watch{
+  background:#fffbeb;
+}
+
+html[data-ui="ui5"] .fi13-metric b{
+  color:#0b1726;
+  font-size:25px;
+  line-height:1;
+}
+
+html[data-ui="ui5"] .fi13-metric small{
+  color:#53677f;
+  font-weight:850;
+  line-height:1.25;
+}
+
+html[data-ui="ui5"] .fi13-main-grid,
+html[data-ui="ui5"] .fi13-lower-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(360px,.9fr);
+  gap:12px;
+  margin-bottom:12px;
+}
+
+html[data-ui="ui5"] .fi13-panel{
+  border-radius:28px;
+  background:rgba(255,255,255,.94);
+  border:1px solid rgba(255,255,255,.96);
+  box-shadow:0 14px 38px rgba(15,38,70,.08);
+}
+
+html[data-ui="ui5"] .fi13-panel header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+html[data-ui="ui5"] .fi13-panel h3{
+  margin:0;
+  color:#0b1726;
+  font-size:20px;
+}
+
+html[data-ui="ui5"] .fi13-panel p,
+html[data-ui="ui5"] .fi13-panel li{
+  color:#53677f;
+  font-weight:850;
+}
+
+html[data-ui="ui5"] .fi13-next ul{
+  margin:0;
+  padding-left:20px;
+}
+
+html[data-ui="ui5"] .fi13-suggestions{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+
+html[data-ui="ui5"] .fi13-suggestions article{
+  padding:10px;
+  border-radius:18px;
+  background:#f8fbff;
+  border:1px solid rgba(31,60,90,.08);
+}
+
+html[data-ui="ui5"] .fi13-suggestions ul{
+  margin:7px 0;
+  padding-left:18px;
+}
+
+html[data-ui="ui5"] .fi13-loading{
+  border-radius:28px;
+}
+
+@media(max-width:1100px){
+  html[data-ui="ui5"] .fi13-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  html[data-ui="ui5"] .fi13-main-grid,
+  html[data-ui="ui5"] .fi13-lower-grid,
+  html[data-ui="ui5"] .fi13-weight{grid-template-columns:1fr}
+}
+
+@media(max-width:680px){
+  html[data-ui="ui5"] .fi13-hero,
+  html[data-ui="ui5"] .fi13-metrics,
+  html[data-ui="ui5"] .fi13-weight-progress > div{grid-template-columns:1fr}
+}
+
+/* DPP_FI_SINGLE_HOME_CSS_END */
+
+
+/* DPP_FI_SINGLE_HOME_COMPACT_NEXT_START */
+
+/* Evita que "Qué hacer ahora" se estire hasta la altura de la gráfica */
+html[data-ui="ui5"] .fi13-main-grid{
+  align-items:start!important;
+  grid-template-columns:minmax(320px,.72fr) minmax(420px,1.28fr)!important;
+}
+
+/* Panel de acción mucho más compacto */
+html[data-ui="ui5"] .fi13-next{
+  align-self:start!important;
+  padding:14px!important;
+}
+
+html[data-ui="ui5"] .fi13-next header{
+  margin-bottom:8px!important;
+}
+
+html[data-ui="ui5"] .fi13-next h3{
+  font-size:18px!important;
+}
+
+html[data-ui="ui5"] .fi13-next header p{
+  margin:2px 0 0!important;
+  font-size:12px!important;
+}
+
+/* Recomendaciones como chips compactos, no bloque gigante */
+html[data-ui="ui5"] .fi13-next > ul{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  margin:0!important;
+  padding:0!important;
+  list-style:none!important;
+}
+
+html[data-ui="ui5"] .fi13-next > ul li{
+  display:inline-flex!important;
+  align-items:center!important;
+  padding:8px 10px!important;
+  border-radius:999px!important;
+  background:#eff6ff!important;
+  color:#1e3a8a!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  line-height:1.2!important;
+}
+
+/* Botón más integrado */
+html[data-ui="ui5"] .fi13-next .btn.small{
+  padding:8px 11px!important;
+  border-radius:999px!important;
+  white-space:nowrap!important;
+}
+
+/* Sugerencias compactas si se despliegan */
+html[data-ui="ui5"] .fi13-suggestions{
+  margin-top:10px!important;
+}
+
+html[data-ui="ui5"] .fi13-suggestions article{
+  padding:9px!important;
+  border-radius:16px!important;
+}
+
+html[data-ui="ui5"] .fi13-suggestions ul{
+  margin:5px 0!important;
+}
+
+@media(max-width:1100px){
+  html[data-ui="ui5"] .fi13-main-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+
+/* DPP_FI_SINGLE_HOME_COMPACT_NEXT_END */
+
+
+/* DPP_FI_HORIZONTAL_ACTION_ROW_START */
+
+/* La fila principal pasa a ser vertical:
+   1) Qué hacer ahora full width
+   2) Peso oficial full width */
+html[data-ui="ui5"] .fi13-main-grid{
+  grid-template-columns:1fr!important;
+  gap:12px!important;
+  align-items:start!important;
+}
+
+/* Panel de acción horizontal completo */
+html[data-ui="ui5"] .fi13-next{
+  display:grid!important;
+  grid-template-columns:minmax(260px,.9fr) minmax(280px,1.2fr) auto!important;
+  gap:14px!important;
+  align-items:center!important;
+  padding:16px 18px!important;
+}
+
+html[data-ui="ui5"] .fi13-next header{
+  margin:0!important;
+  display:block!important;
+}
+
+html[data-ui="ui5"] .fi13-next header > div{
+  min-width:0!important;
+}
+
+html[data-ui="ui5"] .fi13-next h3{
+  margin:0 0 4px!important;
+  font-size:20px!important;
+}
+
+html[data-ui="ui5"] .fi13-next header p{
+  margin:0!important;
+  font-size:13px!important;
+  color:#5b6f89!important;
+  font-weight:850!important;
+}
+
+/* Recomendaciones en horizontal tipo chip */
+html[data-ui="ui5"] .fi13-next > ul{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin:0!important;
+  padding:0!important;
+  list-style:none!important;
+  min-width:0!important;
+}
+
+html[data-ui="ui5"] .fi13-next > ul li{
+  display:inline-flex!important;
+  align-items:center!important;
+  padding:9px 12px!important;
+  border-radius:999px!important;
+  background:#eff6ff!important;
+  color:#1e3a8a!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  line-height:1.2!important;
+  max-width:100%!important;
+}
+
+/* Botón a la derecha */
+html[data-ui="ui5"] .fi13-next .btn.small{
+  justify-self:end!important;
+  white-space:nowrap!important;
+  padding:10px 14px!important;
+  border-radius:999px!important;
+}
+
+/* Si aparecen sugerencias, debajo a ancho completo */
+html[data-ui="ui5"] .fi13-next .fi13-suggestions{
+  grid-column:1 / -1!important;
+  margin-top:2px!important;
+}
+
+html[data-ui="ui5"] .fi13-next .fi13-suggestions article{
+  padding:10px!important;
+  border-radius:16px!important;
+}
+
+/* Gráfica ocupa toda la fila siguiente */
+html[data-ui="ui5"] .fi13-main-grid > .fi13-panel:not(.fi13-next){
+  width:100%!important;
+}
+
+/* Responsive */
+@media(max-width:1100px){
+  html[data-ui="ui5"] .fi13-next{
+    grid-template-columns:1fr!important;
+    align-items:start!important;
+  }
+
+  html[data-ui="ui5"] .fi13-next .btn.small{
+    justify-self:start!important;
+  }
+}
+
+/* DPP_FI_HORIZONTAL_ACTION_ROW_END */
+
