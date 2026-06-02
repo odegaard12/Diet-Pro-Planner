@@ -1217,3 +1217,228 @@ window.renderHome = renderHome;
 setInterval(dpp12Version, 1000);
 /* DPP_V012_SCORE_HOME_END */
 
+
+/* DPP_FOOD_INTEL_CARD_START */
+/* v0.0.13-dev · visual dashboard card for Food Intelligence */
+
+(function(){
+  const CARD_ID = 'dppFoodIntelCard';
+
+  function esc(v){
+    return String(v ?? '').replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function clean(v){
+    return String(v ?? '')
+      .replace(/Buen dia/g, 'Buen d\u00eda')
+      .replace(/Proteina/g, 'Prote\u00edna')
+      .replace(/proteina/g, 'prote\u00edna')
+      .replace(/Energia/g, 'Energ\u00eda')
+      .replace(/manana/g, 'ma\u00f1ana')
+      .replace(/Opcion/g, 'Opci\u00f3n')
+      .replace(/dia/g, 'd\u00eda');
+  }
+
+  function currentDay(){
+    try{
+      if(typeof day === 'function') return day();
+    }catch(e){}
+    return new Date().toISOString().slice(0,10);
+  }
+
+  function fmtNum(v, digits){
+    const n = Number(v || 0);
+    try{
+      return n.toLocaleString('es-ES', {maximumFractionDigits: digits ?? 0});
+    }catch(e){
+      return String(Math.round(n));
+    }
+  }
+
+  function canShow(){
+    const view = document.querySelector('#view');
+    if(!view) return false;
+    const txt = view.innerText || '';
+    return txt.includes('Dashboard') || txt.includes('Día de hoy') || txt.includes('Dia de hoy') || txt.includes('Peso hacia 80');
+  }
+
+  async function fetchIntel(d){
+    const r = await fetch(`/api/food-intel/day?date=${encodeURIComponent(d)}`);
+    if(!r.ok) throw new Error('No pude cargar inteligencia del d\u00eda');
+    return await r.json();
+  }
+
+  async function fetchMealPlan(d){
+    const r = await fetch('/api/food-intel/meal-plan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        date: d,
+        meal: 'next',
+        available_foods: [],
+        training_today: false
+      })
+    });
+    if(!r.ok) throw new Error('No pude sugerir comida');
+    return await r.json();
+  }
+
+  function ruleStatus(rule){
+    if(!rule) return 'info';
+    if(rule.status === 'ok') return 'ok';
+    if(rule.status === 'watch') return 'watch';
+    return 'bad';
+  }
+
+  function renderCard(data){
+    const a = data.analysis || {};
+    const summary = data.summary || {};
+    const conf = data.confidence || {};
+    const rules = a.rules || {};
+    const protein = rules.protein || {};
+    const energy = rules.energy || {};
+    const salt = rules.salt || {};
+    const training = rules.training_alignment || {};
+    const sem = a.semaphore || 'green';
+
+    return `
+      <section id="${CARD_ID}" class="dpp-fi-card ${esc(sem)}">
+        <div class="dpp-fi-head">
+          <div>
+            <span class="dpp-fi-kicker">Inteligencia del d\u00eda · v0.0.13-dev</span>
+            <h3>${esc(clean(a.label || 'An\u00e1lisis'))}</h3>
+            <p>${esc(clean(a.main_action || 'Analizando comida, deporte y confianza de datos.'))}</p>
+          </div>
+          <div class="dpp-fi-score">
+            <b>${a.score == null ? '--' : esc(a.score)}</b>
+            <small>score</small>
+          </div>
+        </div>
+
+        <div class="dpp-fi-grid">
+          <article class="${ruleStatus(protein)}">
+            <span>Prote\u00edna</span>
+            <b>${fmtNum(summary.protein, 1)} g</b>
+            <small>${esc(clean(protein.message || ''))}</small>
+          </article>
+          <article class="${ruleStatus(energy)}">
+            <span>Energ\u00eda</span>
+            <b>${fmtNum(a.kcal_margin, 0)} kcal</b>
+            <small>margen vs objetivo</small>
+          </article>
+          <article class="${ruleStatus(training)}">
+            <span>Entreno</span>
+            <b>${esc(clean(training.status || 'info'))}</b>
+            <small>${esc(clean(training.message || ''))}</small>
+          </article>
+          <article class="${ruleStatus(salt)}">
+            <span>Confianza</span>
+            <b>${esc(clean(conf.label || 'media'))}</b>
+            <small>${esc((conf.reasons || []).slice(0,1).join(' · ') || 'datos locales')}</small>
+          </article>
+        </div>
+
+        <div class="dpp-fi-actions">
+          <button class="btn small" id="dppFiSuggestBtn">Sugerir siguiente comida</button>
+          <small id="dppFiSuggestStatus">Motor local heur\u00edstico · sin enviar datos fuera</small>
+        </div>
+        <div id="dppFiSuggestions" class="dpp-fi-suggestions"></div>
+      </section>
+    `;
+  }
+
+  function renderSuggestions(payload){
+    const box = document.querySelector('#dppFiSuggestions');
+    const status = document.querySelector('#dppFiSuggestStatus');
+    if(!box) return;
+
+    const options = (((payload || {}).plan || {}).options || []).slice(0,3);
+    if(!options.length){
+      box.innerHTML = '<div class="dpp-fi-empty">No hay propuesta suficiente con los alimentos actuales.</div>';
+      if(status) status.textContent = 'Sin opciones claras';
+      return;
+    }
+
+    box.innerHTML = options.map(function(opt){
+      const totals = opt.totals || {};
+      const items = (opt.items || []).map(function(it){
+        return `<li>${esc(clean(it.food_name))} · ${fmtNum(it.grams,0)} g</li>`;
+      }).join('');
+
+      return `
+        <article>
+          <div>
+            <b>${esc(clean(opt.title || 'Opci\u00f3n'))}</b>
+            <small>${fmtNum(totals.kcal,0)} kcal · ${fmtNum(totals.protein,1)} g prote\u00edna · fit ${esc(opt.fit_score ?? '--')}</small>
+          </div>
+          <ul>${items}</ul>
+          <p>${esc(clean(opt.why || ''))}</p>
+        </article>
+      `;
+    }).join('');
+
+    if(status) status.textContent = 'Propuestas generadas por motor local';
+  }
+
+  async function attachSuggest(d){
+    const btn = document.querySelector('#dppFiSuggestBtn');
+    const status = document.querySelector('#dppFiSuggestStatus');
+    if(!btn || btn.dataset.bound === '1') return;
+
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', async function(){
+      try{
+        btn.disabled = true;
+        if(status) status.textContent = 'Calculando opciones...';
+        const payload = await fetchMealPlan(d);
+        renderSuggestions(payload);
+      }catch(e){
+        if(status) status.textContent = clean(e.message || 'Error calculando opciones');
+      }finally{
+        btn.disabled = false;
+      }
+    });
+  }
+
+  async function ensureCard(){
+    if(!canShow()) return;
+    if(document.querySelector('#' + CARD_ID)) return;
+
+    const view = document.querySelector('#view');
+    if(!view) return;
+
+    const d = currentDay();
+
+    try{
+      const data = await fetchIntel(d);
+      if(!canShow()) return;
+      if(document.querySelector('#' + CARD_ID)) return;
+      view.insertAdjacentHTML('afterbegin', renderCard(data));
+      await attachSuggest(d);
+    }catch(e){
+      // No bloquea dashboard si falla el backend inteligente.
+    }
+  }
+
+  const oldRenderHome = window.renderHome;
+  if(typeof oldRenderHome === 'function'){
+    window.renderHome = function(){
+      const out = oldRenderHome.apply(this, arguments);
+      setTimeout(ensureCard, 120);
+      setTimeout(ensureCard, 500);
+      setTimeout(ensureCard, 1200);
+      return out;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(ensureCard, 300);
+    setTimeout(ensureCard, 1200);
+  });
+
+  setInterval(ensureCard, 1800);
+})();
+/* DPP_FOOD_INTEL_CARD_END */
+
