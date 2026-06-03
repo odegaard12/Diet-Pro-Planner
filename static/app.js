@@ -1672,3 +1672,171 @@ setInterval(dpp12Version, 1000);
 })();
 /* DPP_BODY_SNAPSHOT_CARD_END */
 
+
+/* DPP_BODY_SNAPSHOT_FORCE_MOUNT_START */
+/* Robust late mount for Body Snapshot after the final home render. */
+(function(){
+  if(window.__DPP_BODY_SNAPSHOT_FORCE_MOUNT__) return;
+  window.__DPP_BODY_SNAPSHOT_FORCE_MOUNT__ = true;
+
+  const CARD_ID = 'dppBodySnapshotCard';
+
+  function esc(v){
+    return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function fmt(v, digits=1){
+    if(v === null || v === undefined || v === '') return '--';
+    try{
+      return Number(v).toLocaleString('es-ES', {maximumFractionDigits: digits});
+    }catch(e){
+      return String(v);
+    }
+  }
+
+  function value(data, key){
+    return (((data || {}).metrics || {})[key] || {}).value;
+  }
+
+  function metricCard(label, main, sub, tone){
+    return `
+      <article class="${tone || ''}">
+        <span>${esc(label)}</span>
+        <b>${main}</b>
+        <small>${sub || ''}</small>
+      </article>
+    `;
+  }
+
+  function freshLabel(data){
+    const d = ((data || {}).freshness || {}).days_old;
+    if(d === 0) return 'lectura de hoy';
+    if(d === 1) return 'lectura de ayer';
+    if(d === null || d === undefined) return 'última lectura';
+    return `hace ${d} días`;
+  }
+
+  function html(data){
+    const weight = value(data, 'weight');
+    const fat = value(data, 'body_fat_pct');
+    const water = value(data, 'water_pct');
+    const muscle = value(data, 'muscle_mass_kg');
+    const skeletal = value(data, 'skeletal_muscle_kg');
+    const visceral = value(data, 'visceral_fat');
+    const bmr = value(data, 'bmr_kcal');
+    const bio = value(data, 'biocharge_wakeup');
+    const hrv = value(data, 'hrv');
+    const resting = value(data, 'resting_hr');
+    const fatMass = (data.derived || {}).fat_mass_kg;
+
+    return `
+      <section id="${CARD_ID}" class="bs14-card">
+        <div class="bs14-visual">
+          <div class="bs14-person-wrap">
+            <div class="bs14-person">
+              <i class="head"></i>
+              <i class="torso"></i>
+              <i class="legs"></i>
+            </div>
+            <div class="bs14-person-label">
+              <b>${fmt(weight,2)} kg</b>
+              <small>${fmt(fat,1)}% grasa</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="bs14-content">
+          <div class="bs14-head">
+            <div>
+              <span>Foto corporal · v0.0.14-dev</span>
+              <h3>Composición corporal</h3>
+              <p>${esc(data.date || '')} ${data.time ? '· ' + esc(data.time) : ''} · ${esc(freshLabel(data))}</p>
+            </div>
+            <div class="bs14-badge">
+              <b>${fmt(bio,0)}</b>
+              <small>BioCharge</small>
+            </div>
+          </div>
+
+          <div class="bs14-grid">
+            ${metricCard('Grasa', `${fmt(fat,1)}%`, fatMass ? `${fmt(fatMass,1)} kg estimados` : 'bioimpedancia', 'watch')}
+            ${metricCard('Agua', `${fmt(water,1)}%`, 'hidratación', '')}
+            ${metricCard('Músculo', `${fmt(muscle,1)} kg`, 'total estimado', '')}
+            ${metricCard('Músculo esq.', `${fmt(skeletal,1)} kg`, 'estimado', '')}
+            ${metricCard('Visceral', `${fmt(visceral,0)}`, 'vigilar tendencia', 'watch')}
+            ${metricCard('BMR', `${fmt(bmr,0)} kcal`, 'basal estimado', '')}
+            ${metricCard('HRV', `${fmt(hrv,0)} ms`, resting ? `FC reposo ${fmt(resting,0)}` : 'recuperación', '')}
+          </div>
+
+          <p class="bs14-note">Bioimpedancia estimada: útil para tendencia semanal, no para juzgar un peso aislado.</p>
+        </div>
+      </section>
+    `;
+  }
+
+  async function loadSnapshot(){
+    const r = await fetch('/api/body-snapshot/latest', {cache:'no-store'});
+    if(!r.ok) throw new Error('body-snapshot failed');
+    return await r.json();
+  }
+
+  async function mountBodySnapshot(){
+    try{
+      if(document.querySelector('#' + CARD_ID)) return;
+
+      const view = document.querySelector('#view');
+      if(!view) return;
+
+      const txt = view.innerText || '';
+      if(!txt.includes('Peso hacia 80 kg') && !txt.includes('Inteligencia del día')) return;
+
+      const data = await loadSnapshot();
+      if(!data || !data.available) return;
+
+      const weightCard = view.querySelector('.fi13-weight');
+      if(weightCard){
+        weightCard.insertAdjacentHTML('afterend', html(data));
+      }else{
+        const metrics = view.querySelector('.fi13-metrics');
+        if(metrics){
+          metrics.insertAdjacentHTML('beforebegin', html(data));
+        }else{
+          view.insertAdjacentHTML('afterbegin', html(data));
+        }
+      }
+    }catch(e){
+      console.warn('[BodySnapshot] mount failed', e);
+    }
+  }
+
+  window.dppMountBodySnapshot = mountBodySnapshot;
+
+  function schedule(){
+    setTimeout(mountBodySnapshot, 100);
+    setTimeout(mountBodySnapshot, 500);
+    setTimeout(mountBodySnapshot, 1200);
+  }
+
+  const oldRenderHome = window.renderHome;
+  if(typeof oldRenderHome === 'function'){
+    window.renderHome = function(){
+      const out = oldRenderHome.apply(this, arguments);
+      schedule();
+      return out;
+    };
+  }
+
+  const oldRender = window.render;
+  if(typeof oldRender === 'function'){
+    window.render = function(){
+      const out = oldRender.apply(this, arguments);
+      schedule();
+      return out;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', schedule);
+  setInterval(mountBodySnapshot, 1500);
+})();
+/* DPP_BODY_SNAPSHOT_FORCE_MOUNT_END */
+
