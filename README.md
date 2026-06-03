@@ -1,50 +1,140 @@
 # Diet Pro Planner
 
-**Current version:** v0.0.12
+**Current version:** `v0.0.14`
 
-Local-first web app for tracking body weight, meals by grams, reusable foods, meal templates, workouts, weekly plans and optional integrations.
+Diet Pro Planner is a private, local-first nutrition, weight, sport and body-composition web app designed to run on a Raspberry Pi with Docker.
 
-Designed to run privately on a Raspberry Pi with Docker. Your personal data stays local.
+The goal is to build a premium personal cockpit for daily diet decisions, closer to Apple Health + Gentler Streak + a local nutrition assistant than to a spreadsheet.
 
-## Features
-Optional Body Snapshot dashboard card for smart-scale composition data.
+## What it helps with
 
-Body Snapshot API at `/api/body-snapshot/latest`.
+- Track meals by grams.
+- Track official and reference weight.
+- Follow a target weight goal.
+- Analyze protein, calories, oil, training and data confidence.
+- Understand whether a day is good, caution or excess.
+- Detect when a weight spike is probably water, food volume or training inflammation.
+- Use smart-scale body-composition data as trend context.
+- Suggest practical next meals with local heuristics.
 
-Body composition context with weight, body fat, water, muscle, visceral fat, BioCharge and derived fat mass.
+## Latest release: `v0.0.14` — Body Snapshot
 
-Bioimpedance values are treated as weekly trend context, not mandatory daily truth.
+`v0.0.14` adds the first optional smart-scale composition module.
 
-Confidence-aware nutrition analysis that separates good formulation from estimated/composite food uncertainty.
+### New in `v0.0.14`
 
-Local heuristic meal planner that suggests clean, light or post-training meal options from available foods.
+- New endpoint: `/api/body-snapshot/latest`.
+- New dashboard card: **Foto corporal**.
+- Shows:
+  - weight
+  - body fat %
+  - estimated fat mass
+  - water %
+  - muscle mass
+  - visceral fat
+  - BioCharge
+- Treats bioimpedance as trend context, not daily truth.
+- Does not require daily body-composition logging.
+- Does not penalize the daily nutrition score for one isolated smart-scale reading.
+- Prepares the future **Weight 2.0** screen.
 
-Unified Food Intelligence dashboard with score, confidence, weight progress, protein, energy, oil, training and next-action panel.
+## Food Intelligence
 
-- Food Intelligence v0.0.13 with daily analysis, confidence labels, local meal suggestions and a unified dashboard powered by `/api/food-intel/day`, `/api/food-intel/meal-plan` and `/api/food-intel/health`.
+Introduced in `v0.0.13`.
 
-- Official and reference weight tracking.
+### Endpoints
+
+- `GET /api/food-intel/day`
+- `POST /api/food-intel/meal-plan`
+- `GET /api/food-intel/health`
+
+### Capabilities
+
+- Daily nutrition analysis.
+- Confidence labels for food data:
+  - exacta
+  - alta
+  - media
+  - baja
+- Detection of estimated and composite foods.
+- More realistic scoring instead of false precision.
+- Local heuristic meal suggestions.
+- Unified dashboard with score, confidence, weight progress, protein, energy, oil, training and next-action panel.
+
+## Core features
+
+### Nutrition
+
 - Meal logging by saved foods and grams.
-- Reusable meal templates where you can adjust quantities before saving.
-- Product catalog with brand, nutrition values and optional local label photo.
-- Local OCR helper for food labels using Tesseract.
-- OCR3 parser with validation, cache and known-label correction for common products.
+- Reusable food catalog.
+- Purchased products.
+- Meal templates.
+- Weekly meal plan.
+- Meal history.
+- Oil tracking.
+- Dry-weight pasta/rice guidance.
+- Protein-focused daily targets.
+
+### Food catalog
+
+- Brand, kcal, protein, carbs, fat, sugar, salt and typical portion.
+- Product notes and source notes.
+- Purchased flag.
+- Local label photo support.
+- Clean canonical foods for repeated products.
+
+### OCR
+
+- Local Tesseract OCR.
+- OCR3 parser.
+- Known-label correction.
+- Plausibility validation.
+- OCR cache.
+- Photos stay local.
+
+### Weight
+
+- Official weight.
+- Reference weight.
+- Weight chart.
+- Trend interpretation.
+- Goal weight progress.
+- Current personal target: 80 kg.
+
+### Body Snapshot
+
+- Optional smart-scale body-composition storage.
+- Latest snapshot API.
+- Dashboard summary card.
+- Bioimpedance warning built into the UI.
+- Designed for weekly trend interpretation.
+
+### Sport
+
 - Manual workout logging.
-- Strava OAuth connection through localhost.
+- Strava OAuth through localhost.
 - Manual Strava import by date range.
-- Optional Strava auto-sync in the Raspberry background.
-- Strava calories are read from detailed activity data when available.
-- UI5 blue responsive layout with redesigned sidebar, topbar, dashboard cards and daily rule cards.
-- Sport dashboard with 7-day summary and compact workout cards.
-- Editable weekly plan board with horizontal day cards.
-- Intelligent dashboard with daily score, semaphore, protein/kcal/oil/activity cards, 80 kg weight-goal progress and compact advice panels.
-- Backend daily insights endpoint at `/api/insights/today`.
-- UTF-8 cleanup for visible Spanish text in the v0.0.12 dashboard.
-- Local SQLite database in `data/dieta.db`.
+- Optional Strava background auto-sync.
+- Duplicate protection by Strava activity ID.
+- Detailed Strava calories when available.
+- Sport dashboard with 7-day summary.
 
-## Privacy
+### Dashboard
 
-Do not commit local or private files. The repository excludes them through `.gitignore`:
+- Food Intelligence daily dashboard.
+- Daily score.
+- Semaphore state.
+- Confidence label.
+- Weight progress.
+- Protein, energy, oil and training cards.
+- Optional Body Snapshot card.
+- Daily meals and activity summary.
+
+## Local-first privacy
+
+The repository contains only public application code.
+
+Private/local files are excluded from Git:
 
 - `data/`
 - `uploads/`
@@ -57,63 +147,90 @@ Do not commit local or private files. The repository excludes them through `.git
 - local label photos
 - OCR cache files
 
+SQLite databases, Strava tokens, OCR uploads, body-composition records and private food logs stay on the Raspberry Pi.
+
 ## Docker
 
-```bash
-docker compose up -d --build
-```
+Build and start:
+
+    docker compose up -d --build
 
 Default local URL:
 
-```text
-http://localhost:8099
-```
+    http://localhost:8099
 
-## Strava local setup
+LAN example:
+
+    http://192.168.68.103:8099
+
+## Strava setup
 
 Diet Pro Planner can connect to Strava without exposing the Raspberry Pi to the internet.
 
 Recommended local OAuth flow:
 
 1. Create a Strava API application.
-2. Set the website to `http://localhost:8099`.
-3. Set the authorization callback domain to `localhost`.
-4. Store `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET` and `STRAVA_REDIRECT_URI` in the local `.env` file.
-5. Open an SSH tunnel from your computer to the Raspberry Pi:
+2. Set website to `http://localhost:8099`.
+3. Set authorization callback domain to `localhost`.
+4. Store `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET` and `STRAVA_REDIRECT_URI` in local `.env`.
+5. Open an SSH tunnel:
 
-```bash
-ssh -N -L 8099:127.0.0.1:8099 user@raspberry-ip
-```
+       ssh -N -L 8099:127.0.0.1:8099 user@raspberry-ip
 
 6. Open `http://localhost:8099`.
-7. Go to Integrations -> Strava -> Connect Strava.
+7. Go to Integrations → Strava → Connect Strava.
 
-Tokens are stored locally under `data/` and are excluded from Git.
+Tokens stay local under `data/`.
 
-## Strava import modes
+## API summary
 
-- Manual preview by date range.
-- Select activities before importing.
-- Duplicate protection by Strava activity id.
-- Optional auto-sync in the Raspberry background.
-- Auto-sync imports newly detected activities every configured interval.
-- A visible status message shows the latest successful sync time.
+Core:
 
-## OCR food labels
+- `GET /health`
+- `GET /api/state`
 
-Food-label OCR is local-first:
+Daily intelligence:
 
-- photos stay local,
-- OCR results are editable before saving,
-- impossible nutrition values are discarded,
-- repeated image reads can use local OCR cache.
+- `GET /api/insights/today`
+- `GET /api/food-intel/day`
+- `POST /api/food-intel/meal-plan`
+- `GET /api/food-intel/health`
+
+Body composition:
+
+- `GET /api/body-snapshot/latest`
 
 ## Releases
-v0.0.14: optional Body Snapshot module with smart-scale composition card, `/api/body-snapshot/latest`, fat/water/muscle/visceral metrics and trend-focused bioimpedance interpretation.
 
-v0.0.13: Food Intelligence dashboard, daily analysis, confidence labels, local heuristic meal planner and unified premium home.
+### `v0.0.14` — Body Snapshot
 
-- `v0.0.12`: intelligent score dashboard, backend daily insights, compact premium home, weight-goal progress and UTF-8 cleanup.
+- Optional Body Snapshot module.
+- `/api/body-snapshot/latest`.
+- Smart-scale composition dashboard card.
+- Fat, water, muscle, visceral fat and BioCharge.
+- Bioimpedance treated as trend context.
+- Foundation for Weight 2.0.
+
+### `v0.0.13` — Food Intelligence dashboard
+
+- Food Intelligence backend.
+- `/api/food-intel/day`.
+- `/api/food-intel/meal-plan`.
+- `/api/food-intel/health`.
+- Confidence-aware daily analysis.
+- Local heuristic meal suggestions.
+- Unified Food Intelligence home dashboard.
+
+### `v0.0.12` — Intelligent score dashboard
+
+- Daily insights endpoint.
+- Score and semaphore.
+- Compact premium home.
+- Weight-goal progress.
+- UTF-8 dashboard cleanup.
+
+### Previous releases
+
 - `v0.0.11`: UI5 redesign, OCR3 label parser, sport dashboard and editable weekly plan.
 - `v0.0.10`: improved weight system and compact food-label helper.
 - `v0.0.9`: curated products, practical templates and improved assistant.
@@ -122,10 +239,22 @@ v0.0.13: Food Intelligence dashboard, daily analysis, confidence labels, local h
 - `v0.0.6`: stable Spanish UI after removing broken translation layer.
 - `v0.0.5`: safe UI translation cleanup.
 - `v0.0.4`: background Strava auto-sync and last-sync status.
-- `v0.0.3`: branding, app icon, ES/EN toggle and Strava auto-preview.
-- `v0.0.2`: manual Strava import by date range.
+- `v0.0.3`: branding, ES/EN toggle and Strava auto-preview.
+- `v0.0.2`: manual Strava import.
 - `v0.0.1`: first clean public release.
 
-## Notes
+## Roadmap
 
-This repository contains only the public application code. Local user data, databases, environment files, Strava tokens, backups, OCR cache files and uploaded label photos must remain private.
+- Weight 2.0 with composition graphs.
+- Weekly trend interpretation.
+- Apple Health import/export path.
+- Planned vs real meal workflow.
+- More automatic meal suggestions from available foods.
+- OCR4 product detection and duplicate handling.
+- Premium dashboard polish.
+
+## Disclaimer
+
+This is a personal local-first project. It is not a medical device and does not provide medical diagnosis.
+
+Smart-scale body-composition values are estimates and should be used for trends, not as absolute daily truth.
