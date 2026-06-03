@@ -3,7 +3,6 @@ import sqlite3
 from pathlib import Path
 
 DB = Path(os.environ.get("DPP_DB", "data/dieta.db"))
-
 if not DB.exists():
     raise SystemExit(f"No existe DB: {DB}")
 
@@ -15,9 +14,6 @@ def table_exists(name):
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
         (name,)
     ).fetchone() is not None
-
-if not table_exists("foods"):
-    raise SystemExit(f"La DB no tiene tabla foods: {DB}")
 
 def ensure_food(name, brand, kcal, protein, carbs, fat, sugar, salt, typical_g, purchased, source_note, notes):
     row = con.execute(
@@ -45,14 +41,11 @@ def ensure_food(name, brand, kcal, protein, carbs, fat, sugar, salt, typical_g, 
 def delete_food_exact(name):
     con.execute("DELETE FROM foods WHERE lower(name)=lower(?)", (name,))
 
-def delete_duplicate_canonicals(name):
+def delete_duplicate_canonical(name):
     rows = con.execute(
         "SELECT id FROM foods WHERE lower(name)=lower(?) ORDER BY id ASC",
         (name,)
     ).fetchall()
-    if len(rows) <= 1:
-        return
-    keep = rows[0]["id"]
     for r in rows[1:]:
         con.execute("DELETE FROM foods WHERE id=?", (r["id"],))
 
@@ -64,14 +57,13 @@ def replace_meal_item_like(pattern, new):
     if table_exists("meal_items"):
         con.execute("UPDATE meal_items SET food_name=? WHERE food_name LIKE ?", (new, pattern))
 
-def replace_notes_0306(old, new):
+def replace_note_0306(old, new):
     if table_exists("meals"):
         con.execute(
             "UPDATE meals SET notes=replace(notes, ?, ?) WHERE date='2026-06-03'",
             (old, new)
         )
 
-# 1) Crear/forzar canonicales buenos.
 ensure_food(
     "Alpro Protein cacao", "Alpro",
     69, 5.0, 5.3, 2.8, 5.0, 0.16, 250, 1,
@@ -107,7 +99,6 @@ ensure_food(
     "Casi no suma."
 )
 
-# 2) Reasignar referencias antiguas exactas.
 replace_meal_item_like("Alpro Protein%", "Alpro Protein cacao")
 replace_meal_item("Huevos", "Huevo entero")
 replace_meal_item("Platano", "Plátano")
@@ -115,15 +106,13 @@ replace_meal_item("Chocolate", "Chocolate onzas estimado")
 replace_meal_item("cacao", "Chocolate onzas estimado")
 replace_meal_item("cacao onzas estimado", "Chocolate onzas estimado")
 
-# 3) Limpiar notas SOLO del día afectado, para no romper textos históricos.
 for old in [
     "Alpro Protein Chocolate onzas estimado onzas estimado",
     "Alpro Protein Chocolate onzas estimado",
     "Alpro Protein Chocolate",
 ]:
-    replace_notes_0306(old, "Alpro Protein cacao")
+    replace_note_0306(old, "Alpro Protein cacao")
 
-# 4) Borrar alias exactos del catálogo. No se toca nada parcial.
 for bad in [
     "Huevos",
     "Chocolate",
@@ -135,7 +124,6 @@ for bad in [
 ]:
     delete_food_exact(bad)
 
-# 5) Borrar duplicados exactos de canonicales.
 for good in [
     "Alpro Protein cacao",
     "Huevo entero",
@@ -143,18 +131,17 @@ for good in [
     "Chocolate onzas estimado",
     "Café con edulcorante",
 ]:
-    delete_duplicate_canonicals(good)
+    delete_duplicate_canonical(good)
 
 con.commit()
 
-print(f"== DB corregida: {DB} ==")
-for pat in ["Alpro", "Huevo", "Plátano", "Chocolate", "Café"]:
+print(f"== DB limpia: {DB} ==")
+for pat in ["Alpro", "Huevo", "Huevos", "Plátano", "Chocolate", "Café"]:
     print(f"\n-- {pat}")
-    rows = con.execute(
+    for r in con.execute(
         "SELECT id,name,kcal,protein,typical_g,purchased FROM foods WHERE name LIKE ? ORDER BY name,id",
         (f"%{pat}%",)
-    ).fetchall()
-    for r in rows:
+    ):
         print(dict(r))
 
 con.close()

@@ -1,3 +1,171 @@
+
+/* DPP_V0141_STATE_SANITIZER_START */
+(function(){
+  if(window.__DPP_V0141_STATE_SANITIZER__) return;
+  window.__DPP_V0141_STATE_SANITIZER__ = true;
+
+  function canonName(name){
+    var n = String(name || '').trim();
+    var low = n.toLowerCase();
+
+    if(low.indexOf('alpro protein chocolate') === 0) return 'Alpro Protein cacao';
+    if(low === 'alpro protein cacao') return 'Alpro Protein cacao';
+
+    if(low === 'huevos') return 'Huevo entero';
+    if(low === 'huevo entero') return 'Huevo entero';
+
+    if(low === 'platano') return 'Plátano';
+    if(low === 'plátano') return 'Plátano';
+
+    if(low === 'chocolate' || low === 'cacao' || low === 'cacao onzas estimado' || low === 'chocolate onzas estimado'){
+      return 'Chocolate onzas estimado';
+    }
+
+    if(low === 'cafe con edulcorante' || low === 'café con edulcorante'){
+      return 'Café con edulcorante';
+    }
+
+    return n;
+  }
+
+  var FIX = {
+    'Alpro Protein cacao': {
+      name:'Alpro Protein cacao', brand:'Alpro',
+      kcal:69, protein:5, carbs:5.3, fat:2.8, sugar:5, salt:0.16, typical_g:250, purchased:1,
+      source_note:'Etiqueta/ficha: 69 kcal, 5 g proteína, 5.3 g hidratos y 2.8 g grasa por 100 ml.',
+      notes:'Bebida proteica sabor cacao. Vaso 250 ml = aprox. 172 kcal y 12.5 g proteína.'
+    },
+    'Huevo entero': {
+      name:'Huevo entero', brand:'Casa',
+      kcal:143, protein:12.6, carbs:0.7, fat:9.5, sugar:0, salt:0.35, typical_g:60, purchased:1,
+      source_note:'Valor medio por 100 g.',
+      notes:'1 huevo mediano-grande aprox. 60 g. Para 2 huevos registrar 120 g.'
+    },
+    'Plátano': {
+      name:'Plátano', brand:'Fruta',
+      kcal:89, protein:1.1, carbs:23, fat:0.3, sugar:12, salt:0.01, typical_g:120, purchased:1,
+      source_note:'Valor medio por 100 g.',
+      notes:'Peso comestible aproximado. Útil para desayuno/pre-entreno.'
+    },
+    'Chocolate onzas estimado': {
+      name:'Chocolate onzas estimado', brand:'Estimado',
+      kcal:550, protein:6, carbs:55, fat:32, sugar:48, salt:0.05, typical_g:20, purchased:0,
+      source_note:'4 onzas estimadas como 20 g.',
+      notes:'Snack dulce estimado. Registrar solo si se consume.'
+    },
+    'Café con edulcorante': {
+      name:'Café con edulcorante', brand:'Casa',
+      kcal:0, protein:0, carbs:0, fat:0, sugar:0, salt:0, typical_g:200, purchased:0,
+      source_note:'Café sin azúcar.',
+      notes:'Casi no suma.'
+    }
+  };
+
+  function fixFood(f){
+    if(!f || typeof f !== 'object') return f;
+    var name = canonName(f.name || f.food_name);
+    if(FIX[name]){
+      return Object.assign({}, f, FIX[name]);
+    }
+    if(f.name !== undefined) f.name = name;
+    if(f.food_name !== undefined) f.food_name = name;
+    return f;
+  }
+
+  function fixRecursive(x){
+    if(!x) return x;
+    if(Array.isArray(x)) return x.map(fixRecursive);
+    if(typeof x === 'object'){
+      if(x.name || x.food_name) x = fixFood(x);
+      Object.keys(x).forEach(function(k){
+        if(k === 'name' || k === 'food_name') return;
+        x[k] = fixRecursive(x[k]);
+      });
+      return x;
+    }
+    if(typeof x === 'string'){
+      return x
+        .replaceAll('Alpro Protein Chocolate onzas estimado onzas estimado', 'Alpro Protein cacao')
+        .replaceAll('Alpro Protein Chocolate onzas estimado', 'Alpro Protein cacao')
+        .replaceAll('Alpro Protein Chocolate', 'Alpro Protein cacao');
+    }
+    return x;
+  }
+
+  function sanitizeState(data){
+    data = fixRecursive(data);
+
+    if(data && Array.isArray(data.foods)){
+      var seen = {};
+      var clean = [];
+
+      data.foods.forEach(function(raw){
+        var f = fixFood(raw);
+        var name = String(f.name || '').trim();
+        var low = name.toLowerCase();
+
+        if(low === 'huevos') return;
+        if(low === 'chocolate') return;
+        if(low === 'cacao') return;
+        if(low.indexOf('alpro protein chocolate') === 0) return;
+
+        var key = low;
+        if(!seen[key]){
+          seen[key] = f;
+          clean.push(f);
+        } else {
+          var prev = seen[key];
+          if(!Number(prev.purchased || 0) && Number(f.purchased || 0)){
+            var idx = clean.indexOf(prev);
+            if(idx >= 0) clean[idx] = f;
+            seen[key] = f;
+          }
+        }
+      });
+
+      data.foods = clean;
+    }
+
+    return data;
+  }
+
+  var originalFetch = window.fetch;
+  if(typeof originalFetch === 'function'){
+    window.fetch = async function(input, init){
+      var res = await originalFetch.apply(this, arguments);
+      try{
+        var url = typeof input === 'string' ? input : (input && input.url) || '';
+        if(String(url).indexOf('/api/state') === -1) return res;
+
+        var clone = res.clone();
+        var data = await clone.json();
+        data = sanitizeState(data);
+
+        return new Response(JSON.stringify(data), {
+          status: res.status,
+          statusText: res.statusText,
+          headers: {'Content-Type':'application/json; charset=utf-8'}
+        });
+      }catch(e){
+        return res;
+      }
+    };
+  }
+
+  try{
+    if(localStorage.getItem('__DPP_V0141_STATE_CACHE_CLEAR__') !== '1'){
+      Object.keys(localStorage).forEach(function(k){
+        if(/dpp|diet|dieta|food|foods|state/i.test(k)){
+          localStorage.removeItem(k);
+        }
+      });
+      localStorage.setItem('__DPP_V0141_STATE_CACHE_CLEAR__', '1');
+    }
+  }catch(e){}
+})();
+/* DPP_V0141_STATE_SANITIZER_END */
+
+
 let state=null; let page='home'; let mealItems=[]; let selectedDate=localStorage.getItem('selectedDate')||''; let selectedFoodPhoto='';
 const PAGES=[['home','🏠','Resumen'],['register','⚡','Registrar'],['sport','🏋️','Deporte'],['templates','🍽️','Plantillas'],['foods','🥫','Alimentos'],['plan','📅','Plan'],['weights','⚖️','Historial peso'],['integrations','🔗','Integraciones'],['history','📚','Historial']];
 const $=s=>document.querySelector(s); const fmt=n=>Number(n||0).toLocaleString('es-ES',{maximumFractionDigits:1});
