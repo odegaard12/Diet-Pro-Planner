@@ -1898,7 +1898,7 @@ def api_v012_insights_today():
 
 @app.get("/health")
 def api_v012_health():
-    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.13"})
+    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.14"})
 # DPP_V012_INSIGHTS_END
 
 init_db()
@@ -2434,7 +2434,7 @@ def _fi_build_day(d, planned_workout=None):
     return {
         "ok": True,
         "date": d,
-        "version": "v0.0.13-food-intel",
+        "version": "v0.0.14-food-intel",
         "summary": totals,
         "meals_count": len(meals),
         "items_count": len(items),
@@ -2472,7 +2472,7 @@ def api_food_intel_health():
     return jsonify({
         "ok": True,
         "module": "food-intelligence",
-        "version": "v0.0.13",
+        "version": "v0.0.14",
         "endpoints": [
             "/api/food-intel/day",
             "/api/food-intel/meal-plan",
@@ -2729,7 +2729,7 @@ def api_food_intel_meal_plan():
     current_day = _fi_build_day(d, planned_workout=payload.get("planned_workout") if training_today else None)
     return jsonify({
         "ok": True,
-        "version": "v0.0.13-food-intel",
+        "version": "v0.0.14-food-intel",
         "engine": "heuristic_local",
         "plan": _fimp_make_options(d, meal, available_foods, training_today, current_day),
         "day_analysis": {
@@ -2746,7 +2746,7 @@ def api_food_intel_meal_plan():
 
 
 # DPP_BODY_SNAPSHOT_API_START
-# v0.0.14-dev · Optional body snapshot API.
+# v0.0.14 · Optional body snapshot API.
 # Smart-scale body composition is treated as an estimated trend snapshot,
 # not as a mandatory daily metric and not as a medical diagnosis.
 
@@ -2769,7 +2769,7 @@ def api_body_snapshot_latest():
         return jsonify({
             "ok": True,
             "available": False,
-            "version": "v0.0.14-dev",
+            "version": "v0.0.14",
             "reason": "body_composition table not found"
         })
 
@@ -2786,7 +2786,7 @@ def api_body_snapshot_latest():
         return jsonify({
             "ok": True,
             "available": False,
-            "version": "v0.0.14-dev",
+            "version": "v0.0.14",
             "reason": "no body composition records"
         })
 
@@ -2871,7 +2871,7 @@ def api_body_snapshot_latest():
     return jsonify({
         "ok": True,
         "available": True,
-        "version": "v0.0.14-dev",
+        "version": "v0.0.14",
         "date": latest["date"],
         "time": latest["time"],
         "freshness": {

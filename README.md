@@ -7,6 +7,14 @@ Local-first web app for tracking body weight, meals by grams, reusable foods, me
 Designed to run privately on a Raspberry Pi with Docker. Your personal data stays local.
 
 ## Features
+Optional Body Snapshot dashboard card for smart-scale composition data.
+
+Body Snapshot API at `/api/body-snapshot/latest`.
+
+Body composition context with weight, body fat, water, muscle, visceral fat, BioCharge and derived fat mass.
+
+Bioimpedance values are treated as weekly trend context, not mandatory daily truth.
+
 Confidence-aware nutrition analysis that separates good formulation from estimated/composite food uncertainty.
 
 Local heuristic meal planner that suggests clean, light or post-training meal options from available foods.
@@ -29,7 +37,7 @@ Unified Food Intelligence dashboard with score, confidence, weight progress, pro
 - UI5 blue responsive layout with redesigned sidebar, topbar, dashboard cards and daily rule cards.
 - Sport dashboard with 7-day summary and compact workout cards.
 - Editable weekly plan board with horizontal day cards.
-- Intelligent v0.0.12 dashboard with daily score, semaphore, protein/kcal/oil/activity cards, 80 kg weight-goal progress and compact advice panels.
+- Intelligent dashboard with daily score, semaphore, protein/kcal/oil/activity cards, 80 kg weight-goal progress and compact advice panels.
 - Backend daily insights endpoint at `/api/insights/today`.
 - UTF-8 cleanup for visible Spanish text in the v0.0.12 dashboard.
 - Local SQLite database in `data/dieta.db`.
@@ -101,6 +109,8 @@ Food-label OCR is local-first:
 - repeated image reads can use local OCR cache.
 
 ## Releases
+v0.0.14: optional Body Snapshot module with smart-scale composition card, `/api/body-snapshot/latest`, fat/water/muscle/visceral metrics and trend-focused bioimpedance interpretation.
+
 v0.0.13: Food Intelligence dashboard, daily analysis, confidence labels, local heuristic meal planner and unified premium home.
 
 - `v0.0.12`: intelligent score dashboard, backend daily insights, compact premium home, weight-goal progress and UTF-8 cleanup.
