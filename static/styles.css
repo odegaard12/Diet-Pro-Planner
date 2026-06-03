@@ -1741,3 +1741,13 @@ html[data-ui="ui5"] .bs14-card.bs14-compact .bs14-note{
 
 /* DPP_BODY_SNAPSHOT_COMPACT_UX_END */
 
+
+
+/* DPP_V0141_CSS_CLEANUP_START */
+html[data-ui="ui5"] .bs14-mini-person b{
+  font-size:23px!important;
+}
+html[data-ui="ui5"] .bs14-mini-person small{
+  max-width:190px!important;
+}
+/* DPP_V0141_CSS_CLEANUP_END */
