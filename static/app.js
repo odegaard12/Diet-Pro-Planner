@@ -1,3 +1,171 @@
+
+/* DPP_V0141_STATE_SANITIZER_START */
+(function(){
+  if(window.__DPP_V0141_STATE_SANITIZER__) return;
+  window.__DPP_V0141_STATE_SANITIZER__ = true;
+
+  function canonName(name){
+    var n = String(name || '').trim();
+    var low = n.toLowerCase();
+
+    if(low.indexOf('alpro protein chocolate') === 0) return 'Alpro Protein cacao';
+    if(low === 'alpro protein cacao') return 'Alpro Protein cacao';
+
+    if(low === 'huevos') return 'Huevo entero';
+    if(low === 'huevo entero') return 'Huevo entero';
+
+    if(low === 'platano') return 'Plátano';
+    if(low === 'plátano') return 'Plátano';
+
+    if(low === 'chocolate' || low === 'cacao' || low === 'cacao onzas estimado' || low === 'chocolate onzas estimado'){
+      return 'Chocolate onzas estimado';
+    }
+
+    if(low === 'cafe con edulcorante' || low === 'café con edulcorante'){
+      return 'Café con edulcorante';
+    }
+
+    return n;
+  }
+
+  var FIX = {
+    'Alpro Protein cacao': {
+      name:'Alpro Protein cacao', brand:'Alpro',
+      kcal:69, protein:5, carbs:5.3, fat:2.8, sugar:5, salt:0.16, typical_g:250, purchased:1,
+      source_note:'Etiqueta/ficha: 69 kcal, 5 g proteína, 5.3 g hidratos y 2.8 g grasa por 100 ml.',
+      notes:'Bebida proteica sabor cacao. Vaso 250 ml = aprox. 172 kcal y 12.5 g proteína.'
+    },
+    'Huevo entero': {
+      name:'Huevo entero', brand:'Casa',
+      kcal:143, protein:12.6, carbs:0.7, fat:9.5, sugar:0, salt:0.35, typical_g:60, purchased:1,
+      source_note:'Valor medio por 100 g.',
+      notes:'1 huevo mediano-grande aprox. 60 g. Para 2 huevos registrar 120 g.'
+    },
+    'Plátano': {
+      name:'Plátano', brand:'Fruta',
+      kcal:89, protein:1.1, carbs:23, fat:0.3, sugar:12, salt:0.01, typical_g:120, purchased:1,
+      source_note:'Valor medio por 100 g.',
+      notes:'Peso comestible aproximado. Útil para desayuno/pre-entreno.'
+    },
+    'Chocolate onzas estimado': {
+      name:'Chocolate onzas estimado', brand:'Estimado',
+      kcal:550, protein:6, carbs:55, fat:32, sugar:48, salt:0.05, typical_g:20, purchased:0,
+      source_note:'4 onzas estimadas como 20 g.',
+      notes:'Snack dulce estimado. Registrar solo si se consume.'
+    },
+    'Café con edulcorante': {
+      name:'Café con edulcorante', brand:'Casa',
+      kcal:0, protein:0, carbs:0, fat:0, sugar:0, salt:0, typical_g:200, purchased:0,
+      source_note:'Café sin azúcar.',
+      notes:'Casi no suma.'
+    }
+  };
+
+  function fixFood(f){
+    if(!f || typeof f !== 'object') return f;
+    var name = canonName(f.name || f.food_name);
+    if(FIX[name]){
+      return Object.assign({}, f, FIX[name]);
+    }
+    if(f.name !== undefined) f.name = name;
+    if(f.food_name !== undefined) f.food_name = name;
+    return f;
+  }
+
+  function fixRecursive(x){
+    if(!x) return x;
+    if(Array.isArray(x)) return x.map(fixRecursive);
+    if(typeof x === 'object'){
+      if(x.name || x.food_name) x = fixFood(x);
+      Object.keys(x).forEach(function(k){
+        if(k === 'name' || k === 'food_name') return;
+        x[k] = fixRecursive(x[k]);
+      });
+      return x;
+    }
+    if(typeof x === 'string'){
+      return x
+        .replaceAll('Alpro Protein Chocolate onzas estimado onzas estimado', 'Alpro Protein cacao')
+        .replaceAll('Alpro Protein Chocolate onzas estimado', 'Alpro Protein cacao')
+        .replaceAll('Alpro Protein Chocolate', 'Alpro Protein cacao');
+    }
+    return x;
+  }
+
+  function sanitizeState(data){
+    data = fixRecursive(data);
+
+    if(data && Array.isArray(data.foods)){
+      var seen = {};
+      var clean = [];
+
+      data.foods.forEach(function(raw){
+        var f = fixFood(raw);
+        var name = String(f.name || '').trim();
+        var low = name.toLowerCase();
+
+        if(low === 'huevos') return;
+        if(low === 'chocolate') return;
+        if(low === 'cacao') return;
+        if(low.indexOf('alpro protein chocolate') === 0) return;
+
+        var key = low;
+        if(!seen[key]){
+          seen[key] = f;
+          clean.push(f);
+        } else {
+          var prev = seen[key];
+          if(!Number(prev.purchased || 0) && Number(f.purchased || 0)){
+            var idx = clean.indexOf(prev);
+            if(idx >= 0) clean[idx] = f;
+            seen[key] = f;
+          }
+        }
+      });
+
+      data.foods = clean;
+    }
+
+    return data;
+  }
+
+  var originalFetch = window.fetch;
+  if(typeof originalFetch === 'function'){
+    window.fetch = async function(input, init){
+      var res = await originalFetch.apply(this, arguments);
+      try{
+        var url = typeof input === 'string' ? input : (input && input.url) || '';
+        if(String(url).indexOf('/api/state') === -1) return res;
+
+        var clone = res.clone();
+        var data = await clone.json();
+        data = sanitizeState(data);
+
+        return new Response(JSON.stringify(data), {
+          status: res.status,
+          statusText: res.statusText,
+          headers: {'Content-Type':'application/json; charset=utf-8'}
+        });
+      }catch(e){
+        return res;
+      }
+    };
+  }
+
+  try{
+    if(localStorage.getItem('__DPP_V0141_STATE_CACHE_CLEAR__') !== '1'){
+      Object.keys(localStorage).forEach(function(k){
+        if(/dpp|diet|dieta|food|foods|state/i.test(k)){
+          localStorage.removeItem(k);
+        }
+      });
+      localStorage.setItem('__DPP_V0141_STATE_CACHE_CLEAR__', '1');
+    }
+  }catch(e){}
+})();
+/* DPP_V0141_STATE_SANITIZER_END */
+
+
 let state=null; let page='home'; let mealItems=[]; let selectedDate=localStorage.getItem('selectedDate')||''; let selectedFoodPhoto='';
 const PAGES=[['home','🏠','Resumen'],['register','⚡','Registrar'],['sport','🏋️','Deporte'],['templates','🍽️','Plantillas'],['foods','🥫','Alimentos'],['plan','📅','Plan'],['weights','⚖️','Historial peso'],['integrations','🔗','Integraciones'],['history','📚','Historial']];
 const $=s=>document.querySelector(s); const fmt=n=>Number(n||0).toLocaleString('es-ES',{maximumFractionDigits:1});
@@ -102,7 +270,7 @@ function renderRegister(){
       <div class="row">
         <div class="field span-4"><label>Fecha</label><input id="wDate" type="date" value="${today()}"></div>
         <div class="field span-3"><label>Hora</label><input id="wTime" type="time" value="${nowHM()}"></div>
-        <div class="field span-3"><label>Kg</label><input id="wKg" type="number" step="0.01" placeholder="86.70"></div>
+        <div class="field span-3"><label>Kg</label><input id="wKg" type="number" step="0.01" placeholder="kg de hoy"></div>
         <div class="field span-2"><label>Tipo</label><select id="wOfficial"><option value="1">Oficial</option><option value="0">Referencia</option></select></div>
         <div class="field span-12"><label>Contexto</label><input id="wCtx" placeholder="mañana, después baño"></div>
       </div>
@@ -464,7 +632,7 @@ function renderIntegrations(){
   function stableHeader(){
     document.documentElement.lang = 'es';
     document.documentElement.dataset.lang = 'es';
-    document.title = 'Diet Pro Planner · v0.0.13';
+    document.title = 'Diet Pro Planner · v0.0.14';
     const brand = document.querySelector('.brand h1');
     if(brand) brand.textContent = 'Diet Pro Planner';
     const sub = document.querySelector('.brand p');
@@ -535,7 +703,7 @@ function assistantFor(d=day()){const meals=byDate(state.meals,d),workouts=byDate
 function ui5Progress(label,value,pct,sub,tone='good'){return `<article class="ui5-progress ${tone}"><div><span>${label}</span><b>${value}</b></div><i><em style="width:${Math.max(4,Math.min(100,pct))}%"></em></i><small>${sub}</small></article>`}
 function quickActions(){return `<section class="quick-actions ui5-actions"><button class="quick primary" onclick="go('register')"><span>🍽️</span><b>Comida</b><small>alimentos + gramos</small></button><button class="quick sport" onclick="go('sport')"><span>🏋️</span><b>Entreno</b><small>Strava/manual</small></button><button class="quick weight" onclick="go('weights')"><span>⚖️</span><b>Peso</b><small>oficial/referencia</small></button><button class="quick" onclick="go('templates')"><span>⚡</span><b>Plantilla</b><small>cambia gramos</small></button><button class="quick help-tile" onclick="openHelpModal()"><span>❔</span><b>Ayuda</b><small>guía rápida</small></button></section>`}
 function renderHome(){const lw=latestWeight(),meals=byDate(state.meals),workouts=byDate(state.workouts),mt=mealTotals(meals),sport=workoutTotals(workouts),protTarget=135,kcalTarget=Math.max(1500,1900+Math.min(sport,900)*.35),tr=ui5Trend(); $('#view').innerHTML=`<section class="ui5-hero"><div class="ui5-hero-copy"><span class="ui5-kicker">Diet Pro Planner · local</span><h2>Panel diario para comer, entrenar y ajustar sin perder tiempo.</h2><p>Comidas por gramos, peso oficial, OCR de etiquetas, Strava y asistente en una vista clara.</p><div class="ui5-pills"><span><small>Peso</small><b>${lw?fmt(lw.kg)+' kg':'—'}</b></span><span><small>Proteína</small><b>${fmt(mt.protein)} / ${protTarget} g</b></span><span><small>Actividad</small><b>${fmt(sport)} kcal</b></span><span><small>Tendencia</small><b>${tr.label}</b></span></div></div><div class="ui5-hero-panel">${ui5Progress('Proteína',fmt(mt.protein)+' g',mt.protein/protTarget*100,'Objetivo 130–150 g',mt.protein>=120?'good':'warn')}${ui5Progress('Comida',fmt(mt.kcal)+' kcal',mt.kcal/kcalTarget*100,'Objetivo flexible '+fmt(kcalTarget)+' kcal aprox.',mt.kcal>2300?'bad':'good')}${ui5Progress('Actividad',fmt(sport)+' kcal',Math.min(100,sport/10),sport?'Actividad registrada':'Sin entrenos hoy',sport>900?'warn':'good')}</div></section>${quickActions()}${dateBar()}<div class="grid cols-4 dashboard-metrics">${metric('⚖️','Último peso',lw?`${fmt(lw.kg)} kg`:'—',lw?`${lw.date} ${lw.time} · ${lw.official?'oficial':'referencia'}`:'sin datos')}${metric('🍽️','Comido',fmt(mt.kcal),'kcal estimadas')}${metric('💪','Proteína',`${fmt(mt.protein)} g`,'objetivo 130–150 g')}${metric('🔥','Actividad',fmt(sport),'kcal del día seleccionado')}</div><div class="grid cols-2 home-main" style="margin-top:14px"><div class="card assistant compact-assistant"><h3>🤖 Asistente</h3><ul>${assistantFor().map(x=>`<li>${x}</li>`).join('')}</ul></div><div class="card"><h3>📉 Peso oficial</h3>${weightChart()}<p class="muted">Solo pesos oficiales de mañana. Con pocos días no extrapolamos kg/semana.</p></div></div><div class="day-columns"><section class="card day-panel"><div class="section-title compact-title"><div><h3>🍽️ Comidas</h3><p>${fmt(mt.kcal)} kcal · ${fmt(mt.protein)} g prot.</p></div><button class="btn small" onclick="go('register')">+ Comida</button></div><div class="compact-list">${meals.length?meals.map(mealCardCompact).join(''):'<div class="empty">Sin comidas.</div>'}</div></section><section class="card day-panel"><div class="section-title compact-title"><div><h3>🏋️ Actividad</h3><p>${fmt(sport)} kcal</p></div><button class="btn small" onclick="go('sport')">+ Entreno</button></div><div class="compact-list">${workouts.length?workouts.map(workoutCardCompact).join(''):'<div class="empty">Sin entrenos para este día.</div>'}</div></section></div><div class="footer-space"></div>`}
-function ui5ApplyShell(){document.documentElement.dataset.ui='ui5'; const e=document.querySelector('.eyebrow'); if(e)e.textContent='Dieta controlada · v0.0.14'; const r=document.querySelector('.rule-banner'); if(r&&r.dataset.ui5!=='1'){r.dataset.ui5='1';r.innerHTML=`<article class="ui5-rule protein"><span>Proteína</span><b>130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b>5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>`} const sr=document.querySelector('.sidebar .side-rule'); if(sr&&sr.dataset.ui5!=='1'){sr.dataset.ui5='1';sr.innerHTML='<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'} if(!document.getElementById('ui5Badge')){const b=document.createElement('div');b.id='ui5Badge';b.className='ui5-badge';b.textContent='v0.0.13';document.querySelector('.topbar')?.appendChild(b)} if(!document.getElementById('floatingHelp')){const h=document.createElement('button');h.id='floatingHelp';h.className='floating-help';h.textContent='?';h.onclick=openHelpModal;h.title='Ayuda';document.body.appendChild(h)}}
+function ui5ApplyShell(){document.documentElement.dataset.ui='ui5'; const e=document.querySelector('.eyebrow'); if(e)e.textContent='Dieta controlada · v0.0.14'; const r=document.querySelector('.rule-banner'); if(r&&r.dataset.ui5!=='1'){r.dataset.ui5='1';r.innerHTML=`<article class="ui5-rule protein"><span>Proteína</span><b>130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b>5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>`} const sr=document.querySelector('.sidebar .side-rule'); if(sr&&sr.dataset.ui5!=='1'){sr.dataset.ui5='1';sr.innerHTML='<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'} if(!document.getElementById('ui5Badge')){const b=document.createElement('div');b.id='ui5Badge';b.className='ui5-badge';b.textContent='v0.0.14';document.querySelector('.topbar')?.appendChild(b)} if(!document.getElementById('floatingHelp')){const h=document.createElement('button');h.id='floatingHelp';h.className='floating-help';h.textContent='?';h.onclick=openHelpModal;h.title='Ayuda';document.body.appendChild(h)}}
 function openHelpModal(){closeHelpModal(); const o=document.createElement('div');o.id='helpOverlay';o.className='help-overlay';o.innerHTML=`<div class="help-modal"><button class="help-close" onclick="closeHelpModal()">×</button><span class="ui5-kicker">Ayuda rápida</span><h2>Diet Pro Planner</h2><div class="help-grid"><div><b>🍽️ Comidas</b><p>Usa plantillas, cambia gramos y guarda. Pasta/arroz siempre en seco.</p></div><div><b>⚖️ Peso</b><p>Oficial por la mañana. Post-comida, noche o post-entreno son referencia.</p></div><div><b>📷 OCR</b><p>Sube foto de etiqueta. Tesseract intenta leerla. Revisa valores antes de guardar.</p></div><div><b>🏋️ Strava</b><p>Importa por ID y evita duplicados. Auto-sync queda igual.</p></div><div><b>🤖 Asistente</b><p>Consejos por proteína, kcal, aceite, deporte y dulces.</p></div><div><b>🔐 Privacidad</b><p>Esta prueba es local. No sube DB, tokens, .env ni fotos al repo.</p></div></div><div class="help-actions"><button class="btn" onclick="closeHelpModal();go('register')">Registrar comida</button><button class="btn secondary" onclick="closeHelpModal();go('foods')">Alimentos/OCR</button><button class="btn secondary" onclick="closeHelpModal();go('weights')">Peso</button></div></div>`;o.onclick=e=>{if(e.target.id==='helpOverlay')closeHelpModal()};document.body.appendChild(o)}
 function closeHelpModal(){document.getElementById('helpOverlay')?.remove()}
 if(!window.__DPP_UI5_PATCHED__){window.__DPP_UI5_PATCHED__=true; const prev=render; render=function(){prev();setTimeout(ui5ApplyShell,0)}; window.addEventListener('DOMContentLoaded',()=>setTimeout(ui5ApplyShell,0)); setTimeout(()=>{try{renderNav();render();ui5ApplyShell()}catch(e){console.error(e)}},250); setInterval(ui5ApplyShell,3000)}
@@ -815,7 +983,7 @@ function ui5PlanDefaultWeek(){
         breakfast: "Tostada + café + yogur proteico.",
         lunch: "Tupper: carbo pesado en seco + pollo/atún + verdura + 5 g aceite.",
         snack: "Queso fresco batido o yogur proteico.",
-        dinner: "Huevos/pescado + verdura.",
+        dinner: "Huevo entero/pescado + verdura.",
         target: "rutina",
         status: "borrador"
       }
@@ -982,8 +1150,8 @@ function renderPlan(){
   $('#view').innerHTML = `
     <section class="ui5-plan-hero2">
       <div>
-        <span class="ui5-kicker">Plan semanal editable</span>
-        <h3>Planifica horizontal, corrige rápido y guarda.</h3>
+        <span class="ui5-kicker">Plan semanal previsto</span>
+        <h3>Plan previsto editable. El real registrado se consulta en Historial.</h3>
         <p>Si el plan anterior venía roto, pulsa “Cargar plan base” o “Completar semana”.</p>
       </div>
       <div id="ui5PlanStats" class="ui5-plan-stats">
@@ -1037,8 +1205,8 @@ function dpp12Text(v){
     .replace(/Todav\?a/g, 'Todav\u00eda')
     .replace(/todav\?a/g, 'todav\u00eda')
     .replace(/ma\?ana/g, 'ma\u00f1ana')
-    .replace(/v0\.0\.12\.1/g, 'v0.0.13')
-    .replace(/v0\.0\.12-dev/g, 'v0.0.13')
+    .replace(/v0\.0\.12\.1/g, 'v0.0.14')
+    .replace(/v0\.0\.12-dev/g, 'v0.0.14')
     .replace(/Dashboard inteligente \?/g, 'Dashboard \u00b7')
     .replace(/Dashboard \?/g, 'Dashboard \u00b7')
     .replace(/Dieta controlada \?/g, 'Dieta controlada \u00b7')
@@ -1048,11 +1216,11 @@ function dpp12Text(v){
 }
 
 function dpp12Version(){
-  document.title = 'Diet Pro Planner \u00b7 v0.0.13';
+  document.title = 'Diet Pro Planner \u00b7 v0.0.14';
   const eyebrow = document.querySelector('.eyebrow');
-  if(eyebrow) eyebrow.textContent = 'Dieta controlada \u00b7 v0.0.13';
+  if(eyebrow) eyebrow.textContent = 'Dieta controlada \u00b7 v0.0.14';
   const badge = document.querySelector('#ui5Badge');
-  if(badge) badge.textContent = 'v0.0.13';
+  if(badge) badge.textContent = 'v0.0.14';
 }
 
 async function dpp12Insights(d){
@@ -1219,7 +1387,7 @@ setInterval(dpp12Version, 1000);
 
 
 /* DPP_FI_SINGLE_HOME_START */
-/* v0.0.13 · Single premium home powered by Food Intelligence. */
+/* v0.0.14 · Single premium home powered by Food Intelligence. */
 
 (function(){
   if(window.__DPP_FI_SINGLE_HOME__) return;
@@ -1430,8 +1598,8 @@ setInterval(dpp12Version, 1000);
                 <i class="legs"></i>
               </div>
               <div>
-                <b>${fmt2(weight,2)} kg</b>
-                <small>${fmt2(fat,1)}% grasa · ${d.fat_mass_kg ? fmt2(d.fat_mass_kg,1) + ' kg grasa estimada' : 'bioimpedancia'}</small>
+                <b>${fmt2(fat,1)}% grasa</b>
+                <small>${fmt2(water,1)}% agua · ${fmt2(muscle,1)} kg músculo · ${d.fat_mass_kg ? fmt2(d.fat_mass_kg,1) + ' kg grasa' : 'bioimpedancia'}</small>
               </div>
             </div>
 
@@ -1576,10 +1744,82 @@ setInterval(dpp12Version, 1000);
 /* DPP_FI_SINGLE_HOME_END */
 
 
+/* DPP_V0141_UI_CLEANUP_START */
+/* v0.0.14.1: small UX guardrails for forms */
+(function(){
+  if(window.__DPP_V0141_UI_CLEANUP__) return;
+  window.__DPP_V0141_UI_CLEANUP__ = true;
+
+  function mealTypeForHour(h){
+    if(h >= 5 && h < 12) return 'Desayuno';
+    if(h >= 12 && h < 17) return 'Comida';
+    if(h >= 17 && h < 20) return 'Merienda';
+    return 'Cena';
+  }
+
+  function cleanRegisterForm(){
+    const view = document.querySelector('#view');
+    if(!view) return;
+    const txt = view.innerText || '';
+
+    // Peso rápido: no prellenar 86.70/86.7 como oficial accidental.
+    if(txt.includes('Peso rápido') || txt.includes('Registrar peso')){
+      const inputs = Array.from(view.querySelectorAll('input'));
+      for(const input of inputs){
+        const v = String(input.value || '').trim();
+        if(v === '86.70' || v === '86.7'){
+          input.value = '';
+          input.placeholder = 'kg de hoy';
+        }
+      }
+    }
+
+    // Nueva comida: tipo por hora si sigue en Desayuno por defecto.
+    if(txt.includes('Nueva comida')){
+      const selects = Array.from(view.querySelectorAll('select'));
+      for(const sel of selects){
+        const labels = Array.from(sel.options || []).map(o => o.textContent || o.value);
+        const hasMealTypes = ['Desayuno','Comida','Merienda','Cena'].every(x => labels.some(y => y.includes(x)));
+        if(!hasMealTypes) continue;
+        if(sel.dataset.dppV0141Touched) continue;
+        if((sel.value || '').includes('Desayuno') || (sel.options[sel.selectedIndex]?.textContent || '').includes('Desayuno')){
+          const target = mealTypeForHour(new Date().getHours());
+          for(const opt of Array.from(sel.options)){
+            if((opt.value || '').includes(target) || (opt.textContent || '').includes(target)){
+              sel.value = opt.value;
+              sel.dataset.dppV0141Touched = '1';
+              sel.dispatchEvent(new Event('change', {bubbles:true}));
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', cleanRegisterForm);
+  const obs = new MutationObserver(() => setTimeout(cleanRegisterForm, 80));
+  obs.observe(document.body, {childList:true, subtree:true});
+  setInterval(cleanRegisterForm, 1500);
+})();
+/* DPP_V0141_UI_CLEANUP_END */
 
 
 
-
-
-
-
+/* DPP_V0141_WEIGHT_INPUT_HOTFIX_START */
+(function(){
+  function clearDangerousWeightDefault(){
+    const w = document.querySelector('#wKg');
+    if(!w) return;
+    const v = String(w.value || '').trim();
+    if(v === '86.70' || v === '86.7'){
+      w.value = '';
+    }
+    w.placeholder = 'kg de hoy';
+  }
+  document.addEventListener('DOMContentLoaded', clearDangerousWeightDefault);
+  const obs = new MutationObserver(() => setTimeout(clearDangerousWeightDefault, 80));
+  obs.observe(document.body, {childList:true, subtree:true});
+  setInterval(clearDangerousWeightDefault, 1500);
+})();
+/* DPP_V0141_WEIGHT_INPUT_HOTFIX_END */
