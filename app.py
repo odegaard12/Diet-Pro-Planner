@@ -2743,5 +2743,153 @@ def api_food_intel_meal_plan():
 # DPP_FOOD_INTEL_MEAL_PLAN_END
 
 
+
+
+# DPP_BODY_SNAPSHOT_API_START
+# v0.0.14-dev · Optional body snapshot API.
+# Smart-scale body composition is treated as an estimated trend snapshot,
+# not as a mandatory daily metric and not as a medical diagnosis.
+
+@app.route("/api/body-snapshot/latest")
+def api_body_snapshot_latest():
+    import sqlite3
+    from pathlib import Path
+    from datetime import date as _date
+
+    db_path = Path("data") / "dieta.db"
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+
+    table = con.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='body_composition'"
+    ).fetchone()
+
+    if not table:
+        con.close()
+        return jsonify({
+            "ok": True,
+            "available": False,
+            "version": "v0.0.14-dev",
+            "reason": "body_composition table not found"
+        })
+
+    latest = con.execute("""
+        SELECT date, time
+        FROM body_composition
+        GROUP BY date, time
+        ORDER BY date DESC, time DESC
+        LIMIT 1
+    """).fetchone()
+
+    if not latest:
+        con.close()
+        return jsonify({
+            "ok": True,
+            "available": False,
+            "version": "v0.0.14-dev",
+            "reason": "no body composition records"
+        })
+
+    rows = con.execute("""
+        SELECT metric, value, unit, source, confidence, notes
+        FROM body_composition
+        WHERE date=? AND time=?
+        ORDER BY metric
+    """, (latest["date"], latest["time"])).fetchall()
+
+    previous = con.execute("""
+        SELECT date, time
+        FROM body_composition
+        WHERE (date < ? OR (date = ? AND time < ?))
+        GROUP BY date, time
+        ORDER BY date DESC, time DESC
+        LIMIT 1
+    """, (latest["date"], latest["date"], latest["time"])).fetchone()
+
+    prev_metrics = {}
+    if previous:
+        prev_rows = con.execute("""
+            SELECT metric, value
+            FROM body_composition
+            WHERE date=? AND time=?
+        """, (previous["date"], previous["time"])).fetchall()
+        prev_metrics = {r["metric"]: r["value"] for r in prev_rows}
+
+    con.close()
+
+    metrics = {}
+    for r in rows:
+        metrics[r["metric"]] = {
+            "value": r["value"],
+            "unit": r["unit"] or "",
+            "source": r["source"] or "",
+            "confidence": r["confidence"] or "media",
+            "notes": r["notes"] or ""
+        }
+
+    def val(key):
+        try:
+            return float((metrics.get(key) or {}).get("value") or 0)
+        except Exception:
+            return 0.0
+
+    def pval(key):
+        try:
+            return float(prev_metrics.get(key) or 0)
+        except Exception:
+            return 0.0
+
+    weight = val("weight")
+    fat_pct = val("body_fat_pct")
+    muscle = val("muscle_mass_kg")
+
+    derived = {
+        "fat_mass_kg": round(weight * fat_pct / 100.0, 2) if weight and fat_pct else None,
+        "lean_mass_kg": round(weight - (weight * fat_pct / 100.0), 2) if weight and fat_pct else None,
+        "muscle_weight_pct": round(muscle / weight * 100.0, 1) if muscle and weight else None,
+    }
+
+    deltas = {}
+    for key in ["weight", "body_fat_pct", "water_pct", "muscle_mass_kg", "visceral_fat", "bmr_kcal", "biocharge_wakeup", "hrv"]:
+        if key in metrics and key in prev_metrics:
+            deltas[key] = round(val(key) - pval(key), 2)
+
+    try:
+        days_old = (_date.today() - _date.fromisoformat(latest["date"])).days
+    except Exception:
+        days_old = None
+
+    if days_old is None:
+        freshness = "unknown"
+    elif days_old <= 2:
+        freshness = "fresh"
+    elif days_old <= 7:
+        freshness = "recent"
+    else:
+        freshness = "old"
+
+    return jsonify({
+        "ok": True,
+        "available": True,
+        "version": "v0.0.14-dev",
+        "date": latest["date"],
+        "time": latest["time"],
+        "freshness": {
+            "days_old": days_old,
+            "label": freshness
+        },
+        "metrics": metrics,
+        "derived": derived,
+        "deltas": deltas,
+        "previous": {
+            "date": previous["date"] if previous else None,
+            "time": previous["time"] if previous else None
+        },
+        "message": "Foto corporal estimada por bioimpedancia. Usar tendencia semanal, no valor aislado."
+    })
+
+# DPP_BODY_SNAPSHOT_API_END
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))
