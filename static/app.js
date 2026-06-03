@@ -102,7 +102,7 @@ function renderRegister(){
       <div class="row">
         <div class="field span-4"><label>Fecha</label><input id="wDate" type="date" value="${today()}"></div>
         <div class="field span-3"><label>Hora</label><input id="wTime" type="time" value="${nowHM()}"></div>
-        <div class="field span-3"><label>Kg</label><input id="wKg" type="number" step="0.01" placeholder="86.70"></div>
+        <div class="field span-3"><label>Kg</label><input id="wKg" type="number" step="0.01" placeholder="kg de hoy"></div>
         <div class="field span-2"><label>Tipo</label><select id="wOfficial"><option value="1">Oficial</option><option value="0">Referencia</option></select></div>
         <div class="field span-12"><label>Contexto</label><input id="wCtx" placeholder="mañana, después baño"></div>
       </div>
@@ -815,7 +815,7 @@ function ui5PlanDefaultWeek(){
         breakfast: "Tostada + café + yogur proteico.",
         lunch: "Tupper: carbo pesado en seco + pollo/atún + verdura + 5 g aceite.",
         snack: "Queso fresco batido o yogur proteico.",
-        dinner: "Huevos/pescado + verdura.",
+        dinner: "Huevo entero/pescado + verdura.",
         target: "rutina",
         status: "borrador"
       }
@@ -982,7 +982,7 @@ function renderPlan(){
   $('#view').innerHTML = `
     <section class="ui5-plan-hero2">
       <div>
-        <span class="ui5-kicker">Plan semanal editable</span>
+        <span class="ui5-kicker">Plan semanal previsto</span>
         <h3>Plan previsto editable. El real registrado se consulta en Historial.</h3>
         <p>Si el plan anterior venía roto, pulsa “Cargar plan base” o “Completar semana”.</p>
       </div>
@@ -1288,7 +1288,7 @@ setInterval(dpp12Version, 1000);
     const lw = fiLatestWeight();
     const goal = 80;
     const current = Number(lw?.kg || 0);
-    const start = 86.7;
+    const start = kg de hoy;
     const lost = Math.max(0, start - current);
     const remaining = Math.max(0, current - goal);
     const pct = Math.max(0, Math.min(100, lost / Math.max(.1, start - goal) * 100));
@@ -1594,12 +1594,12 @@ setInterval(dpp12Version, 1000);
     if(!view) return;
     const txt = view.innerText || '';
 
-    // Peso rápido: no prellenar 86.70/86.7 como oficial accidental.
+    // Peso rápido: no prellenar kg de hoy/kg de hoy como oficial accidental.
     if(txt.includes('Peso rápido') || txt.includes('Registrar peso')){
       const inputs = Array.from(view.querySelectorAll('input'));
       for(const input of inputs){
         const v = String(input.value || '').trim();
-        if(v === '86.70' || v === '86.7'){
+        if(v === 'kg de hoy' || v === 'kg de hoy'){
           input.value = '';
           input.placeholder = 'kg de hoy';
         }
