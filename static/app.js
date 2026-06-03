@@ -1288,7 +1288,7 @@ setInterval(dpp12Version, 1000);
     const lw = fiLatestWeight();
     const goal = 80;
     const current = Number(lw?.kg || 0);
-    const start = kg de hoy;
+    const start = 86.7;
     const lost = Math.max(0, start - current);
     const remaining = Math.max(0, current - goal);
     const pct = Math.max(0, Math.min(100, lost / Math.max(.1, start - goal) * 100));
@@ -1594,12 +1594,12 @@ setInterval(dpp12Version, 1000);
     if(!view) return;
     const txt = view.innerText || '';
 
-    // Peso rápido: no prellenar kg de hoy/kg de hoy como oficial accidental.
+    // Peso rápido: no prellenar 86.70/86.7 como oficial accidental.
     if(txt.includes('Peso rápido') || txt.includes('Registrar peso')){
       const inputs = Array.from(view.querySelectorAll('input'));
       for(const input of inputs){
         const v = String(input.value || '').trim();
-        if(v === 'kg de hoy' || v === 'kg de hoy'){
+        if(v === '86.70' || v === '86.7'){
           input.value = '';
           input.placeholder = 'kg de hoy';
         }
@@ -1636,3 +1636,22 @@ setInterval(dpp12Version, 1000);
 })();
 /* DPP_V0141_UI_CLEANUP_END */
 
+
+
+/* DPP_V0141_WEIGHT_INPUT_HOTFIX_START */
+(function(){
+  function clearDangerousWeightDefault(){
+    const w = document.querySelector('#wKg');
+    if(!w) return;
+    const v = String(w.value || '').trim();
+    if(v === '86.70' || v === '86.7'){
+      w.value = '';
+    }
+    w.placeholder = 'kg de hoy';
+  }
+  document.addEventListener('DOMContentLoaded', clearDangerousWeightDefault);
+  const obs = new MutationObserver(() => setTimeout(clearDangerousWeightDefault, 80));
+  obs.observe(document.body, {childList:true, subtree:true});
+  setInterval(clearDangerousWeightDefault, 1500);
+})();
+/* DPP_V0141_WEIGHT_INPUT_HOTFIX_END */
