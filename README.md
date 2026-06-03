@@ -1,6 +1,6 @@
 # Diet Pro Planner
 
-**Current version:** `v0.0.14`
+**Current version:** `v0.0.14.1`
 
 Diet Pro Planner is a private, local-first nutrition, weight, sport and body-composition web app designed to run on a Raspberry Pi with Docker.
 
@@ -201,6 +201,15 @@ Body composition:
 - `GET /api/body-snapshot/latest`
 
 ## Releases
+
+### `v0.0.14.1` — Dashboard and catalog cleanup
+
+- Cleans legacy food catalog aliases in `/api/state`.
+- Adds backend safety net for duplicated foods such as `Huevos`, `Chocolate`, stale Alpro names and stale coffee values.
+- Adds safe local catalog cleanup script.
+- Fixes visible version consistency after `v0.0.14`.
+- Improves dashboard/form cleanup without changing private user data.
+- Verifies that Food Intelligence no longer reports false chocolate extras from Alpro.
 
 ### `v0.0.14` — Body Snapshot
 
