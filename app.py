@@ -2891,5 +2891,255 @@ def api_body_snapshot_latest():
 # DPP_BODY_SNAPSHOT_API_END
 
 
+
+# DPP_V0141_API_STATE_SANITIZER_START
+# v0.0.14.1 safety net: sanitize legacy catalog aliases in /api/state.
+# This is intentionally response-level because some UI state can be built from
+# more than one source, not only the current foods table.
+import json as _dpp_v0141_json
+from flask import request as _dpp_v0141_request, current_app as _dpp_v0141_current_app
+
+_DPP_V0141_CANONICAL_FOODS = {
+    "alpro protein cacao": {
+        "name": "Alpro Protein cacao",
+        "brand": "Alpro",
+        "kcal": 69,
+        "protein": 5.0,
+        "carbs": 5.3,
+        "fat": 2.8,
+        "sugar": 5.0,
+        "salt": 0.16,
+        "typical_g": 250,
+        "purchased": 1,
+        "source_note": "Etiqueta/ficha: 69 kcal, 5 g proteína, 5.3 g hidratos y 2.8 g grasa por 100 ml.",
+        "notes": "Bebida proteica sabor cacao. Vaso 250 ml = aprox. 172 kcal y 12.5 g proteína.",
+    },
+    "huevo entero": {
+        "name": "Huevo entero",
+        "brand": "Casa",
+        "kcal": 143,
+        "protein": 12.6,
+        "carbs": 0.7,
+        "fat": 9.5,
+        "sugar": 0,
+        "salt": 0.35,
+        "typical_g": 60,
+        "purchased": 1,
+        "source_note": "Valor medio por 100 g.",
+        "notes": "1 huevo mediano-grande aprox. 60 g. Para 2 huevos registrar 120 g.",
+    },
+    "plátano": {
+        "name": "Plátano",
+        "brand": "Fruta",
+        "kcal": 89,
+        "protein": 1.1,
+        "carbs": 23,
+        "fat": 0.3,
+        "sugar": 12,
+        "salt": 0.01,
+        "typical_g": 120,
+        "purchased": 1,
+        "source_note": "Valor medio por 100 g.",
+        "notes": "Peso comestible aproximado. Útil para desayuno/pre-entreno.",
+    },
+    "chocolate onzas estimado": {
+        "name": "Chocolate onzas estimado",
+        "brand": "Estimado",
+        "kcal": 550,
+        "protein": 6,
+        "carbs": 55,
+        "fat": 32,
+        "sugar": 48,
+        "salt": 0.05,
+        "typical_g": 20,
+        "purchased": 0,
+        "source_note": "4 onzas estimadas como 20 g.",
+        "notes": "Snack dulce estimado. Registrar solo si se consume.",
+    },
+    "café con edulcorante": {
+        "name": "Café con edulcorante",
+        "brand": "Casa",
+        "kcal": 0,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 0,
+        "sugar": 0,
+        "salt": 0,
+        "typical_g": 200,
+        "purchased": 0,
+        "source_note": "Café sin azúcar.",
+        "notes": "Casi no suma.",
+    },
+}
+
+_DPP_V0141_ALIASES = {
+    "alpro protein chocolate": "alpro protein cacao",
+    "alpro protein chocolate onzas estimado": "alpro protein cacao",
+    "alpro protein chocolate onzas estimado onzas estimado": "alpro protein cacao",
+    "alpro protein cacao": "alpro protein cacao",
+
+    "huevos": "huevo entero",
+    "huevo entero": "huevo entero",
+
+    "platano": "plátano",
+    "plátano": "plátano",
+
+    "chocolate": "chocolate onzas estimado",
+    "cacao": "chocolate onzas estimado",
+    "cacao onzas estimado": "chocolate onzas estimado",
+    "chocolate onzas estimado": "chocolate onzas estimado",
+
+    "cafe con edulcorante": "café con edulcorante",
+    "café con edulcorante": "café con edulcorante",
+}
+
+def _dpp_v0141_canonical_key(name):
+    raw = str(name or "").strip()
+    low = raw.lower()
+    if low.startswith("alpro protein chocolate"):
+        return "alpro protein cacao"
+    return _DPP_V0141_ALIASES.get(low, low)
+
+def _dpp_v0141_fix_food_dict(obj):
+    if not isinstance(obj, dict):
+        return obj
+
+    name = obj.get("name", obj.get("food_name", ""))
+    key = _dpp_v0141_canonical_key(name)
+
+    fixed = dict(obj)
+
+    if key in _DPP_V0141_CANONICAL_FOODS:
+        canonical = dict(_DPP_V0141_CANONICAL_FOODS[key])
+        # Preserve ids/photo paths if present, but force nutrition/name fields.
+        for preserve in ("id", "photo_path", "created_at"):
+            if preserve in fixed and preserve not in canonical:
+                canonical[preserve] = fixed[preserve]
+
+        if "food_name" in fixed:
+            canonical["food_name"] = canonical["name"]
+
+        return canonical
+
+    if "name" in fixed:
+        fixed["name"] = str(name).strip()
+    if "food_name" in fixed:
+        fixed["food_name"] = str(name).strip()
+
+    return fixed
+
+def _dpp_v0141_fix_strings(value):
+    if not isinstance(value, str):
+        return value
+    return (
+        value
+        .replace("Alpro Protein Chocolate onzas estimado onzas estimado", "Alpro Protein cacao")
+        .replace("Alpro Protein Chocolate onzas estimado", "Alpro Protein cacao")
+        .replace("Alpro Protein Chocolate", "Alpro Protein cacao")
+    )
+
+def _dpp_v0141_sanitize_recursive(value):
+    if isinstance(value, list):
+        return [_dpp_v0141_sanitize_recursive(v) for v in value]
+
+    if isinstance(value, dict):
+        if "name" in value or "food_name" in value:
+            value = _dpp_v0141_fix_food_dict(value)
+        else:
+            value = dict(value)
+
+        for k in list(value.keys()):
+            value[k] = _dpp_v0141_sanitize_recursive(value[k])
+
+        return value
+
+    return _dpp_v0141_fix_strings(value)
+
+def _dpp_v0141_sanitize_foods_list(foods):
+    if not isinstance(foods, list):
+        return foods
+
+    seen = {}
+    clean = []
+
+    for raw in foods:
+        if not isinstance(raw, dict):
+            continue
+
+        fixed = _dpp_v0141_fix_food_dict(raw)
+        name = str(fixed.get("name", "")).strip()
+        key = _dpp_v0141_canonical_key(name)
+
+        # Drop explicit legacy aliases from state.
+        if str(raw.get("name", "")).strip().lower() in {
+            "huevos",
+            "chocolate",
+            "cacao",
+            "cacao onzas estimado",
+            "alpro protein chocolate",
+            "alpro protein chocolate onzas estimado",
+            "alpro protein chocolate onzas estimado onzas estimado",
+        }:
+            if key in _DPP_V0141_CANONICAL_FOODS:
+                fixed = dict(_DPP_V0141_CANONICAL_FOODS[key])
+            else:
+                continue
+
+        dedupe = str(fixed.get("name", "")).strip().lower()
+        if not dedupe:
+            continue
+
+        if dedupe not in seen:
+            seen[dedupe] = fixed
+            clean.append(fixed)
+        else:
+            prev = seen[dedupe]
+            prev_p = int(prev.get("purchased") or 0)
+            new_p = int(fixed.get("purchased") or 0)
+            if new_p > prev_p:
+                idx = clean.index(prev)
+                clean[idx] = fixed
+                seen[dedupe] = fixed
+
+    return clean
+
+def _dpp_v0141_sanitize_state_payload(data):
+    data = _dpp_v0141_sanitize_recursive(data)
+
+    if isinstance(data, dict):
+        if isinstance(data.get("foods"), list):
+            data["foods"] = _dpp_v0141_sanitize_foods_list(data["foods"])
+
+        # Some versions may expose purchased foods separately.
+        for key in ("purchased_foods", "catalog", "food_catalog"):
+            if isinstance(data.get(key), list):
+                data[key] = _dpp_v0141_sanitize_foods_list(data[key])
+
+    return data
+
+@app.after_request
+def _dpp_v0141_after_request_sanitize_api_state(response):
+    try:
+        if _dpp_v0141_request.path != "/api/state":
+            return response
+
+        data = response.get_json(silent=True)
+        if data is None:
+            return response
+
+        data = _dpp_v0141_sanitize_state_payload(data)
+        payload = _dpp_v0141_json.dumps(data, ensure_ascii=False)
+
+        new_response = _dpp_v0141_current_app.response_class(
+            payload,
+            status=response.status_code,
+            mimetype="application/json",
+        )
+        return new_response
+    except Exception:
+        return response
+# DPP_V0141_API_STATE_SANITIZER_END
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))
