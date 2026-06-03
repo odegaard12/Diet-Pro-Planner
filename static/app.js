@@ -1384,7 +1384,84 @@ setInterval(dpp12Version, 1000);
     }).join('');
   }
 
-  function fiHomeHtml(data){
+
+  async function fiBodySnapshotHtml(){
+    try{
+      const r = await fetch('/api/body-snapshot/latest', {cache:'no-store'});
+      if(!r.ok) return '';
+      const data = await r.json();
+      if(!data || !data.available) return '';
+
+      const m = data.metrics || {};
+      const d = data.derived || {};
+      const v = (k) => (m[k] || {}).value;
+      const fmt2 = (x, dec=1) => {
+        if(x === null || x === undefined || x === '') return '--';
+        try{return Number(x).toLocaleString('es-ES', {maximumFractionDigits:dec});}
+        catch(e){return String(x);}
+      };
+
+      const weight = v('weight');
+      const fat = v('body_fat_pct');
+      const water = v('water_pct');
+      const muscle = v('muscle_mass_kg');
+      const skeletal = v('skeletal_muscle_kg');
+      const visceral = v('visceral_fat');
+      const bmr = v('bmr_kcal');
+      const bio = v('biocharge_wakeup');
+      const hrv = v('hrv');
+      const resting = v('resting_hr');
+
+      return `
+        <section id="dppBodySnapshotCard" class="bs14-card">
+          <div class="bs14-visual">
+            <div class="bs14-person-wrap">
+              <div class="bs14-person">
+                <i class="head"></i>
+                <i class="torso"></i>
+                <i class="legs"></i>
+              </div>
+              <div class="bs14-person-label">
+                <b>${fmt2(weight,2)} kg</b>
+                <small>${fmt2(fat,1)}% grasa</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="bs14-content">
+            <div class="bs14-head">
+              <div>
+                <span>Foto corporal · v0.0.14-dev</span>
+                <h3>Composición corporal</h3>
+                <p>${data.date || ''} ${data.time ? '· ' + data.time : ''} · lectura opcional de báscula</p>
+              </div>
+              <div class="bs14-badge">
+                <b>${fmt2(bio,0)}</b>
+                <small>BioCharge</small>
+              </div>
+            </div>
+
+            <div class="bs14-grid">
+              <article class="watch"><span>Grasa</span><b>${fmt2(fat,1)}%</b><small>${d.fat_mass_kg ? fmt2(d.fat_mass_kg,1) + ' kg estimados' : 'bioimpedancia'}</small></article>
+              <article><span>Agua</span><b>${fmt2(water,1)}%</b><small>hidratación</small></article>
+              <article><span>Músculo</span><b>${fmt2(muscle,1)} kg</b><small>total estimado</small></article>
+              <article><span>Músculo esq.</span><b>${fmt2(skeletal,1)} kg</b><small>estimado</small></article>
+              <article class="watch"><span>Visceral</span><b>${fmt2(visceral,0)}</b><small>vigilar tendencia</small></article>
+              <article><span>BMR</span><b>${fmt2(bmr,0)} kcal</b><small>basal estimado</small></article>
+              <article><span>HRV</span><b>${fmt2(hrv,0)} ms</b><small>${resting ? 'FC reposo ' + fmt2(resting,0) : 'recuperación'}</small></article>
+            </div>
+
+            <p class="bs14-note">Bioimpedancia estimada: útil para tendencia semanal, no para juzgar un peso aislado.</p>
+          </div>
+        </section>
+      `;
+    }catch(e){
+      return '';
+    }
+  }
+
+
+  function fiHomeHtml(data, bodySnapshotHtml=''){
     const a = data.analysis || {};
     const rules = a.rules || {};
     const summary = data.summary || {};
@@ -1418,6 +1495,8 @@ setInterval(dpp12Version, 1000);
       </section>
 
       ${fiWeightBlock()}
+
+      ${bodySnapshotHtml || ''}
 
       <section class="fi13-metrics">
         ${fiMetric('Proteína', `${fiFmt(summary.protein,1)} g`, protein.message || 'objetivo 130-150 g', protein.status === 'ok' ? 'ok' : 'watch')}
@@ -1463,8 +1542,9 @@ setInterval(dpp12Version, 1000);
 
     try{
       const data = await fiDay(d);
+      const bodySnapshotHtml = await fiBodySnapshotHtml();
       if(day() !== d) return;
-      $('#view').innerHTML = fiHomeHtml(data);
+      $('#view').innerHTML = fiHomeHtml(data, bodySnapshotHtml);
 
       const btn = document.querySelector('#fi13SuggestBtn');
       if(btn){
