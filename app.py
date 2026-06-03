@@ -1898,7 +1898,7 @@ def api_v012_insights_today():
 
 @app.get("/health")
 def api_v012_health():
-    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.13"})
+    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.14"})
 # DPP_V012_INSIGHTS_END
 
 init_db()
@@ -2230,7 +2230,7 @@ def _fi_confidence_day(items):
     if low:
         reasons.append(f"{low} alimentos con confianza media/baja")
     if not reasons:
-        reasons.append("Mayoria de alimentos trazables por gramos y macros")
+        reasons.append("Mayoría de alimentos trazables por gramos y macros")
 
     return {"score": round(score, 3), "label": label, "reasons": reasons}
 
@@ -2434,7 +2434,7 @@ def _fi_build_day(d, planned_workout=None):
     return {
         "ok": True,
         "date": d,
-        "version": "v0.0.13-food-intel",
+        "version": "v0.0.14-food-intel",
         "summary": totals,
         "meals_count": len(meals),
         "items_count": len(items),
@@ -2472,7 +2472,7 @@ def api_food_intel_health():
     return jsonify({
         "ok": True,
         "module": "food-intelligence",
-        "version": "v0.0.13",
+        "version": "v0.0.14",
         "endpoints": [
             "/api/food-intel/day",
             "/api/food-intel/meal-plan",
@@ -2729,7 +2729,7 @@ def api_food_intel_meal_plan():
     current_day = _fi_build_day(d, planned_workout=payload.get("planned_workout") if training_today else None)
     return jsonify({
         "ok": True,
-        "version": "v0.0.13-food-intel",
+        "version": "v0.0.14-food-intel",
         "engine": "heuristic_local",
         "plan": _fimp_make_options(d, meal, available_foods, training_today, current_day),
         "day_analysis": {
@@ -2741,6 +2741,154 @@ def api_food_intel_meal_plan():
     })
 
 # DPP_FOOD_INTEL_MEAL_PLAN_END
+
+
+
+
+# DPP_BODY_SNAPSHOT_API_START
+# v0.0.14 · Optional body snapshot API.
+# Smart-scale body composition is treated as an estimated trend snapshot,
+# not as a mandatory daily metric and not as a medical diagnosis.
+
+@app.route("/api/body-snapshot/latest")
+def api_body_snapshot_latest():
+    import sqlite3
+    from pathlib import Path
+    from datetime import date as _date
+
+    db_path = Path("data") / "dieta.db"
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+
+    table = con.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='body_composition'"
+    ).fetchone()
+
+    if not table:
+        con.close()
+        return jsonify({
+            "ok": True,
+            "available": False,
+            "version": "v0.0.14",
+            "reason": "body_composition table not found"
+        })
+
+    latest = con.execute("""
+        SELECT date, time
+        FROM body_composition
+        GROUP BY date, time
+        ORDER BY date DESC, time DESC
+        LIMIT 1
+    """).fetchone()
+
+    if not latest:
+        con.close()
+        return jsonify({
+            "ok": True,
+            "available": False,
+            "version": "v0.0.14",
+            "reason": "no body composition records"
+        })
+
+    rows = con.execute("""
+        SELECT metric, value, unit, source, confidence, notes
+        FROM body_composition
+        WHERE date=? AND time=?
+        ORDER BY metric
+    """, (latest["date"], latest["time"])).fetchall()
+
+    previous = con.execute("""
+        SELECT date, time
+        FROM body_composition
+        WHERE (date < ? OR (date = ? AND time < ?))
+        GROUP BY date, time
+        ORDER BY date DESC, time DESC
+        LIMIT 1
+    """, (latest["date"], latest["date"], latest["time"])).fetchone()
+
+    prev_metrics = {}
+    if previous:
+        prev_rows = con.execute("""
+            SELECT metric, value
+            FROM body_composition
+            WHERE date=? AND time=?
+        """, (previous["date"], previous["time"])).fetchall()
+        prev_metrics = {r["metric"]: r["value"] for r in prev_rows}
+
+    con.close()
+
+    metrics = {}
+    for r in rows:
+        metrics[r["metric"]] = {
+            "value": r["value"],
+            "unit": r["unit"] or "",
+            "source": r["source"] or "",
+            "confidence": r["confidence"] or "media",
+            "notes": r["notes"] or ""
+        }
+
+    def val(key):
+        try:
+            return float((metrics.get(key) or {}).get("value") or 0)
+        except Exception:
+            return 0.0
+
+    def pval(key):
+        try:
+            return float(prev_metrics.get(key) or 0)
+        except Exception:
+            return 0.0
+
+    weight = val("weight")
+    fat_pct = val("body_fat_pct")
+    muscle = val("muscle_mass_kg")
+
+    derived = {
+        "fat_mass_kg": round(weight * fat_pct / 100.0, 2) if weight and fat_pct else None,
+        "lean_mass_kg": round(weight - (weight * fat_pct / 100.0), 2) if weight and fat_pct else None,
+        "muscle_weight_pct": round(muscle / weight * 100.0, 1) if muscle and weight else None,
+    }
+
+    deltas = {}
+    for key in ["weight", "body_fat_pct", "water_pct", "muscle_mass_kg", "visceral_fat", "bmr_kcal", "biocharge_wakeup", "hrv"]:
+        if key in metrics and key in prev_metrics:
+            deltas[key] = round(val(key) - pval(key), 2)
+
+    try:
+        days_old = (_date.today() - _date.fromisoformat(latest["date"])).days
+    except Exception:
+        days_old = None
+
+    if days_old is None:
+        freshness = "unknown"
+    elif days_old <= 2:
+        freshness = "fresh"
+    elif days_old <= 7:
+        freshness = "recent"
+    else:
+        freshness = "old"
+
+    return jsonify({
+        "ok": True,
+        "available": True,
+        "version": "v0.0.14",
+        "date": latest["date"],
+        "time": latest["time"],
+        "freshness": {
+            "days_old": days_old,
+            "label": freshness
+        },
+        "metrics": metrics,
+        "derived": derived,
+        "deltas": deltas,
+        "previous": {
+            "date": previous["date"] if previous else None,
+            "time": previous["time"] if previous else None
+        },
+        "message": "Foto corporal estimada por bioimpedancia. Usar tendencia semanal, no valor aislado."
+    })
+
+# DPP_BODY_SNAPSHOT_API_END
 
 
 if __name__ == "__main__":
