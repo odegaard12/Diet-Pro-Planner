@@ -535,7 +535,7 @@ function assistantFor(d=day()){const meals=byDate(state.meals,d),workouts=byDate
 function ui5Progress(label,value,pct,sub,tone='good'){return `<article class="ui5-progress ${tone}"><div><span>${label}</span><b>${value}</b></div><i><em style="width:${Math.max(4,Math.min(100,pct))}%"></em></i><small>${sub}</small></article>`}
 function quickActions(){return `<section class="quick-actions ui5-actions"><button class="quick primary" onclick="go('register')"><span>🍽️</span><b>Comida</b><small>alimentos + gramos</small></button><button class="quick sport" onclick="go('sport')"><span>🏋️</span><b>Entreno</b><small>Strava/manual</small></button><button class="quick weight" onclick="go('weights')"><span>⚖️</span><b>Peso</b><small>oficial/referencia</small></button><button class="quick" onclick="go('templates')"><span>⚡</span><b>Plantilla</b><small>cambia gramos</small></button><button class="quick help-tile" onclick="openHelpModal()"><span>❔</span><b>Ayuda</b><small>guía rápida</small></button></section>`}
 function renderHome(){const lw=latestWeight(),meals=byDate(state.meals),workouts=byDate(state.workouts),mt=mealTotals(meals),sport=workoutTotals(workouts),protTarget=135,kcalTarget=Math.max(1500,1900+Math.min(sport,900)*.35),tr=ui5Trend(); $('#view').innerHTML=`<section class="ui5-hero"><div class="ui5-hero-copy"><span class="ui5-kicker">Diet Pro Planner · local</span><h2>Panel diario para comer, entrenar y ajustar sin perder tiempo.</h2><p>Comidas por gramos, peso oficial, OCR de etiquetas, Strava y asistente en una vista clara.</p><div class="ui5-pills"><span><small>Peso</small><b>${lw?fmt(lw.kg)+' kg':'—'}</b></span><span><small>Proteína</small><b>${fmt(mt.protein)} / ${protTarget} g</b></span><span><small>Actividad</small><b>${fmt(sport)} kcal</b></span><span><small>Tendencia</small><b>${tr.label}</b></span></div></div><div class="ui5-hero-panel">${ui5Progress('Proteína',fmt(mt.protein)+' g',mt.protein/protTarget*100,'Objetivo 130–150 g',mt.protein>=120?'good':'warn')}${ui5Progress('Comida',fmt(mt.kcal)+' kcal',mt.kcal/kcalTarget*100,'Objetivo flexible '+fmt(kcalTarget)+' kcal aprox.',mt.kcal>2300?'bad':'good')}${ui5Progress('Actividad',fmt(sport)+' kcal',Math.min(100,sport/10),sport?'Actividad registrada':'Sin entrenos hoy',sport>900?'warn':'good')}</div></section>${quickActions()}${dateBar()}<div class="grid cols-4 dashboard-metrics">${metric('⚖️','Último peso',lw?`${fmt(lw.kg)} kg`:'—',lw?`${lw.date} ${lw.time} · ${lw.official?'oficial':'referencia'}`:'sin datos')}${metric('🍽️','Comido',fmt(mt.kcal),'kcal estimadas')}${metric('💪','Proteína',`${fmt(mt.protein)} g`,'objetivo 130–150 g')}${metric('🔥','Actividad',fmt(sport),'kcal del día seleccionado')}</div><div class="grid cols-2 home-main" style="margin-top:14px"><div class="card assistant compact-assistant"><h3>🤖 Asistente</h3><ul>${assistantFor().map(x=>`<li>${x}</li>`).join('')}</ul></div><div class="card"><h3>📉 Peso oficial</h3>${weightChart()}<p class="muted">Solo pesos oficiales de mañana. Con pocos días no extrapolamos kg/semana.</p></div></div><div class="day-columns"><section class="card day-panel"><div class="section-title compact-title"><div><h3>🍽️ Comidas</h3><p>${fmt(mt.kcal)} kcal · ${fmt(mt.protein)} g prot.</p></div><button class="btn small" onclick="go('register')">+ Comida</button></div><div class="compact-list">${meals.length?meals.map(mealCardCompact).join(''):'<div class="empty">Sin comidas.</div>'}</div></section><section class="card day-panel"><div class="section-title compact-title"><div><h3>🏋️ Actividad</h3><p>${fmt(sport)} kcal</p></div><button class="btn small" onclick="go('sport')">+ Entreno</button></div><div class="compact-list">${workouts.length?workouts.map(workoutCardCompact).join(''):'<div class="empty">Sin entrenos para este día.</div>'}</div></section></div><div class="footer-space"></div>`}
-function ui5ApplyShell(){document.documentElement.dataset.ui='ui5'; const e=document.querySelector('.eyebrow'); if(e)e.textContent='Dieta controlada · v0.0.13'; const r=document.querySelector('.rule-banner'); if(r&&r.dataset.ui5!=='1'){r.dataset.ui5='1';r.innerHTML=`<article class="ui5-rule protein"><span>Proteína</span><b>130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b>5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>`} const sr=document.querySelector('.sidebar .side-rule'); if(sr&&sr.dataset.ui5!=='1'){sr.dataset.ui5='1';sr.innerHTML='<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'} if(!document.getElementById('ui5Badge')){const b=document.createElement('div');b.id='ui5Badge';b.className='ui5-badge';b.textContent='v0.0.12';document.querySelector('.topbar')?.appendChild(b)} if(!document.getElementById('floatingHelp')){const h=document.createElement('button');h.id='floatingHelp';h.className='floating-help';h.textContent='?';h.onclick=openHelpModal;h.title='Ayuda';document.body.appendChild(h)}}
+function ui5ApplyShell(){document.documentElement.dataset.ui='ui5'; const e=document.querySelector('.eyebrow'); if(e)e.textContent='Dieta controlada · v0.0.13'; const r=document.querySelector('.rule-banner'); if(r&&r.dataset.ui5!=='1'){r.dataset.ui5='1';r.innerHTML=`<article class="ui5-rule protein"><span>Proteína</span><b>130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b>5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>`} const sr=document.querySelector('.sidebar .side-rule'); if(sr&&sr.dataset.ui5!=='1'){sr.dataset.ui5='1';sr.innerHTML='<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'} if(!document.getElementById('ui5Badge')){const b=document.createElement('div');b.id='ui5Badge';b.className='ui5-badge';b.textContent='v0.0.13';document.querySelector('.topbar')?.appendChild(b)} if(!document.getElementById('floatingHelp')){const h=document.createElement('button');h.id='floatingHelp';h.className='floating-help';h.textContent='?';h.onclick=openHelpModal;h.title='Ayuda';document.body.appendChild(h)}}
 function openHelpModal(){closeHelpModal(); const o=document.createElement('div');o.id='helpOverlay';o.className='help-overlay';o.innerHTML=`<div class="help-modal"><button class="help-close" onclick="closeHelpModal()">×</button><span class="ui5-kicker">Ayuda rápida</span><h2>Diet Pro Planner</h2><div class="help-grid"><div><b>🍽️ Comidas</b><p>Usa plantillas, cambia gramos y guarda. Pasta/arroz siempre en seco.</p></div><div><b>⚖️ Peso</b><p>Oficial por la mañana. Post-comida, noche o post-entreno son referencia.</p></div><div><b>📷 OCR</b><p>Sube foto de etiqueta. Tesseract intenta leerla. Revisa valores antes de guardar.</p></div><div><b>🏋️ Strava</b><p>Importa por ID y evita duplicados. Auto-sync queda igual.</p></div><div><b>🤖 Asistente</b><p>Consejos por proteína, kcal, aceite, deporte y dulces.</p></div><div><b>🔐 Privacidad</b><p>Esta prueba es local. No sube DB, tokens, .env ni fotos al repo.</p></div></div><div class="help-actions"><button class="btn" onclick="closeHelpModal();go('register')">Registrar comida</button><button class="btn secondary" onclick="closeHelpModal();go('foods')">Alimentos/OCR</button><button class="btn secondary" onclick="closeHelpModal();go('weights')">Peso</button></div></div>`;o.onclick=e=>{if(e.target.id==='helpOverlay')closeHelpModal()};document.body.appendChild(o)}
 function closeHelpModal(){document.getElementById('helpOverlay')?.remove()}
 if(!window.__DPP_UI5_PATCHED__){window.__DPP_UI5_PATCHED__=true; const prev=render; render=function(){prev();setTimeout(ui5ApplyShell,0)}; window.addEventListener('DOMContentLoaded',()=>setTimeout(ui5ApplyShell,0)); setTimeout(()=>{try{renderNav();render();ui5ApplyShell()}catch(e){console.error(e)}},250); setInterval(ui5ApplyShell,3000)}
@@ -1037,8 +1037,8 @@ function dpp12Text(v){
     .replace(/Todav\?a/g, 'Todav\u00eda')
     .replace(/todav\?a/g, 'todav\u00eda')
     .replace(/ma\?ana/g, 'ma\u00f1ana')
-    .replace(/v0\.0\.12\.1/g, 'v0.0.12')
-    .replace(/v0\.0\.12-dev/g, 'v0.0.12')
+    .replace(/v0\.0\.12\.1/g, 'v0.0.13')
+    .replace(/v0\.0\.12-dev/g, 'v0.0.13')
     .replace(/Dashboard inteligente \?/g, 'Dashboard \u00b7')
     .replace(/Dashboard \?/g, 'Dashboard \u00b7')
     .replace(/Dieta controlada \?/g, 'Dieta controlada \u00b7')
@@ -1048,11 +1048,11 @@ function dpp12Text(v){
 }
 
 function dpp12Version(){
-  document.title = 'Diet Pro Planner \u00b7 v0.0.12';
+  document.title = 'Diet Pro Planner \u00b7 v0.0.13';
   const eyebrow = document.querySelector('.eyebrow');
-  if(eyebrow) eyebrow.textContent = 'Dieta controlada \u00b7 v0.0.12';
+  if(eyebrow) eyebrow.textContent = 'Dieta controlada \u00b7 v0.0.13';
   const badge = document.querySelector('#ui5Badge');
-  if(badge) badge.textContent = 'v0.0.12';
+  if(badge) badge.textContent = 'v0.0.13';
 }
 
 async function dpp12Insights(d){
@@ -1405,54 +1405,45 @@ setInterval(dpp12Version, 1000);
       const fat = v('body_fat_pct');
       const water = v('water_pct');
       const muscle = v('muscle_mass_kg');
-      const skeletal = v('skeletal_muscle_kg');
       const visceral = v('visceral_fat');
-      const bmr = v('bmr_kcal');
       const bio = v('biocharge_wakeup');
-      const hrv = v('hrv');
-      const resting = v('resting_hr');
 
       return `
-        <section id="dppBodySnapshotCard" class="bs14-card">
-          <div class="bs14-visual">
-            <div class="bs14-person-wrap">
+        <section id="dppBodySnapshotCard" class="bs14-card bs14-compact">
+          <div class="bs14-topline">
+            <div>
+              <span>Foto corporal · v0.0.14-dev</span>
+              <h3>Composición corporal</h3>
+              <p>${data.date || ''} ${data.time ? '· ' + data.time : ''} · lectura opcional de báscula</p>
+            </div>
+            <div class="bs14-status-pill">
+              <b>${fmt2(bio,0)}</b>
+              <small>BioCharge</small>
+            </div>
+          </div>
+
+          <div class="bs14-compact-body">
+            <div class="bs14-mini-person">
               <div class="bs14-person">
                 <i class="head"></i>
                 <i class="torso"></i>
                 <i class="legs"></i>
               </div>
-              <div class="bs14-person-label">
-                <b>${fmt2(weight,2)} kg</b>
-                <small>${fmt2(fat,1)}% grasa</small>
-              </div>
-            </div>
-          </div>
-
-          <div class="bs14-content">
-            <div class="bs14-head">
               <div>
-                <span>Foto corporal · v0.0.14-dev</span>
-                <h3>Composición corporal</h3>
-                <p>${data.date || ''} ${data.time ? '· ' + data.time : ''} · lectura opcional de báscula</p>
-              </div>
-              <div class="bs14-badge">
-                <b>${fmt2(bio,0)}</b>
-                <small>BioCharge</small>
+                <b>${fmt2(weight,2)} kg</b>
+                <small>${fmt2(fat,1)}% grasa · ${d.fat_mass_kg ? fmt2(d.fat_mass_kg,1) + ' kg grasa estimada' : 'bioimpedancia'}</small>
               </div>
             </div>
 
-            <div class="bs14-grid">
-              <article class="watch"><span>Grasa</span><b>${fmt2(fat,1)}%</b><small>${d.fat_mass_kg ? fmt2(d.fat_mass_kg,1) + ' kg estimados' : 'bioimpedancia'}</small></article>
-              <article><span>Agua</span><b>${fmt2(water,1)}%</b><small>hidratación</small></article>
-              <article><span>Músculo</span><b>${fmt2(muscle,1)} kg</b><small>total estimado</small></article>
-              <article><span>Músculo esq.</span><b>${fmt2(skeletal,1)} kg</b><small>estimado</small></article>
-              <article class="watch"><span>Visceral</span><b>${fmt2(visceral,0)}</b><small>vigilar tendencia</small></article>
-              <article><span>BMR</span><b>${fmt2(bmr,0)} kcal</b><small>basal estimado</small></article>
-              <article><span>HRV</span><b>${fmt2(hrv,0)} ms</b><small>${resting ? 'FC reposo ' + fmt2(resting,0) : 'recuperación'}</small></article>
+            <div class="bs14-compact-grid">
+              <article class="watch"><span>Grasa</span><b>${fmt2(fat,1)}%</b></article>
+              <article><span>Agua</span><b>${fmt2(water,1)}%</b></article>
+              <article><span>Músculo</span><b>${fmt2(muscle,1)} kg</b></article>
+              <article class="watch"><span>Visceral</span><b>${fmt2(visceral,0)}</b></article>
             </div>
-
-            <p class="bs14-note">Bioimpedancia estimada: útil para tendencia semanal, no para juzgar un peso aislado.</p>
           </div>
+
+          <p class="bs14-note">Dato estimado por bioimpedancia. Úsalo como tendencia semanal, no para juzgar un peso aislado. Detalle completo en Peso 2.0 próximamente.</p>
         </section>
       `;
     }catch(e){
@@ -1585,338 +1576,10 @@ setInterval(dpp12Version, 1000);
 /* DPP_FI_SINGLE_HOME_END */
 
 
-/* DPP_BODY_SNAPSHOT_CARD_START */
-/* v0.0.14-dev · Optional Body Snapshot card */
-
-(function(){
-  if(window.__DPP_BODY_SNAPSHOT_CARD__) return;
-  window.__DPP_BODY_SNAPSHOT_CARD__ = true;
-
-  const CARD_ID = 'dppBodySnapshotCard';
-
-  function esc(v){
-    return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  function fmt(v, digits=1){
-    if(v === null || v === undefined || v === '') return '--';
-    try{
-      return Number(v).toLocaleString('es-ES', {maximumFractionDigits: digits});
-    }catch(e){
-      return String(v);
-    }
-  }
-
-  function metric(data, key){
-    return ((data || {}).metrics || {})[key] || {};
-  }
-
-  function value(data, key){
-    return metric(data, key).value;
-  }
-
-  function delta(data, key, digits=1){
-    const d = ((data || {}).deltas || {})[key];
-    if(d === undefined || d === null || Number(d) === 0) return '';
-    const sign = Number(d) > 0 ? '+' : '';
-    return `<em>${sign}${fmt(d, digits)}</em>`;
-  }
-
-  function isHome(){
-    const view = document.querySelector('#view');
-    if(!view) return false;
-    const txt = view.innerText || '';
-    return txt.includes('Inteligencia del día') || txt.includes('Peso hacia 80 kg');
-  }
-
-  async function loadSnapshot(){
-    const r = await fetch('/api/body-snapshot/latest');
-    if(!r.ok) throw new Error('body-snapshot failed');
-    return await r.json();
-  }
-
-  function metricCard(label, main, sub, tone){
-    return `
-      <article class="${tone || ''}">
-        <span>${esc(label)}</span>
-        <b>${main}</b>
-        <small>${sub || ''}</small>
-      </article>
-    `;
-  }
-
-  function freshnessText(data){
-    const f = (data.freshness || {});
-    if(f.days_old === null || f.days_old === undefined) return 'última lectura';
-    if(f.days_old === 0) return 'lectura de hoy';
-    if(f.days_old === 1) return 'lectura de ayer';
-    return `hace ${f.days_old} días`;
-  }
-
-  function snapshotMessage(data){
-    const fresh = (data.freshness || {}).label;
-    if(fresh === 'old'){
-      return 'Última foto corporal antigua. Úsala como referencia, no para decidir el día.';
-    }
-    return 'Bioimpedancia estimada: útil para tendencia semanal, no para juzgar un peso aislado.';
-  }
-
-  function html(data){
-    const weight = value(data, 'weight');
-    const fat = value(data, 'body_fat_pct');
-    const water = value(data, 'water_pct');
-    const muscle = value(data, 'muscle_mass_kg');
-    const skeletal = value(data, 'skeletal_muscle_kg');
-    const visceral = value(data, 'visceral_fat');
-    const bmr = value(data, 'bmr_kcal');
-    const bio = value(data, 'biocharge_wakeup');
-    const hrv = value(data, 'hrv');
-    const resting = value(data, 'resting_hr');
-    const fatMass = (data.derived || {}).fat_mass_kg;
-
-    return `
-      <section id="${CARD_ID}" class="bs14-card">
-        <div class="bs14-visual">
-          <div class="bs14-person-wrap">
-            <div class="bs14-person">
-              <i class="head"></i>
-              <i class="torso"></i>
-              <i class="legs"></i>
-            </div>
-            <div class="bs14-person-label">
-              <b>${fmt(weight,2)} kg</b>
-              <small>${fmt(fat,1)}% grasa</small>
-            </div>
-          </div>
-        </div>
-
-        <div class="bs14-content">
-          <div class="bs14-head">
-            <div>
-              <span>Foto corporal · v0.0.14-dev</span>
-              <h3>Composición corporal</h3>
-              <p>${esc(data.date || '')} ${data.time ? '· ' + esc(data.time) : ''} · ${esc(freshnessText(data))}</p>
-            </div>
-            <div class="bs14-badge">
-              <b>${fmt(bio,0)}</b>
-              <small>BioCharge</small>
-            </div>
-          </div>
-
-          <div class="bs14-grid">
-            ${metricCard('Grasa', `${fmt(fat,1)}%`, `${delta(data,'body_fat_pct',1)} ${fatMass ? '· ' + fmt(fatMass,1) + ' kg' : ''}`, 'watch')}
-            ${metricCard('Agua', `${fmt(water,1)}%`, `${delta(data,'water_pct',1)} hidratación`, '')}
-            ${metricCard('Músculo', `${fmt(muscle,1)} kg`, `${delta(data,'muscle_mass_kg',1)} total`, '')}
-            ${metricCard('Músculo esq.', `${fmt(skeletal,1)} kg`, 'estimado', '')}
-            ${metricCard('Visceral', `${fmt(visceral,0)}`, `${delta(data,'visceral_fat',0)} vigilar tendencia`, 'watch')}
-            ${metricCard('BMR', `${fmt(bmr,0)} kcal`, `${delta(data,'bmr_kcal',0)} basal`, '')}
-            ${metricCard('HRV', `${fmt(hrv,0)} ms`, resting ? `FC reposo ${fmt(resting,0)}` : 'recuperación', '')}
-          </div>
-
-          <p class="bs14-note">${esc(snapshotMessage(data))}</p>
-        </div>
-      </section>
-    `;
-  }
-
-  async function mount(){
-    try{
-      if(!isHome()) return;
-      if(document.querySelector('#' + CARD_ID)) return;
-
-      const data = await loadSnapshot();
-      if(!data || !data.available) return;
-
-      const weightCard = document.querySelector('.fi13-weight');
-      const view = document.querySelector('#view');
-
-      if(weightCard){
-        weightCard.insertAdjacentHTML('afterend', html(data));
-      }else if(view){
-        view.insertAdjacentHTML('afterbegin', html(data));
-      }
-    }catch(e){}
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    setTimeout(mount, 400);
-    setTimeout(mount, 1200);
-  });
-
-  const observer = new MutationObserver(function(){
-    setTimeout(mount, 120);
-  });
-  observer.observe(document.body, {childList:true, subtree:true});
-
-  setInterval(mount, 1800);
-})();
-/* DPP_BODY_SNAPSHOT_CARD_END */
 
 
-/* DPP_BODY_SNAPSHOT_FORCE_MOUNT_START */
-/* Robust late mount for Body Snapshot after the final home render. */
-(function(){
-  if(window.__DPP_BODY_SNAPSHOT_FORCE_MOUNT__) return;
-  window.__DPP_BODY_SNAPSHOT_FORCE_MOUNT__ = true;
 
-  const CARD_ID = 'dppBodySnapshotCard';
 
-  function esc(v){
-    return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
 
-  function fmt(v, digits=1){
-    if(v === null || v === undefined || v === '') return '--';
-    try{
-      return Number(v).toLocaleString('es-ES', {maximumFractionDigits: digits});
-    }catch(e){
-      return String(v);
-    }
-  }
 
-  function value(data, key){
-    return (((data || {}).metrics || {})[key] || {}).value;
-  }
-
-  function metricCard(label, main, sub, tone){
-    return `
-      <article class="${tone || ''}">
-        <span>${esc(label)}</span>
-        <b>${main}</b>
-        <small>${sub || ''}</small>
-      </article>
-    `;
-  }
-
-  function freshLabel(data){
-    const d = ((data || {}).freshness || {}).days_old;
-    if(d === 0) return 'lectura de hoy';
-    if(d === 1) return 'lectura de ayer';
-    if(d === null || d === undefined) return 'última lectura';
-    return `hace ${d} días`;
-  }
-
-  function html(data){
-    const weight = value(data, 'weight');
-    const fat = value(data, 'body_fat_pct');
-    const water = value(data, 'water_pct');
-    const muscle = value(data, 'muscle_mass_kg');
-    const skeletal = value(data, 'skeletal_muscle_kg');
-    const visceral = value(data, 'visceral_fat');
-    const bmr = value(data, 'bmr_kcal');
-    const bio = value(data, 'biocharge_wakeup');
-    const hrv = value(data, 'hrv');
-    const resting = value(data, 'resting_hr');
-    const fatMass = (data.derived || {}).fat_mass_kg;
-
-    return `
-      <section id="${CARD_ID}" class="bs14-card">
-        <div class="bs14-visual">
-          <div class="bs14-person-wrap">
-            <div class="bs14-person">
-              <i class="head"></i>
-              <i class="torso"></i>
-              <i class="legs"></i>
-            </div>
-            <div class="bs14-person-label">
-              <b>${fmt(weight,2)} kg</b>
-              <small>${fmt(fat,1)}% grasa</small>
-            </div>
-          </div>
-        </div>
-
-        <div class="bs14-content">
-          <div class="bs14-head">
-            <div>
-              <span>Foto corporal · v0.0.14-dev</span>
-              <h3>Composición corporal</h3>
-              <p>${esc(data.date || '')} ${data.time ? '· ' + esc(data.time) : ''} · ${esc(freshLabel(data))}</p>
-            </div>
-            <div class="bs14-badge">
-              <b>${fmt(bio,0)}</b>
-              <small>BioCharge</small>
-            </div>
-          </div>
-
-          <div class="bs14-grid">
-            ${metricCard('Grasa', `${fmt(fat,1)}%`, fatMass ? `${fmt(fatMass,1)} kg estimados` : 'bioimpedancia', 'watch')}
-            ${metricCard('Agua', `${fmt(water,1)}%`, 'hidratación', '')}
-            ${metricCard('Músculo', `${fmt(muscle,1)} kg`, 'total estimado', '')}
-            ${metricCard('Músculo esq.', `${fmt(skeletal,1)} kg`, 'estimado', '')}
-            ${metricCard('Visceral', `${fmt(visceral,0)}`, 'vigilar tendencia', 'watch')}
-            ${metricCard('BMR', `${fmt(bmr,0)} kcal`, 'basal estimado', '')}
-            ${metricCard('HRV', `${fmt(hrv,0)} ms`, resting ? `FC reposo ${fmt(resting,0)}` : 'recuperación', '')}
-          </div>
-
-          <p class="bs14-note">Bioimpedancia estimada: útil para tendencia semanal, no para juzgar un peso aislado.</p>
-        </div>
-      </section>
-    `;
-  }
-
-  async function loadSnapshot(){
-    const r = await fetch('/api/body-snapshot/latest', {cache:'no-store'});
-    if(!r.ok) throw new Error('body-snapshot failed');
-    return await r.json();
-  }
-
-  async function mountBodySnapshot(){
-    try{
-      if(document.querySelector('#' + CARD_ID)) return;
-
-      const view = document.querySelector('#view');
-      if(!view) return;
-
-      const txt = view.innerText || '';
-      if(!txt.includes('Peso hacia 80 kg') && !txt.includes('Inteligencia del día')) return;
-
-      const data = await loadSnapshot();
-      if(!data || !data.available) return;
-
-      const weightCard = view.querySelector('.fi13-weight');
-      if(weightCard){
-        weightCard.insertAdjacentHTML('afterend', html(data));
-      }else{
-        const metrics = view.querySelector('.fi13-metrics');
-        if(metrics){
-          metrics.insertAdjacentHTML('beforebegin', html(data));
-        }else{
-          view.insertAdjacentHTML('afterbegin', html(data));
-        }
-      }
-    }catch(e){
-      console.warn('[BodySnapshot] mount failed', e);
-    }
-  }
-
-  window.dppMountBodySnapshot = mountBodySnapshot;
-
-  function schedule(){
-    setTimeout(mountBodySnapshot, 100);
-    setTimeout(mountBodySnapshot, 500);
-    setTimeout(mountBodySnapshot, 1200);
-  }
-
-  const oldRenderHome = window.renderHome;
-  if(typeof oldRenderHome === 'function'){
-    window.renderHome = function(){
-      const out = oldRenderHome.apply(this, arguments);
-      schedule();
-      return out;
-    };
-  }
-
-  const oldRender = window.render;
-  if(typeof oldRender === 'function'){
-    window.render = function(){
-      const out = oldRender.apply(this, arguments);
-      schedule();
-      return out;
-    };
-  }
-
-  document.addEventListener('DOMContentLoaded', schedule);
-  setInterval(mountBodySnapshot, 1500);
-})();
-/* DPP_BODY_SNAPSHOT_FORCE_MOUNT_END */
 

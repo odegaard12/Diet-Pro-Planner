@@ -2230,7 +2230,7 @@ def _fi_confidence_day(items):
     if low:
         reasons.append(f"{low} alimentos con confianza media/baja")
     if not reasons:
-        reasons.append("Mayoria de alimentos trazables por gramos y macros")
+        reasons.append("Mayoría de alimentos trazables por gramos y macros")
 
     return {"score": round(score, 3), "label": label, "reasons": reasons}
 

@@ -1563,3 +1563,181 @@ html[data-ui="ui5"] .bs14-note{
 
 /* DPP_BODY_SNAPSHOT_CARD_CSS_END */
 
+
+/* DPP_BODY_SNAPSHOT_COMPACT_UX_START */
+
+/* Foto corporal compacta para Resumen: snapshot, no tabla técnica */
+html[data-ui="ui5"] .bs14-card.bs14-compact{
+  display:block!important;
+  margin:0 0 12px!important;
+  padding:15px 16px!important;
+  border-radius:28px!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.97),rgba(239,246,255,.94))!important;
+  border:1px solid rgba(255,255,255,.96)!important;
+  box-shadow:0 14px 38px rgba(15,38,70,.08)!important;
+}
+
+html[data-ui="ui5"] .bs14-topline{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 86px!important;
+  gap:12px!important;
+  align-items:center!important;
+  margin-bottom:12px!important;
+}
+
+html[data-ui="ui5"] .bs14-topline span{
+  color:#2563eb!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+  font-size:11px!important;
+  font-weight:1000!important;
+}
+
+html[data-ui="ui5"] .bs14-topline h3{
+  margin:5px 0 3px!important;
+  color:#0b1726!important;
+  font-size:24px!important;
+  line-height:1!important;
+  letter-spacing:-.04em!important;
+}
+
+html[data-ui="ui5"] .bs14-topline p{
+  margin:0!important;
+  color:#53677f!important;
+  font-weight:850!important;
+}
+
+html[data-ui="ui5"] .bs14-status-pill{
+  display:grid!important;
+  place-items:center!important;
+  text-align:center!important;
+  min-height:70px!important;
+  border-radius:22px!important;
+  background:#eff6ff!important;
+  border:1px solid rgba(37,99,235,.10)!important;
+}
+
+html[data-ui="ui5"] .bs14-status-pill b{
+  color:#0f62fe!important;
+  font-size:28px!important;
+  line-height:1!important;
+}
+
+html[data-ui="ui5"] .bs14-status-pill small{
+  color:#53677f!important;
+  font-weight:900!important;
+}
+
+html[data-ui="ui5"] .bs14-compact-body{
+  display:grid!important;
+  grid-template-columns:280px minmax(0,1fr)!important;
+  gap:12px!important;
+  align-items:center!important;
+}
+
+html[data-ui="ui5"] .bs14-mini-person{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  padding:11px!important;
+  border-radius:22px!important;
+  background:#f8fbff!important;
+  border:1px solid rgba(31,60,90,.08)!important;
+}
+
+html[data-ui="ui5"] .bs14-mini-person .bs14-person{
+  width:48px!important;
+  height:78px!important;
+  flex:0 0 48px!important;
+}
+
+html[data-ui="ui5"] .bs14-mini-person .bs14-person .head{
+  width:22px!important;
+  height:22px!important;
+}
+
+html[data-ui="ui5"] .bs14-mini-person .bs14-person .torso{
+  top:28px!important;
+  width:38px!important;
+  height:34px!important;
+  border-radius:16px 16px 18px 18px!important;
+}
+
+html[data-ui="ui5"] .bs14-mini-person .bs14-person .legs{
+  top:60px!important;
+  width:30px!important;
+  height:18px!important;
+}
+
+html[data-ui="ui5"] .bs14-mini-person b{
+  display:block!important;
+  color:#0b1726!important;
+  font-size:25px!important;
+  line-height:1!important;
+}
+
+html[data-ui="ui5"] .bs14-mini-person small{
+  display:block!important;
+  margin-top:3px!important;
+  color:#53677f!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  line-height:1.25!important;
+}
+
+html[data-ui="ui5"] .bs14-compact-grid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+
+html[data-ui="ui5"] .bs14-compact-grid article{
+  display:grid!important;
+  gap:4px!important;
+  padding:11px!important;
+  border-radius:18px!important;
+  background:#f8fbff!important;
+  border:1px solid rgba(31,60,90,.08)!important;
+}
+
+html[data-ui="ui5"] .bs14-compact-grid article.watch{
+  background:#fffbeb!important;
+}
+
+html[data-ui="ui5"] .bs14-compact-grid span{
+  color:#2563eb!important;
+  text-transform:uppercase!important;
+  letter-spacing:.06em!important;
+  font-size:10px!important;
+  font-weight:1000!important;
+}
+
+html[data-ui="ui5"] .bs14-compact-grid b{
+  color:#0b1726!important;
+  font-size:21px!important;
+  line-height:1!important;
+}
+
+html[data-ui="ui5"] .bs14-card.bs14-compact .bs14-note{
+  margin:10px 0 0!important;
+  color:#53677f!important;
+  font-size:12px!important;
+  font-weight:850!important;
+  line-height:1.35!important;
+}
+
+@media(max-width:920px){
+  html[data-ui="ui5"] .bs14-compact-body{
+    grid-template-columns:1fr!important;
+  }
+}
+
+@media(max-width:680px){
+  html[data-ui="ui5"] .bs14-topline,
+  html[data-ui="ui5"] .bs14-compact-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+
+/* DPP_BODY_SNAPSHOT_COMPACT_UX_END */
+
