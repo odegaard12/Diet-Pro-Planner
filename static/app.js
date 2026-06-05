@@ -232,16 +232,10 @@ function mealCard(m){return `<article class="list-card"><header><div><h4>${m.dat
 function workoutCard(w){return `<article class="list-card"><header><div><h4>${w.date} · ${w.time} · ${w.name}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km?`· ${fmt(w.distance_km)} km`:''} · ${w.notes||''}</p></div><button class="btn small danger" onclick="deleteWorkout(${w.id})">×</button></header><b>${fmt(w.kcal)} kcal</b></article>`}
 function itemSummary(items){const shown=(items||[]).slice(0,3).map(i=>`${i.food_name} ${fmt(i.grams)}g`); const extra=(items||[]).length>3?` +${items.length-3}`:''; return shown.join(' · ')+extra}
 function mealCardCompact(m){
-  if(window.DPPDashboardMealCard && typeof window.DPPDashboardMealCard.mealCardCompact === 'function'){
-    return window.DPPDashboardMealCard.mealCardCompact(m);
-  }
-  return `<article class="compact-card meal"><div class="compact-head"><div><b>${m.time} · ${m.name}</b><small>${itemSummary(m.items)}</small></div><strong>${fmt(m.totals.kcal)} kcal<br><span>${fmt(m.totals.protein)} g prot.</span></strong><button class="mini-delete" title="Borrar" onclick="deleteMeal(${m.id})">×</button></div>${m.notes?`<p class="compact-note">${m.notes}</p>`:''}</article>`;
+  return window.DPPDashboardMealCard.mealCardCompact(m);
 }
 function workoutCardCompact(w){
-  if(window.DPPDashboardWorkoutCard && typeof window.DPPDashboardWorkoutCard.workoutCardCompact === 'function'){
-    return window.DPPDashboardWorkoutCard.workoutCardCompact(w);
-  }
-  return `<article class="compact-card workout"><div class="compact-head"><div><b>${w.time} · ${w.name}</b><small>${fmt(w.minutes)} min${w.distance_km?` · ${fmt(w.distance_km)} km`:''}${w.notes?` · ${w.notes}`:''}</small></div><strong>${fmt(w.kcal)} kcal</strong><button class="mini-delete" title="Borrar" onclick="deleteWorkout(${w.id})">×</button></div></article>`;
+  return window.DPPDashboardWorkoutCard.workoutCardCompact(w);
 }
 async function deleteMeal(id){if(!confirm('¿Borrar comida?'))return; await api('/api/meals/'+id,{method:'DELETE'}); toast('Comida borrada'); await load()} async function deleteWorkout(id){if(!confirm('¿Borrar entreno?'))return; await api('/api/workouts/'+id,{method:'DELETE'}); toast('Entreno borrado'); await load()}
 function templateOptions(){return state.templates.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
