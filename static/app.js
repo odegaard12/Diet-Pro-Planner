@@ -231,8 +231,12 @@ function weightChart(){const ws=officialWeights().slice(-10); if(ws.length<2)ret
 function mealCard(m){return `<article class="list-card"><header><div><h4>${m.date} · ${m.time} · ${m.name}</h4><p class="muted">${m.notes||''}</p></div><button class="btn small danger" onclick="deleteMeal(${m.id})">×</button></header><div class="chips">${m.items.map(i=>`<span class="chip">${i.food_name} ${fmt(i.grams)}g</span>`).join('')}</div><b>${fmt(m.totals.kcal)} kcal · ${fmt(m.totals.protein)} g prot.</b></article>`}
 function workoutCard(w){return `<article class="list-card"><header><div><h4>${w.date} · ${w.time} · ${w.name}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km?`· ${fmt(w.distance_km)} km`:''} · ${w.notes||''}</p></div><button class="btn small danger" onclick="deleteWorkout(${w.id})">×</button></header><b>${fmt(w.kcal)} kcal</b></article>`}
 function itemSummary(items){const shown=(items||[]).slice(0,3).map(i=>`${i.food_name} ${fmt(i.grams)}g`); const extra=(items||[]).length>3?` +${items.length-3}`:''; return shown.join(' · ')+extra}
-function mealCardCompact(m){return `<article class="compact-card meal"><div class="compact-head"><div><b>${m.time} · ${m.name}</b><small>${itemSummary(m.items)}</small></div><strong>${fmt(m.totals.kcal)} kcal<br><span>${fmt(m.totals.protein)} g prot.</span></strong><button class="mini-delete" title="Borrar" onclick="deleteMeal(${m.id})">×</button></div>${m.notes?`<p class="compact-note">${m.notes}</p>`:''}</article>`}
-function workoutCardCompact(w){return `<article class="compact-card workout"><div class="compact-head"><div><b>${w.time} · ${w.name}</b><small>${fmt(w.minutes)} min${w.distance_km?` · ${fmt(w.distance_km)} km`:''}${w.notes?` · ${w.notes}`:''}</small></div><strong>${fmt(w.kcal)} kcal</strong><button class="mini-delete" title="Borrar" onclick="deleteWorkout(${w.id})">×</button></div></article>`}
+function mealCardCompact(m){
+  return window.DPPDashboardMealCard.mealCardCompact(m);
+}
+function workoutCardCompact(w){
+  return window.DPPDashboardWorkoutCard.workoutCardCompact(w);
+}
 async function deleteMeal(id){if(!confirm('¿Borrar comida?'))return; await api('/api/meals/'+id,{method:'DELETE'}); toast('Comida borrada'); await load()} async function deleteWorkout(id){if(!confirm('¿Borrar entreno?'))return; await api('/api/workouts/'+id,{method:'DELETE'}); toast('Entreno borrado'); await load()}
 function templateOptions(){return state.templates.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
 function renderRegister(){
@@ -2100,21 +2104,6 @@ setInterval(dpp12Version, 1000);
     for (const n of nodes) fn(n);
   }
 
-  function stripTechnicalMarkers(){
-    walkTextNodes(document.body, function(node){
-      let v = node.nodeValue || "";
-      const old = v;
-
-      // Oculta marcadores internos pero deja la nota humana.
-      v = v.replace(/\b(?:REAL|PLAN)_\d{4}_[A-Z0-9_]+\s*-\s*/g, "");
-
-      // Limpieza de puntos duplicados en proteína.
-      v = v.replace(/\bg prot\.\.+/g, "g prot.");
-
-      if (v !== old) node.nodeValue = v;
-    });
-  }
-
   function fixFalseChocolateAdvice(){
     const body = textOf(document.body);
 
@@ -2183,26 +2172,9 @@ setInterval(dpp12Version, 1000);
     }
   }
 
-  function tagRealPlanCards(){
-    const selectors = "section, article, .card, .meal-card, .entry-card, li, div";
-    const candidates = Array.from(document.querySelectorAll(selectors))
-      .filter(el => {
-        const t = textOf(el);
-        return /\d{2}:\d{2}\s*·/.test(t) && /kcal/.test(t) && /g prot/.test(t);
-      });
-
-    for (const el of candidates) {
-      if (el.dataset.dppMealUiClean === "1") continue;
-      el.dataset.dppMealUiClean = "1";
-      el.classList.add("dpp-meal-clean-card");
-    }
-  }
-
   function applyCleanup(){
-    stripTechnicalMarkers();
     fixFalseChocolateAdvice();
     moveBodyCompositionDown();
-    tagRealPlanCards();
   }
 
   function scheduleCleanup(){
