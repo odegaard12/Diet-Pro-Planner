@@ -1,6 +1,6 @@
 # Diet Pro Planner
 
-**Current version:** `v0.0.14.2`
+**Current version:** `v0.0.15`
 
 Diet Pro Planner is a private, local-first nutrition, weight, sport and body-composition web app designed to run on a Raspberry Pi with Docker.
 
@@ -17,38 +17,37 @@ The goal is to build a premium personal cockpit for daily diet decisions, closer
 - Use smart-scale body-composition data as trend context.
 - Suggest practical next meals with local heuristics.
 
-## Latest release: `v0.0.14.2` — Dashboard meal totals and UI cleanup
+## Latest release: `v0.0.15` — Dashboard refactor guardrails
+
+`v0.0.15` starts the safe dashboard refactor phase.
+
+### New in v0.0.15
+
+- Adds known-day regression checks for validated real days:
+  - 2026-06-03
+  - 2026-06-04
+  - 2026-06-05
+- Adds frontend anti-monolith guardrails.
+- Locks legacy frontend growth:
+  - `static/app.js <= 2250` lines
+  - `static/styles.css <= 1800` lines
+- Adds modular frontend scaffolding under `static/js/`.
+- Extracts compact meal card rendering to `static/js/dashboard/meal-card.global.js`.
+- Extracts compact workout card rendering to `static/js/dashboard/workout-card.global.js`.
+- Reduces the old UI cleanup patch.
+- Documents v0.0.15 dashboard refactor rules.
+
+### Previous release: `v0.0.14.2` — Dashboard meal totals and UI cleanup
 
 `v0.0.14.2` is a stabilization hotfix for the daily dashboard after the Food Intelligence and Body Snapshot releases.
 
-### New in v0.0.14.2
+#### New in v0.0.14.2
 
 - Meal cards now use Food Intelligence totals as the source of truth.
 - Registered meals show consistent kcal and protein values.
 - Technical `REAL_...` and `PLAN_...` markers are hidden from normal dashboard notes.
 - False chocolate warnings from protein chocolate/cacao products are avoided.
 - Private local data remains excluded from the repository.
-
-### Previous release: `v0.0.14` — Body Snapshot
-
-`v0.0.14` adds the first optional smart-scale composition module.
-
-#### New in v0.0.14
-
-- New endpoint: `/api/body-snapshot/latest`.
-- New dashboard card: Foto corporal.
-- Shows:
-  - weight
-  - body fat %
-  - estimated fat mass
-  - water %
-  - muscle mass
-  - visceral fat
-  - BioCharge
-- Treats bioimpedance as trend context, not daily truth.
-- Does not require daily body-composition logging.
-- Does not penalize the daily nutrition score for one isolated smart-scale reading.
-- Prepares the future Weight 2.0 screen.
 
 ## Food Intelligence
 
@@ -213,6 +212,16 @@ Body composition:
 - `GET /api/body-snapshot/latest`
 
 ## Releases
+
+### `v0.0.15` — Dashboard refactor guardrails
+
+- Adds known-day regression checks for 2026-06-03, 2026-06-04 and 2026-06-05.
+- Adds frontend anti-monolith guardrails.
+- Locks legacy growth for `static/app.js` and `static/styles.css`.
+- Adds modular dashboard scaffolding under `static/js/`.
+- Extracts compact meal and workout card renderers into small dashboard modules.
+- Reduces legacy dashboard cleanup code while preserving current UI behavior.
+
 
 ### `v0.0.14.2` — Dashboard meal totals and UI cleanup
 
