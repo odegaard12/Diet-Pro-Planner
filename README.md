@@ -201,6 +201,13 @@ Body composition:
 - `GET /api/body-snapshot/latest`
 
 ## Releases
+v0.0.14.2 — Dashboard meal totals and UI cleanup
+Fixes meal cards using Food Intelligence totals as the source of truth.
+Keeps kcal/protein visible and consistent in registered meals.
+Cleans technical REAL_/PLAN_ markers from normal dashboard notes.
+Avoids false chocolate warnings from protein chocolate/cacao products.
+Keeps private local data out of the repository.
+
 
 ### `v0.0.14.1` — Dashboard and catalog cleanup
 
