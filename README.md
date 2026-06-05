@@ -1,6 +1,6 @@
 # Diet Pro Planner
 
-**Current version:** `v0.0.14.1`
+**Current version:** `v0.0.14.2`
 
 Diet Pro Planner is a private, local-first nutrition, weight, sport and body-composition web app designed to run on a Raspberry Pi with Docker.
 
@@ -17,14 +17,26 @@ The goal is to build a premium personal cockpit for daily diet decisions, closer
 - Use smart-scale body-composition data as trend context.
 - Suggest practical next meals with local heuristics.
 
-## Latest release: `v0.0.14` — Body Snapshot
+## Latest release: `v0.0.14.2` — Dashboard meal totals and UI cleanup
+
+`v0.0.14.2` is a stabilization hotfix for the daily dashboard after the Food Intelligence and Body Snapshot releases.
+
+### New in v0.0.14.2
+
+- Meal cards now use Food Intelligence totals as the source of truth.
+- Registered meals show consistent kcal and protein values.
+- Technical `REAL_...` and `PLAN_...` markers are hidden from normal dashboard notes.
+- False chocolate warnings from protein chocolate/cacao products are avoided.
+- Private local data remains excluded from the repository.
+
+### Previous release: `v0.0.14` — Body Snapshot
 
 `v0.0.14` adds the first optional smart-scale composition module.
 
-### New in `v0.0.14`
+#### New in v0.0.14
 
 - New endpoint: `/api/body-snapshot/latest`.
-- New dashboard card: **Foto corporal**.
+- New dashboard card: Foto corporal.
 - Shows:
   - weight
   - body fat %
@@ -36,7 +48,7 @@ The goal is to build a premium personal cockpit for daily diet decisions, closer
 - Treats bioimpedance as trend context, not daily truth.
 - Does not require daily body-composition logging.
 - Does not penalize the daily nutrition score for one isolated smart-scale reading.
-- Prepares the future **Weight 2.0** screen.
+- Prepares the future Weight 2.0 screen.
 
 ## Food Intelligence
 
@@ -201,13 +213,14 @@ Body composition:
 - `GET /api/body-snapshot/latest`
 
 ## Releases
-v0.0.14.2 — Dashboard meal totals and UI cleanup
-Fixes meal cards using Food Intelligence totals as the source of truth.
-Keeps kcal/protein visible and consistent in registered meals.
-Cleans technical REAL_/PLAN_ markers from normal dashboard notes.
-Avoids false chocolate warnings from protein chocolate/cacao products.
-Keeps private local data out of the repository.
 
+### `v0.0.14.2` — Dashboard meal totals and UI cleanup
+
+- Fixes meal cards using Food Intelligence totals as the source of truth.
+- Keeps kcal/protein visible and consistent in registered meals.
+- Cleans technical `REAL_...` / `PLAN_...` markers from normal dashboard notes.
+- Avoids false chocolate warnings from protein chocolate/cacao products.
+- Keeps private local data out of the repository.
 
 ### `v0.0.14.1` — Dashboard and catalog cleanup
 
