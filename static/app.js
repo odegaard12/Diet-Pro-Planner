@@ -1744,65 +1744,8 @@ setInterval(dpp12Version, 1000);
 /* DPP_FI_SINGLE_HOME_END */
 
 
-/* DPP_V0141_UI_CLEANUP_START */
-/* v0.0.14.1: small UX guardrails for forms */
-(function(){
-  if(window.__DPP_V0141_UI_CLEANUP__) return;
-  window.__DPP_V0141_UI_CLEANUP__ = true;
 
-  function mealTypeForHour(h){
-    if(h >= 5 && h < 12) return 'Desayuno';
-    if(h >= 12 && h < 17) return 'Comida';
-    if(h >= 17 && h < 20) return 'Merienda';
-    return 'Cena';
-  }
 
-  function cleanRegisterForm(){
-    const view = document.querySelector('#view');
-    if(!view) return;
-    const txt = view.innerText || '';
-
-    // Peso rápido: no prellenar 86.70/86.7 como oficial accidental.
-    if(txt.includes('Peso rápido') || txt.includes('Registrar peso')){
-      const inputs = Array.from(view.querySelectorAll('input'));
-      for(const input of inputs){
-        const v = String(input.value || '').trim();
-        if(v === '86.70' || v === '86.7'){
-          input.value = '';
-          input.placeholder = 'kg de hoy';
-        }
-      }
-    }
-
-    // Nueva comida: tipo por hora si sigue en Desayuno por defecto.
-    if(txt.includes('Nueva comida')){
-      const selects = Array.from(view.querySelectorAll('select'));
-      for(const sel of selects){
-        const labels = Array.from(sel.options || []).map(o => o.textContent || o.value);
-        const hasMealTypes = ['Desayuno','Comida','Merienda','Cena'].every(x => labels.some(y => y.includes(x)));
-        if(!hasMealTypes) continue;
-        if(sel.dataset.dppV0141Touched) continue;
-        if((sel.value || '').includes('Desayuno') || (sel.options[sel.selectedIndex]?.textContent || '').includes('Desayuno')){
-          const target = mealTypeForHour(new Date().getHours());
-          for(const opt of Array.from(sel.options)){
-            if((opt.value || '').includes(target) || (opt.textContent || '').includes(target)){
-              sel.value = opt.value;
-              sel.dataset.dppV0141Touched = '1';
-              sel.dispatchEvent(new Event('change', {bubbles:true}));
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', cleanRegisterForm);
-  const obs = new MutationObserver(() => setTimeout(cleanRegisterForm, 80));
-  obs.observe(document.body, {childList:true, subtree:true});
-  setInterval(cleanRegisterForm, 1500);
-})();
-/* DPP_V0141_UI_CLEANUP_END */
 
 
 
@@ -1823,3 +1766,468 @@ setInterval(dpp12Version, 1000);
   setInterval(clearDangerousWeightDefault, 1500);
 })();
 /* DPP_V0141_WEIGHT_INPUT_HOTFIX_END */
+
+/* DPP_V0141_MEAL_TOTALS_SOURCE_FIX_START */
+(function(){
+  "use strict";
+
+  const FLAG = "__dpp_food_intel_totals_v0141";
+  const CACHE = {};
+  let hydrating = false;
+  let rerendering = false;
+
+  function n(x, fallback){
+    const v = Number(x);
+    return Number.isFinite(v) ? v : (fallback || 0);
+  }
+
+  function round1(x){
+    return Math.round(n(x) * 10) / 10;
+  }
+
+  function normText(x){
+    return String(x || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function selectedDateSafe(){
+    try {
+      if (typeof selectedDate !== "undefined" && selectedDate) return selectedDate;
+    } catch(e) {}
+
+    try {
+      const saved = localStorage.getItem("selectedDate");
+      if (saved) return saved;
+    } catch(e) {}
+
+    const input = document.querySelector('input[type="date"]');
+    if (input && input.value) return input.value;
+
+    const body = (document.body && (document.body.innerText || document.body.textContent) || "");
+    const m = body.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function mealMarker(meal){
+    const notes = String(meal && meal.notes || "");
+    const m = notes.match(/\bREAL_[A-Z0-9_]+\b/);
+    return m ? m[0] : "";
+  }
+
+  function mealKey(meal){
+    return `${String(meal && meal.time || "").trim()}|${normText(meal && meal.name || "")}`;
+  }
+
+  function itemName(it){
+    return it && (it.name || it.food_name || it.food || it.label || "");
+  }
+
+  function itemKey(it){
+    return `${normText(itemName(it))}|${Math.round(n(it && it.grams) * 10) / 10}`;
+  }
+
+  function mealArraysInState(){
+    const out = [];
+
+    try {
+      if (typeof state !== "undefined" && state) {
+        if (Array.isArray(state.meals)) out.push(state.meals);
+        if (state.day && Array.isArray(state.day.meals)) out.push(state.day.meals);
+        if (state.summary && Array.isArray(state.summary.meals)) out.push(state.summary.meals);
+      }
+    } catch(e) {}
+
+    return [...new Set(out)];
+  }
+
+  function buildIntelMaps(intelMeals){
+    const byId = new Map();
+    const byMarker = new Map();
+    const byKey = new Map();
+
+    for (const m of intelMeals) {
+      if (m && m.id !== undefined && m.id !== null) byId.set(String(m.id), m);
+
+      const marker = mealMarker(m);
+      if (marker) byMarker.set(marker, m);
+
+      const key = mealKey(m);
+      if (key !== "|") byKey.set(key, m);
+    }
+
+    return {byId, byMarker, byKey};
+  }
+
+  function findIntelMeal(localMeal, maps){
+    if (!localMeal) return null;
+
+    if (localMeal.id !== undefined && localMeal.id !== null) {
+      const byId = maps.byId.get(String(localMeal.id));
+      if (byId) return byId;
+    }
+
+    const marker = mealMarker(localMeal);
+    if (marker && maps.byMarker.has(marker)) return maps.byMarker.get(marker);
+
+    const key = mealKey(localMeal);
+    if (maps.byKey.has(key)) return maps.byKey.get(key);
+
+    return null;
+  }
+
+  function applyTotalsAliases(meal, totals){
+    if (!meal || !totals) return false;
+
+    const kcal = n(totals.kcal);
+    const protein = n(totals.protein);
+    const carbs = n(totals.carbs);
+    const fat = n(totals.fat);
+    const salt = n(totals.salt);
+    const sugar = n(totals.sugar);
+
+    const cleanTotals = {
+      kcal,
+      protein: round1(protein),
+      carbs: round1(carbs),
+      fat: round1(fat),
+      salt: round1(salt),
+      sugar: round1(sugar),
+    };
+
+    meal.totals = Object.assign({}, meal.totals || {}, cleanTotals);
+    meal.macros = Object.assign({}, meal.macros || {}, cleanTotals);
+    meal.nutrients = Object.assign({}, meal.nutrients || {}, cleanTotals);
+
+    // Aliases probables que el render viejo puede estar usando.
+    meal.kcal = kcal;
+    meal.calories = kcal;
+    meal.energy_kcal = kcal;
+    meal.total_kcal = kcal;
+    meal.protein = round1(protein);
+    meal.protein_g = round1(protein);
+    meal.total_protein = round1(protein);
+    meal.carbs = round1(carbs);
+    meal.fat = round1(fat);
+    meal.salt = round1(salt);
+    meal.sugar = round1(sugar);
+
+    meal[FLAG] = true;
+    return true;
+  }
+
+  function applyItemMacros(localMeal, intelMeal){
+    const localItems = Array.isArray(localMeal && localMeal.items) ? localMeal.items : [];
+    const intelItems = Array.isArray(intelMeal && intelMeal.items) ? intelMeal.items : [];
+
+    if (!localItems.length || !intelItems.length) return 0;
+
+    const intelByKey = new Map();
+    for (const it of intelItems) {
+      intelByKey.set(itemKey(it), it);
+    }
+
+    let changed = 0;
+
+    for (let i = 0; i < localItems.length; i++) {
+      const lit = localItems[i];
+      const iit = intelByKey.get(itemKey(lit)) || intelItems[i];
+
+      if (!iit || !iit.macros) continue;
+
+      const macros = iit.macros;
+      const kcal = n(macros.kcal);
+      const protein = round1(macros.protein);
+
+      lit.macros = Object.assign({}, lit.macros || {}, macros);
+      lit.nutrients = Object.assign({}, lit.nutrients || {}, macros);
+
+      lit.kcal = kcal;
+      lit.calories = kcal;
+      lit.energy_kcal = kcal;
+      lit.protein = protein;
+      lit.protein_g = protein;
+      lit.carbs = round1(macros.carbs);
+      lit.fat = round1(macros.fat);
+      lit.salt = round1(macros.salt);
+      lit.sugar = round1(macros.sugar);
+
+      if (!lit.name && iit.name) lit.name = iit.name;
+      if (!lit.food_name && iit.name) lit.food_name = iit.name;
+      if (!lit.grams && iit.grams) lit.grams = iit.grams;
+
+      lit[FLAG] = true;
+      changed++;
+    }
+
+    return changed;
+  }
+
+  function mergeFoodIntelIntoState(intel){
+    const intelMeals = Array.isArray(intel && intel.meals) ? intel.meals : [];
+    if (!intelMeals.length) return 0;
+
+    const maps = buildIntelMaps(intelMeals);
+    const arrays = mealArraysInState();
+
+    let changed = 0;
+
+    for (const arr of arrays) {
+      for (const localMeal of arr) {
+        const intelMeal = findIntelMeal(localMeal, maps);
+        if (!intelMeal) continue;
+
+        if (applyTotalsAliases(localMeal, intelMeal.totals || {})) changed++;
+        applyItemMacros(localMeal, intelMeal);
+      }
+    }
+
+    try {
+      if (typeof state !== "undefined" && state) {
+        state.foodIntel = intel;
+        state.dayIntel = intel;
+      }
+    } catch(e) {}
+
+    return changed;
+  }
+
+  async function fetchFoodIntel(date){
+    if (CACHE[date]) return CACHE[date];
+
+    const url = `/api/food-intel/day?date=${encodeURIComponent(date)}`;
+    let data;
+
+    if (typeof api === "function") {
+      data = await api(url);
+    } else {
+      const r = await fetch(url, {cache: "no-store"});
+      if (!r.ok) throw new Error(`food-intel ${r.status}`);
+      data = await r.json();
+    }
+
+    CACHE[date] = data;
+    return data;
+  }
+
+  async function hydrateFoodIntelAndMaybeRender(forceRender){
+    if (hydrating) return 0;
+    hydrating = true;
+
+    try {
+      const date = selectedDateSafe();
+      const intel = await fetchFoodIntel(date);
+      const changed = mergeFoodIntelIntoState(intel);
+
+      if (changed && forceRender && typeof render === "function" && !rerendering) {
+        rerendering = true;
+        try {
+          render();
+        } finally {
+          rerendering = false;
+        }
+      }
+
+      if (changed) {
+        console.info(`[DPP] Food Intel totals merged into meal state: ${changed} meals date=${date}`);
+      }
+
+      return changed;
+    } catch(err) {
+      console.warn("[DPP] Food Intel totals source fix skipped:", err);
+      return 0;
+    } finally {
+      hydrating = false;
+    }
+  }
+
+  try {
+    if (typeof load === "function" && !load.__dppFoodIntelWrapped) {
+      const originalLoad = load;
+      load = async function(){
+        const out = await originalLoad.apply(this, arguments);
+        await hydrateFoodIntelAndMaybeRender(false);
+        return out;
+      };
+      load.__dppFoodIntelWrapped = true;
+    }
+  } catch(e) {
+    console.warn("[DPP] load wrapper unavailable:", e);
+  }
+
+  try {
+    if (typeof render === "function" && !render.__dppFoodIntelWrapped) {
+      const originalRender = render;
+      render = function(){
+        if (!rerendering) {
+          hydrateFoodIntelAndMaybeRender(true);
+        }
+        return originalRender.apply(this, arguments);
+      };
+      render.__dppFoodIntelWrapped = true;
+    }
+  } catch(e) {
+    console.warn("[DPP] render wrapper unavailable:", e);
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    hydrateFoodIntelAndMaybeRender(true);
+  });
+
+  setTimeout(function(){ hydrateFoodIntelAndMaybeRender(true); }, 100);
+  setTimeout(function(){ hydrateFoodIntelAndMaybeRender(true); }, 800);
+})();
+/* DPP_V0141_MEAL_TOTALS_SOURCE_FIX_END */
+
+/* DPP_V0141_UI_CLEANUP_START */
+(function(){
+  "use strict";
+
+  function textOf(el){
+    return (el && (el.innerText || el.textContent) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function walkTextNodes(root, fn){
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let node;
+    while ((node = walker.nextNode())) nodes.push(node);
+    for (const n of nodes) fn(n);
+  }
+
+  function stripTechnicalMarkers(){
+    walkTextNodes(document.body, function(node){
+      let v = node.nodeValue || "";
+      const old = v;
+
+      // Oculta marcadores internos pero deja la nota humana.
+      v = v.replace(/\b(?:REAL|PLAN)_\d{4}_[A-Z0-9_]+\s*-\s*/g, "");
+
+      // Limpieza de puntos duplicados en proteína.
+      v = v.replace(/\bg prot\.\.+/g, "g prot.");
+
+      if (v !== old) node.nodeValue = v;
+    });
+  }
+
+  function fixFalseChocolateAdvice(){
+    const body = textOf(document.body);
+
+    const hasProteinChocolate =
+      /batido proteico chocolate/i.test(body) ||
+      /alpro protein cacao/i.test(body);
+
+    const hasRealChocolate =
+      /chocolate onzas/i.test(body) ||
+      /onza[s]? chocolate/i.test(body) ||
+      /chocolate post/i.test(body) ||
+      /chocolate pre/i.test(body);
+
+    if (!hasProteinChocolate || hasRealChocolate) return;
+
+    walkTextNodes(document.body, function(node){
+      let v = node.nodeValue || "";
+      const old = v;
+
+      v = v.replace(
+        /No añadas más extras hoy:\s*chocolate\.?/gi,
+        "Evita aceite extra y picoteo después del pádel."
+      );
+
+      v = v.replace(
+        /Extras detectados:\s*chocolate/gi,
+        "Extras controlados"
+      );
+
+      if (v !== old) node.nodeValue = v;
+    });
+  }
+
+  function bestBlockContaining(required){
+    const selectors = "section, article, .card, .panel, .tile, .summary-card, .metric-card, div";
+    const items = Array.from(document.querySelectorAll(selectors))
+      .filter(el => {
+        const t = textOf(el);
+        return required.every(x => t.includes(x));
+      });
+
+    if (!items.length) return null;
+    items.sort((a,b) => textOf(a).length - textOf(b).length);
+    return items[0];
+  }
+
+  function moveBodyCompositionDown(){
+    const bio = bestBlockContaining(["Foto corporal", "BioCharge"]);
+    if (!bio || bio.dataset.dppMovedBio === "1") return;
+
+    const meals = bestBlockContaining(["Comidas registradas"]);
+    const activity = bestBlockContaining(["Actividad"]);
+
+    // Lo colocamos después de comidas si existe, antes de actividad si puede.
+    try {
+      if (activity && activity.parentNode && activity !== bio && !bio.contains(activity)) {
+        activity.parentNode.insertBefore(bio, activity);
+        bio.dataset.dppMovedBio = "1";
+      } else if (meals && meals.parentNode && meals !== bio && !bio.contains(meals)) {
+        meals.parentNode.insertBefore(bio, meals.nextSibling);
+        bio.dataset.dppMovedBio = "1";
+      }
+    } catch(e) {
+      // Si el layout no permite moverlo, no rompemos nada.
+      console.warn("[DPP] BioCharge reorder skipped:", e);
+    }
+  }
+
+  function tagRealPlanCards(){
+    const selectors = "section, article, .card, .meal-card, .entry-card, li, div";
+    const candidates = Array.from(document.querySelectorAll(selectors))
+      .filter(el => {
+        const t = textOf(el);
+        return /\d{2}:\d{2}\s*·/.test(t) && /kcal/.test(t) && /g prot/.test(t);
+      });
+
+    for (const el of candidates) {
+      if (el.dataset.dppMealUiClean === "1") continue;
+      el.dataset.dppMealUiClean = "1";
+      el.classList.add("dpp-meal-clean-card");
+    }
+  }
+
+  function applyCleanup(){
+    stripTechnicalMarkers();
+    fixFalseChocolateAdvice();
+    moveBodyCompositionDown();
+    tagRealPlanCards();
+  }
+
+  function scheduleCleanup(){
+    setTimeout(applyCleanup, 50);
+    setTimeout(applyCleanup, 300);
+    setTimeout(applyCleanup, 900);
+  }
+
+  try {
+    if (typeof render === "function" && !render.__dppUiCleanupWrapped) {
+      const oldRender = render;
+      render = function(){
+        const out = oldRender.apply(this, arguments);
+        scheduleCleanup();
+        return out;
+      };
+      render.__dppUiCleanupWrapped = true;
+    }
+  } catch(e) {
+    console.warn("[DPP] UI cleanup render hook skipped:", e);
+  }
+
+  document.addEventListener("DOMContentLoaded", scheduleCleanup);
+  window.addEventListener("focus", scheduleCleanup);
+  setInterval(applyCleanup, 2000);
+  scheduleCleanup();
+})();
+/* DPP_V0141_UI_CLEANUP_END */
