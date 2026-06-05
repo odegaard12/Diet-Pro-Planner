@@ -3043,10 +3043,11 @@ def _dpp_v0141_sanitize_recursive(value):
         return [_dpp_v0141_sanitize_recursive(v) for v in value]
 
     if isinstance(value, dict):
-        if "name" in value or "food_name" in value:
-            value = _dpp_v0141_fix_food_dict(value)
-        else:
-            value = dict(value)
+        # IMPORTANT:
+        # Do not canonicalize meal_items here. Meal items contain grams/macros.
+        # Canonicalizing every object with food_name would replace the item with
+        # the food catalog object and make the UI show 0 g / 0 kcal.
+        value = dict(value)
 
         for k in list(value.keys()):
             value[k] = _dpp_v0141_sanitize_recursive(value[k])

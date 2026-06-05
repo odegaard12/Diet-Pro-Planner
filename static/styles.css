@@ -1751,3 +1751,25 @@ html[data-ui="ui5"] .bs14-mini-person small{
   max-width:190px!important;
 }
 /* DPP_V0141_CSS_CLEANUP_END */
+
+/* DPP_V0141_UI_CLEANUP_CSS_START */
+.dpp-meal-clean-card{
+  position:relative;
+}
+
+.dpp-meal-clean-card [class*="note"],
+.dpp-meal-clean-card [class*="notes"],
+.dpp-meal-clean-card small{
+  overflow-wrap:anywhere;
+}
+
+.dpp-meal-clean-card{
+  scroll-margin-top:18px;
+}
+
+@media (max-width: 760px){
+  .dpp-meal-clean-card{
+    border-radius:18px;
+  }
+}
+/* DPP_V0141_UI_CLEANUP_CSS_END */
