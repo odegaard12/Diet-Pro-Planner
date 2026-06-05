@@ -237,7 +237,12 @@ function mealCardCompact(m){
   }
   return `<article class="compact-card meal"><div class="compact-head"><div><b>${m.time} · ${m.name}</b><small>${itemSummary(m.items)}</small></div><strong>${fmt(m.totals.kcal)} kcal<br><span>${fmt(m.totals.protein)} g prot.</span></strong><button class="mini-delete" title="Borrar" onclick="deleteMeal(${m.id})">×</button></div>${m.notes?`<p class="compact-note">${m.notes}</p>`:''}</article>`;
 }
-function workoutCardCompact(w){return `<article class="compact-card workout"><div class="compact-head"><div><b>${w.time} · ${w.name}</b><small>${fmt(w.minutes)} min${w.distance_km?` · ${fmt(w.distance_km)} km`:''}${w.notes?` · ${w.notes}`:''}</small></div><strong>${fmt(w.kcal)} kcal</strong><button class="mini-delete" title="Borrar" onclick="deleteWorkout(${w.id})">×</button></div></article>`}
+function workoutCardCompact(w){
+  if(window.DPPDashboardWorkoutCard && typeof window.DPPDashboardWorkoutCard.workoutCardCompact === 'function'){
+    return window.DPPDashboardWorkoutCard.workoutCardCompact(w);
+  }
+  return `<article class="compact-card workout"><div class="compact-head"><div><b>${w.time} · ${w.name}</b><small>${fmt(w.minutes)} min${w.distance_km?` · ${fmt(w.distance_km)} km`:''}${w.notes?` · ${w.notes}`:''}</small></div><strong>${fmt(w.kcal)} kcal</strong><button class="mini-delete" title="Borrar" onclick="deleteWorkout(${w.id})">×</button></div></article>`;
+}
 async function deleteMeal(id){if(!confirm('¿Borrar comida?'))return; await api('/api/meals/'+id,{method:'DELETE'}); toast('Comida borrada'); await load()} async function deleteWorkout(id){if(!confirm('¿Borrar entreno?'))return; await api('/api/workouts/'+id,{method:'DELETE'}); toast('Entreno borrado'); await load()}
 function templateOptions(){return state.templates.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
 function renderRegister(){
