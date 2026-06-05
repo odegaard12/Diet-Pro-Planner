@@ -2104,21 +2104,6 @@ setInterval(dpp12Version, 1000);
     for (const n of nodes) fn(n);
   }
 
-  function stripTechnicalMarkers(){
-    walkTextNodes(document.body, function(node){
-      let v = node.nodeValue || "";
-      const old = v;
-
-      // Oculta marcadores internos pero deja la nota humana.
-      v = v.replace(/\b(?:REAL|PLAN)_\d{4}_[A-Z0-9_]+\s*-\s*/g, "");
-
-      // Limpieza de puntos duplicados en proteína.
-      v = v.replace(/\bg prot\.\.+/g, "g prot.");
-
-      if (v !== old) node.nodeValue = v;
-    });
-  }
-
   function fixFalseChocolateAdvice(){
     const body = textOf(document.body);
 
@@ -2187,26 +2172,9 @@ setInterval(dpp12Version, 1000);
     }
   }
 
-  function tagRealPlanCards(){
-    const selectors = "section, article, .card, .meal-card, .entry-card, li, div";
-    const candidates = Array.from(document.querySelectorAll(selectors))
-      .filter(el => {
-        const t = textOf(el);
-        return /\d{2}:\d{2}\s*·/.test(t) && /kcal/.test(t) && /g prot/.test(t);
-      });
-
-    for (const el of candidates) {
-      if (el.dataset.dppMealUiClean === "1") continue;
-      el.dataset.dppMealUiClean = "1";
-      el.classList.add("dpp-meal-clean-card");
-    }
-  }
-
   function applyCleanup(){
-    stripTechnicalMarkers();
     fixFalseChocolateAdvice();
     moveBodyCompositionDown();
-    tagRealPlanCards();
   }
 
   function scheduleCleanup(){
