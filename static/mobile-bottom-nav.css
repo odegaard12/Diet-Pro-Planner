@@ -1,0 +1,186 @@
+/*
+ * Diet Pro Planner v0.0.15.3
+ * Simple fixed bottom navigation.
+ */
+
+@media (max-width: 760px), (pointer: coarse) {
+  body.dpp-mobile-bottom-nav-enabled {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /*
+   * Hide the always-expanded top/sidebar menu on mobile.
+   * Keep brand/header and the page content visible.
+   */
+  body.dpp-mobile-bottom-nav-enabled aside nav,
+  body.dpp-mobile-bottom-nav-enabled .sidebar nav,
+  body.dpp-mobile-bottom-nav-enabled .side-nav,
+  body.dpp-mobile-bottom-nav-enabled .nav-list,
+  body.dpp-mobile-bottom-nav-enabled .nav-rail {
+    display: none !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled aside,
+  body.dpp-mobile-bottom-nav-enabled .sidebar,
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar {
+    max-height: 132px !important;
+    overflow: hidden !important;
+  }
+
+  .dpp-mobile-nav {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 9999 !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    padding: 8px !important;
+    border: 1px solid rgba(148, 163, 184, .24) !important;
+    border-radius: 24px !important;
+    background: rgba(15, 23, 42, .94) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    backdrop-filter: blur(18px) !important;
+    box-shadow: 0 18px 54px rgba(15, 23, 42, .38) !important;
+  }
+
+  .dpp-mobile-nav__item {
+    appearance: none !important;
+    border: 0 !important;
+    border-radius: 18px !important;
+    min-width: 0 !important;
+    min-height: 58px !important;
+    padding: 7px 4px 6px !important;
+    background: transparent !important;
+    color: rgba(226, 232, 240, .74) !important;
+    display: grid !important;
+    place-items: center !important;
+    gap: 2px !important;
+    cursor: pointer !important;
+    font: inherit !important;
+    line-height: 1 !important;
+  }
+
+  .dpp-mobile-nav__item.is-active {
+    background: rgba(56, 189, 248, .16) !important;
+    color: #f8fafc !important;
+    box-shadow: inset 0 0 0 1px rgba(125, 211, 252, .22) !important;
+  }
+
+  .dpp-mobile-nav__item:active {
+    transform: translateY(1px) scale(.99) !important;
+  }
+
+  .dpp-mobile-nav__icon {
+    font-size: 20px !important;
+    line-height: 1 !important;
+  }
+
+  .dpp-mobile-nav__label {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+    letter-spacing: -.02em !important;
+    line-height: 1.05 !important;
+  }
+
+  .dpp-mobile-more-backdrop {
+    display: none !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9997 !important;
+    border: 0 !important;
+    background: rgba(2, 6, 23, .42) !important;
+  }
+
+  body.dpp-mobile-more-open .dpp-mobile-more-backdrop {
+    display: block !important;
+  }
+
+  .dpp-mobile-more-sheet {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 9998 !important;
+    transform: translateY(18px) scale(.98) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform .16s ease, opacity .16s ease !important;
+    border: 1px solid rgba(148, 163, 184, .24) !important;
+    border-radius: 26px !important;
+    padding: 10px !important;
+    background: rgba(15, 23, 42, .97) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    backdrop-filter: blur(18px) !important;
+    box-shadow: 0 22px 70px rgba(15, 23, 42, .44) !important;
+  }
+
+  body.dpp-mobile-more-open .dpp-mobile-more-sheet {
+    transform: translateY(0) scale(1) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .dpp-mobile-more-sheet__handle {
+    width: 42px !important;
+    height: 4px !important;
+    border-radius: 999px !important;
+    margin: 2px auto 8px !important;
+    background: rgba(148, 163, 184, .38) !important;
+  }
+
+  .dpp-mobile-more-sheet h2 {
+    margin: 0 4px 10px !important;
+    color: #f8fafc !important;
+    font-size: 15px !important;
+    line-height: 1.15 !important;
+  }
+
+  .dpp-mobile-more-sheet__grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .dpp-mobile-more-sheet__item,
+  .dpp-mobile-more-sheet__close {
+    min-height: 48px !important;
+    border: 1px solid rgba(148, 163, 184, .2) !important;
+    border-radius: 18px !important;
+    background: rgba(30, 41, 59, .74) !important;
+    color: #e2e8f0 !important;
+    font-weight: 850 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+  }
+
+  .dpp-mobile-more-sheet__item .dpp-mobile-nav__icon {
+    font-size: 18px !important;
+  }
+
+  .dpp-mobile-more-sheet__item .dpp-mobile-nav__label {
+    font-size: 13px !important;
+  }
+
+  .dpp-mobile-more-sheet__close {
+    width: 100% !important;
+    margin-top: 8px !important;
+    background: rgba(15, 23, 42, .86) !important;
+  }
+}
+
+@media (min-width: 761px) and (pointer: fine) {
+  .dpp-mobile-nav,
+  .dpp-mobile-more-backdrop,
+  .dpp-mobile-more-sheet {
+    display: none !important;
+  }
+}
