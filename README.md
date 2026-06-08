@@ -1,21 +1,19 @@
 # Diet Pro Planner
 
-**Current version:** `v0.0.15.1`.1`.1`
+**Self-hosted, local-first cockpit for nutrition, body composition, sport and daily diet decisions.**
 
-Diet Pro Planner is a private, local-first nutrition, weight, sport and body-composition web app designed to run on a Raspberry Pi with Docker.
+[![release](https://img.shields.io/github/v/release/odegaard12/Diet-Pro-Planner?label=release)](https://github.com/odegaard12/Diet-Pro-Planner/releases)
+[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![backend](https://img.shields.io/badge/backend-Python%20%2B%20Flask-blue)
+![frontend](https://img.shields.io/badge/frontend-Vanilla%20JS%20%2B%20CSS-yellow)
+![docker](https://img.shields.io/badge/runtime-Docker-2496ED)
+![local-first](https://img.shields.io/badge/privacy-local--first%20%2F%20offline--friendly-111827)
+
+**Current version:** `v0.0.15.1`
+
+Diet Pro Planner is a private Raspberry Pi web app for tracking real meals, weight trend, training load and smart-scale body-composition context without sending private diet data to external services.
 
 The goal is to build a premium personal cockpit for daily diet decisions, closer to Apple Health + Gentler Streak + a local nutrition assistant than to a spreadsheet.
-
-## What it helps with
-
-- Track meals by grams.
-- Track official and reference weight.
-- Follow a target weight goal.
-- Analyze protein, calories, oil, training and data confidence.
-- Understand whether a day is good, caution or excess.
-- Detect when a weight spike is probably water, food volume or training inflammation.
-- Use smart-scale body-composition data as trend context.
-- Suggest practical next meals with local heuristics.
 
 ## Latest release: `v0.0.15.1` — Mobile dashboard rescue and Food Intelligence truth
 
@@ -302,3 +300,9 @@ Body composition:
 This is a personal local-first project. It is not a medical device and does not provide medical diagnosis.
 
 Smart-scale body-composition values are estimates and should be used for trends, not as absolute daily truth.
+
+## About
+
+Self-hosted, local-first dashboard for practical diet control: meal logging by grams, weight trend, sport activity, Food Intelligence, smart-scale body composition and recovery context.
+
+Built for private daily use on a Raspberry Pi with Docker. Public code stays in GitHub; private food logs, SQLite databases, tokens, uploads and body-composition records stay local.
