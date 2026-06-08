@@ -3151,5 +3151,14 @@ except Exception as exc:
     print(f"[DPP] food-intel truth patch not registered: {exc}")
 # DPP_V0151_TRUTH_PATCH_REGISTER_END
 
+
+# DPP_BODY_TRENDS_V2_START
+try:
+    from dpp_body_trends import register_body_trends_routes
+    register_body_trends_routes(app)
+except Exception as exc:
+    print(f"WARN: body trends routes not registered: {exc}")
+# DPP_BODY_TRENDS_V2_END
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))
