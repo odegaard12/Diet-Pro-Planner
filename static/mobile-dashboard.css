@@ -291,3 +291,187 @@
     flex-basis: calc(50% - 6px) !important;
   }
 }
+
+/* DPP v0.0.15.4 mobile header/cards polish */
+@media (max-width: 760px), (pointer: coarse) {
+  body.dpp-mobile-bottom-nav-enabled {
+    background: #eaf6ff !important;
+  }
+
+  /*
+   * Convert the old desktop/sidebar block into a real compact mobile header.
+   * The previous max-height clipping left a weird blue rounded strip.
+   */
+  body.dpp-mobile-bottom-nav-enabled aside,
+  body.dpp-mobile-bottom-nav-enabled .sidebar,
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar,
+  body.dpp-mobile-bottom-nav-enabled .side-panel {
+    height: 84px !important;
+    min-height: 84px !important;
+    max-height: 84px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 8px 10px 0 !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    position: relative !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled aside::before,
+  body.dpp-mobile-bottom-nav-enabled aside::after,
+  body.dpp-mobile-bottom-nav-enabled .sidebar::before,
+  body.dpp-mobile-bottom-nav-enabled .sidebar::after,
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar::before,
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled aside nav,
+  body.dpp-mobile-bottom-nav-enabled .sidebar nav,
+  body.dpp-mobile-bottom-nav-enabled .side-nav,
+  body.dpp-mobile-bottom-nav-enabled .nav-list,
+  body.dpp-mobile-bottom-nav-enabled .nav-rail {
+    display: none !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled aside > :not(:first-child),
+  body.dpp-mobile-bottom-nav-enabled .sidebar > :not(:first-child),
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar > :not(:first-child) {
+    display: none !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled aside > :first-child,
+  body.dpp-mobile-bottom-nav-enabled .sidebar > :first-child,
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar > :first-child {
+    height: 72px !important;
+    min-height: 72px !important;
+    max-height: 72px !important;
+    margin: 0 !important;
+    padding: 12px 14px !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+    background: linear-gradient(135deg, #08243d 0%, #092b48 100%) !important;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, .18) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled aside > :first-child img,
+  body.dpp-mobile-bottom-nav-enabled .sidebar > :first-child img,
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar > :first-child img {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    object-fit: contain !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled aside > :first-child h1,
+  body.dpp-mobile-bottom-nav-enabled aside > :first-child h2,
+  body.dpp-mobile-bottom-nav-enabled aside > :first-child p,
+  body.dpp-mobile-bottom-nav-enabled .sidebar > :first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .sidebar > :first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .sidebar > :first-child p {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    line-height: 1.05 !important;
+  }
+
+  /*
+   * Page starts closer to the header, with less giant white-card feeling.
+   */
+  body.dpp-mobile-bottom-nav-enabled main,
+  body.dpp-mobile-bottom-nav-enabled .main,
+  body.dpp-mobile-bottom-nav-enabled .page,
+  body.dpp-mobile-bottom-nav-enabled .dashboard,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-shell {
+    padding-top: 10px !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled .card,
+  body.dpp-mobile-bottom-nav-enabled .panel,
+  body.dpp-mobile-bottom-nav-enabled .box,
+  body.dpp-mobile-bottom-nav-enabled .tile,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card,
+  body.dpp-mobile-bottom-nav-enabled .summary-card,
+  body.dpp-mobile-bottom-nav-enabled .metric-card {
+    border-radius: 18px !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .07) !important;
+  }
+
+  /*
+   * Compact first dashboard card: title/actions/version.
+   */
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child,
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child {
+    margin-top: 0 !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled .toolbar,
+  body.dpp-mobile-bottom-nav-enabled .actions,
+  body.dpp-mobile-bottom-nav-enabled .page-actions,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-actions {
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled .toolbar button,
+  body.dpp-mobile-bottom-nav-enabled .actions button,
+  body.dpp-mobile-bottom-nav-enabled .page-actions button,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-actions button {
+    min-height: 40px !important;
+    border-radius: 14px !important;
+  }
+
+  /*
+   * Version/badge pills should not look like empty huge cards.
+   */
+  body.dpp-mobile-bottom-nav-enabled [class*="version"],
+  body.dpp-mobile-bottom-nav-enabled [class*="Version"],
+  body.dpp-mobile-bottom-nav-enabled .badge,
+  body.dpp-mobile-bottom-nav-enabled .pill {
+    max-width: 100% !important;
+    min-height: 0 !important;
+    line-height: 1.1 !important;
+  }
+
+  /*
+   * The bottom nav is good; just make it slightly less bulky.
+   */
+  .dpp-mobile-nav {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    border-radius: 22px !important;
+  }
+
+  .dpp-mobile-nav__item {
+    min-height: 54px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  body.dpp-mobile-bottom-nav-enabled aside,
+  body.dpp-mobile-bottom-nav-enabled .sidebar,
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar {
+    height: 80px !important;
+    min-height: 80px !important;
+    max-height: 80px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled aside > :first-child,
+  body.dpp-mobile-bottom-nav-enabled .sidebar > :first-child,
+  body.dpp-mobile-bottom-nav-enabled .nav-sidebar > :first-child {
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+    border-radius: 16px !important;
+  }
+}
