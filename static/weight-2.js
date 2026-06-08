@@ -39,6 +39,33 @@
     return metricUnits[name] || '';
   }
 
+  function typeLabel(type) {
+    const labels = {
+      weight: 'Peso',
+      composition: 'Composición',
+      recovery: 'Recuperación',
+      system: 'Sistema',
+    };
+    return labels[type] || 'Insight';
+  }
+
+  function trendText(delta, suffix) {
+    if (delta === null || delta === undefined || Number.isNaN(Number(delta))) {
+      return 'Sin tendencia suficiente';
+    }
+    const sign = Number(delta) > 0 ? '+' : '';
+    return `Cambio desde primera lectura: ${sign}${fmt(delta, 2)} ${suffix || ''}`.trim();
+  }
+
+  function metricCell(row, name, suffix, digits) {
+    const metric = row.metrics && row.metrics[name];
+    if (!metric || metric.value === null || metric.value === undefined || Number.isNaN(Number(metric.value))) {
+      return '—';
+    }
+    const value = fmt(metric.value, digits ?? 1);
+    return suffix ? `${value}${suffix}` : value;
+  }
+
   function latestMetric(data, name) {
     const metric = data.body && data.body.metrics ? data.body.metrics[name] : null;
     if (!metric || !metric.summary || !metric.summary.latest) return null;
@@ -66,12 +93,11 @@
   }
 
   function card(title, value, suffix, delta, note) {
-    const d = delta === null || delta === undefined ? '' : `<small>Cambio rango: ${delta > 0 ? '+' : ''}${fmt(delta, 2)} ${suffix || ''}</small>`;
     return `
       <article class="w2-card">
         <span>${title}</span>
         <strong>${value}${suffix ? ` <small>${suffix}</small>` : ''}</strong>
-        ${d || `<small>${note || 'Sin tendencia suficiente'}</small>`}
+        <small>${trendText(delta, suffix) || note || 'Sin tendencia suficiente'}</small>
       </article>
     `;
   }
@@ -114,16 +140,11 @@
     const insights = data.insights || [];
     document.getElementById('insights').innerHTML = insights.map((item) => `
       <article class="w2-insight ${item.level || 'neutral'}">
-        <span>${item.type || 'insight'}</span>
+        <span>${typeLabel(item.type)}</span>
         <h3>${item.title || 'Insight'}</h3>
         <p>${item.message || ''}</p>
       </article>
     `).join('');
-  }
-
-  function valueFromSnapshot(snap, name) {
-    const metric = snap.metrics && snap.metrics[name];
-    return metric ? metric.value : null;
   }
 
   function bodyByDate(data) {
@@ -155,12 +176,12 @@
       <tr>
         <td>${row.date}${row.time ? ` · ${row.time}` : ''}</td>
         <td>${row.weight ? `${fmt(row.weight.kg, 2)} kg${row.weight.official ? '' : ' ref.'}` : '—'}</td>
-        <td>${fmt(valueFromSnapshot(row, 'body_fat_pct'), 1)}%</td>
-        <td>${fmt(valueFromSnapshot(row, 'water_pct'), 1)}%</td>
-        <td>${fmt(valueFromSnapshot(row, 'muscle_mass_kg'), 1)} kg</td>
-        <td>${fmt(valueFromSnapshot(row, 'visceral_fat'), 0)}</td>
-        <td>${fmt(valueFromSnapshot(row, 'bmr_kcal'), 0)}</td>
-        <td>${fmt(valueFromSnapshot(row, 'biocharge'), 0)}</td>
+        <td>${metricCell(row, 'body_fat_pct', '%', 1)}</td>
+        <td>${metricCell(row, 'water_pct', '%', 1)}</td>
+        <td>${metricCell(row, 'muscle_mass_kg', ' kg', 1)}</td>
+        <td>${metricCell(row, 'visceral_fat', '', 0)}</td>
+        <td>${metricCell(row, 'bmr_kcal', '', 0)}</td>
+        <td>${metricCell(row, 'biocharge', '', 0)}</td>
       </tr>
     `).join('');
   }

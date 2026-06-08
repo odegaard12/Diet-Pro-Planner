@@ -224,3 +224,46 @@ td {
   .w2-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .w2-controls button { width: 100%; }
 }
+
+/* v0.0.16-alpha2 · Weight 2.0 polish */
+.w2-insight span {
+  color: #0284c7;
+}
+
+.w2-card small small {
+  display: inline;
+  margin: 0;
+}
+
+.w2-card strong small {
+  display: inline;
+  color: var(--muted);
+  font-size: .42em;
+  letter-spacing: -.02em;
+}
+
+.w2-panel-head {
+  align-items: flex-start;
+}
+
+.w2-panel-head .w2-muted {
+  margin: 6px 0 0;
+  max-width: 560px;
+  line-height: 1.35;
+}
+
+@media (max-width: 860px) {
+  .w2-panel-head {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .w2-table-wrap {
+    border-radius: 16px;
+    border: 1px solid var(--line);
+  }
+
+  th, td {
+    padding: 10px 9px;
+  }
+}
