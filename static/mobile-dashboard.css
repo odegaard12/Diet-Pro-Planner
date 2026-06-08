@@ -1,0 +1,293 @@
+/*
+ * Diet Pro Planner v0.0.15.1
+ * Mobile dashboard rescue.
+ *
+ * Keep this file small and mobile-only. Do not grow static/app.js.
+ */
+
+@media (max-width: 760px), (pointer: coarse) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  img,
+  svg,
+  canvas {
+    max-width: 100%;
+  }
+
+  /* Main shell: avoid desktop/sidebar feeling on phone */
+  .app,
+  .layout,
+  .dashboard,
+  .dashboard-shell,
+  .page,
+  .main,
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .app,
+  .layout,
+  .dashboard-shell {
+    display: block !important;
+  }
+
+  aside,
+  .sidebar,
+  .side-nav,
+  .nav-rail {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    position: relative !important;
+    inset: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border-radius: 0 0 22px 22px !important;
+  }
+
+  /* Navigation becomes horizontal and touch-friendly */
+  nav,
+  .sidebar nav,
+  .side-nav,
+  .nav-list,
+  .tabs {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding-bottom: 8px !important;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  nav a,
+  nav button,
+  .sidebar a,
+  .sidebar button,
+  .nav-item,
+  .tab,
+  .tabs button {
+    flex: 0 0 auto !important;
+    min-height: 44px !important;
+    min-width: 88px !important;
+    max-width: 150px !important;
+    scroll-snap-align: start;
+    white-space: normal !important;
+    line-height: 1.15 !important;
+    text-align: center !important;
+  }
+
+  /* Header/date/actions compact */
+  header,
+  .header,
+  .topbar,
+  .toolbar,
+  .page-header,
+  .dashboard-header {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  .toolbar,
+  .actions,
+  .page-actions,
+  .dashboard-actions,
+  .button-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .toolbar button,
+  .actions button,
+  .page-actions button,
+  .dashboard-actions button,
+  .button-row button,
+  button.primary,
+  button.secondary {
+    min-height: 44px !important;
+    flex: 1 1 auto !important;
+  }
+
+  input[type="date"],
+  input[type="time"],
+  input[type="number"],
+  input[type="text"],
+  select {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 44px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Grids/cards: one column and no overflow */
+  .grid,
+  .dashboard-grid,
+  .cards,
+  .card-grid,
+  .summary-grid,
+  .metrics-grid,
+  .kpi-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .card,
+  .panel,
+  .box,
+  .tile,
+  .metric,
+  .metric-card,
+  .summary-card,
+  .dashboard-card,
+  .meal-card,
+  .workout-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  .card h1,
+  .card h2,
+  .card h3,
+  .panel h1,
+  .panel h2,
+  .panel h3,
+  .dashboard-card h1,
+  .dashboard-card h2,
+  .dashboard-card h3 {
+    line-height: 1.1 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Food/workout lists: compact and readable */
+  .meal-card,
+  .workout-card,
+  [class*="meal"],
+  [class*="workout"] {
+    min-width: 0 !important;
+  }
+
+  .meal-card p,
+  .workout-card p,
+  .meal-card small,
+  .workout-card small {
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Long notes should not dominate mobile */
+  .meal-card .notes,
+  .meal-card .note,
+  .workout-card .notes,
+  .workout-card .note,
+  [class*="meal"] .notes,
+  [class*="meal"] .note {
+    max-height: 4.8em !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+
+  /* Tables become scrollable instead of breaking layout */
+  table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Charts and history strips */
+  .chart,
+  .weight-chart,
+  .sparkline,
+  .history-chart,
+  canvas {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Floating/add controls: easier to hit */
+  .fab,
+  .floating-action,
+  .add-button,
+  button[aria-label*="Comida"],
+  button[title*="Comida"] {
+    min-height: 46px !important;
+    min-width: 46px !important;
+  }
+
+  /* Reduce visual noise in dense dashboard */
+  .muted,
+  .hint,
+  .help,
+  .subtitle,
+  small {
+    line-height: 1.25 !important;
+  }
+}
+
+@media (max-width: 430px) {
+  body {
+    font-size: 15px;
+  }
+
+  .card,
+  .panel,
+  .box,
+  .tile,
+  .metric-card,
+  .summary-card,
+  .dashboard-card {
+    border-radius: 18px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  nav a,
+  nav button,
+  .sidebar a,
+  .sidebar button,
+  .nav-item,
+  .tab {
+    min-width: 82px !important;
+    font-size: 13px !important;
+  }
+
+  .toolbar button,
+  .actions button,
+  .page-actions button,
+  .dashboard-actions button {
+    flex-basis: calc(50% - 6px) !important;
+  }
+}
