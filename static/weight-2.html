@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diet Pro Planner · Peso 2.0</title>
+  <link rel="stylesheet" href="/static/weight-2.css?v=0.0.16-alpha1">
+</head>
+<body>
+  <main class="w2-shell">
+    <header class="w2-hero">
+      <a class="w2-back" href="/">← Dashboard</a>
+      <p class="w2-kicker">Diet Pro Planner · Peso 2.0</p>
+      <h1>Peso, composición y recuperación</h1>
+      <p class="w2-subtitle">Tendencias semanales de peso oficial, bioimpedancia y BioCharge. La báscula se usa como contexto, no como verdad diaria absoluta.</p>
+      <div class="w2-controls">
+        <button data-days="14">14 días</button>
+        <button data-days="30" class="is-active">30 días</button>
+        <button data-days="60">60 días</button>
+        <button data-days="120">120 días</button>
+      </div>
+    </header>
+
+    <section class="w2-insights" id="insights"></section>
+
+    <section class="w2-grid" id="cards"></section>
+
+    <section class="w2-panel">
+      <div class="w2-panel-head">
+        <div>
+          <p class="w2-kicker">Series</p>
+          <h2>Últimas lecturas</h2>
+        </div>
+        <p id="rangeLabel" class="w2-muted"></p>
+      </div>
+      <div class="w2-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Peso</th>
+              <th>Grasa</th>
+              <th>Agua</th>
+              <th>Músculo</th>
+              <th>Visceral</th>
+              <th>BMR</th>
+              <th>BioCharge</th>
+            </tr>
+          </thead>
+          <tbody id="snapshots"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/weight-2.js?v=0.0.16-alpha1"></script>
+</body>
+</html>
