@@ -1,53 +1,45 @@
 # Diet Pro Planner
 
-**Current version:** `v0.0.15`
+**Self-hosted, local-first cockpit for nutrition, body composition, sport and daily diet decisions.**
 
-Diet Pro Planner is a private, local-first nutrition, weight, sport and body-composition web app designed to run on a Raspberry Pi with Docker.
+[![release](https://img.shields.io/github/v/release/odegaard12/Diet-Pro-Planner?label=release)](https://github.com/odegaard12/Diet-Pro-Planner/releases)
+[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![backend](https://img.shields.io/badge/backend-Python%20%2B%20Flask-blue)
+![frontend](https://img.shields.io/badge/frontend-Vanilla%20JS%20%2B%20CSS-yellow)
+![docker](https://img.shields.io/badge/runtime-Docker-2496ED)
+![local-first](https://img.shields.io/badge/privacy-local--first%20%2F%20offline--friendly-111827)
+
+**Current version:** `v0.0.15.1`
+
+Diet Pro Planner is a private Raspberry Pi web app for tracking real meals, weight trend, training load and smart-scale body-composition context without sending private diet data to external services.
 
 The goal is to build a premium personal cockpit for daily diet decisions, closer to Apple Health + Gentler Streak + a local nutrition assistant than to a spreadsheet.
 
-## What it helps with
+## Latest release: `v0.0.15.1` — Mobile dashboard rescue and Food Intelligence truth
 
-- Track meals by grams.
-- Track official and reference weight.
-- Follow a target weight goal.
-- Analyze protein, calories, oil, training and data confidence.
-- Understand whether a day is good, caution or excess.
-- Detect when a weight spike is probably water, food volume or training inflammation.
-- Use smart-scale body-composition data as trend context.
-- Suggest practical next meals with local heuristics.
+`v0.0.15.1` is a post-`v0.0.15` stabilization release focused on mobile usability and Food Intelligence truth.
 
-## Latest release: `v0.0.15` — Dashboard refactor guardrails
+### New in v0.0.15.1
+
+- Adds a mobile-only dashboard rescue stylesheet.
+- Adds a fixed bottom navigation for phone use.
+- Hides the always-expanded top/sidebar menu on mobile.
+- Polishes the compact mobile header and top section cards.
+- Keeps the legacy frontend monolith locked under guardrails.
+- Normalizes Food Intelligence truth after real meal corrections:
+  - avoids false 225 g oil from fried-potato text;
+  - avoids false “Falta proteína útil” when protein is already high;
+  - avoids false “No añadas más extras hoy: galleta” from cheesecake/biscuit text.
+- Adds BioCharge / Hybrid Charge aliases in the latest body snapshot response.
+
+### PWA note
+
+The app is now more usable on iPhone as a responsive web app, but it is not yet a full PWA. A future release should add `manifest.json`, `theme-color`, Apple standalone tags and a service worker.
+
+## Previous release: `v0.0.15` — Dashboard refactor guardrails
 
 `v0.0.15` starts the safe dashboard refactor phase.
 
-### New in v0.0.15
-
-- Adds known-day regression checks for validated real days:
-  - 2026-06-03
-  - 2026-06-04
-  - 2026-06-05
-- Adds frontend anti-monolith guardrails.
-- Locks legacy frontend growth:
-  - `static/app.js <= 2250` lines
-  - `static/styles.css <= 1800` lines
-- Adds modular frontend scaffolding under `static/js/`.
-- Extracts compact meal card rendering to `static/js/dashboard/meal-card.global.js`.
-- Extracts compact workout card rendering to `static/js/dashboard/workout-card.global.js`.
-- Reduces the old UI cleanup patch.
-- Documents v0.0.15 dashboard refactor rules.
-
-### Previous release: `v0.0.14.2` — Dashboard meal totals and UI cleanup
-
-`v0.0.14.2` is a stabilization hotfix for the daily dashboard after the Food Intelligence and Body Snapshot releases.
-
-#### New in v0.0.14.2
-
-- Meal cards now use Food Intelligence totals as the source of truth.
-- Registered meals show consistent kcal and protein values.
-- Technical `REAL_...` and `PLAN_...` markers are hidden from normal dashboard notes.
-- False chocolate warnings from protein chocolate/cacao products are avoided.
-- Private local data remains excluded from the repository.
 
 ## Food Intelligence
 
@@ -213,6 +205,17 @@ Body composition:
 
 ## Releases
 
+### `v0.0.15.1` — Mobile dashboard rescue and Food Intelligence truth
+
+- Adds mobile-only dashboard rescue CSS.
+- Adds fixed bottom navigation for mobile.
+- Hides the always-expanded top menu on mobile.
+- Polishes mobile header and top section cards.
+- Keeps `static/app.js` and `static/styles.css` within anti-monolith budgets.
+- Normalizes Food Intelligence truth for oil, protein and extras.
+- Exposes BioCharge and Hybrid Charge aliases in the latest body snapshot.
+- Keeps private local data out of the repository.
+
 ### `v0.0.15` — Dashboard refactor guardrails
 
 - Adds known-day regression checks for 2026-06-03, 2026-06-04 and 2026-06-05.
@@ -290,9 +293,16 @@ Body composition:
 - More automatic meal suggestions from available foods.
 - OCR4 product detection and duplicate handling.
 - Premium dashboard polish.
+- PWA básica para iPhone / standalone install.
 
 ## Disclaimer
 
 This is a personal local-first project. It is not a medical device and does not provide medical diagnosis.
 
 Smart-scale body-composition values are estimates and should be used for trends, not as absolute daily truth.
+
+## About
+
+Self-hosted, local-first dashboard for practical diet control: meal logging by grams, weight trend, sport activity, Food Intelligence, smart-scale body composition and recovery context.
+
+Built for private daily use on a Raspberry Pi with Docker. Public code stays in GitHub; private food logs, SQLite databases, tokens, uploads and body-composition records stay local.
