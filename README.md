@@ -9,36 +9,39 @@
 ![docker](https://img.shields.io/badge/runtime-Docker-2496ED)
 ![local-first](https://img.shields.io/badge/privacy-local--first%20%2F%20offline--friendly-111827)
 
-**Current version:** `v0.0.15.1`
+**Current version:** `v0.0.16`
 
 Diet Pro Planner is a private Raspberry Pi web app for tracking real meals, weight trend, training load and smart-scale body-composition context without sending private diet data to external services.
 
 The goal is to build a premium personal cockpit for daily diet decisions, closer to Apple Health + Gentler Streak + a local nutrition assistant than to a spreadsheet.
 
-## Latest release: `v0.0.15.1` — Mobile dashboard rescue and Food Intelligence truth
+## Latest release: `v0.0.16` — Weight and Body Composition 2.0
 
-`v0.0.15.1` is a post-`v0.0.15` stabilization release focused on mobile usability and Food Intelligence truth.
+`v0.0.16` adds the first full Weight & Body Composition 2.0 module.
 
-### New in v0.0.15.1
+### New in v0.0.16
 
-- Adds a mobile-only dashboard rescue stylesheet.
-- Adds a fixed bottom navigation for phone use.
-- Hides the always-expanded top/sidebar menu on mobile.
-- Polishes the compact mobile header and top section cards.
-- Keeps the legacy frontend monolith locked under guardrails.
-- Normalizes Food Intelligence truth after real meal corrections:
-  - avoids false 225 g oil from fried-potato text;
-  - avoids false “Falta proteína útil” when protein is already high;
-  - avoids false “No añadas más extras hoy: galleta” from cheesecake/biscuit text.
-- Adds BioCharge / Hybrid Charge aliases in the latest body snapshot response.
+- Adds `/weight-2`, a standalone dashboard for weight, smart-scale composition and recovery context.
+- Adds `/api/body-trends?days=...`, a trend endpoint for local body and weight data.
+- Shows official/reference weight series.
+- Shows body fat %, fat mass kg, water %, muscle kg, visceral fat, BMR and BioCharge / Hybrid Charge.
+- Adds trend insights:
+  - official weight direction;
+  - body-fat trend as weekly context;
+  - BioCharge / recovery context.
+- Treats bioimpedance as trend context, not daily absolute truth.
+- Keeps the main dashboard safe: the broken experimental `weight-2-link` injection was removed.
+- Keeps private body-composition and weight data local in `data/dieta.db`.
 
-### PWA note
+### Validation
 
-The app is now more usable on iPhone as a responsive web app, but it is not yet a full PWA. A future release should add `manifest.json`, `theme-color`, Apple standalone tags and a service worker.
+- Docker build and local deploy passed.
+- Smoke OK for `/`, `/weight-2` and `/api/body-trends?days=45`.
+- Known-days regression passed.
+- Frontend anti-monolith guard passed.
+- `static/app.js` and `static/styles.css` remain under budget.
 
-## Previous release: `v0.0.15` — Dashboard refactor guardrails
-
-`v0.0.15` starts the safe dashboard refactor phase.
+## Previous release: `v0.0.15.1` — Mobile dashboard rescue and Food Intelligence truth
 
 
 ## Food Intelligence
@@ -205,6 +208,17 @@ Body composition:
 
 ## Releases
 
+### `v0.0.16` — Weight and Body Composition 2.0
+
+- Adds standalone `/weight-2` page.
+- Adds `/api/body-trends?days=...`.
+- Adds weight/composition/recovery trend cards.
+- Tracks body fat %, fat mass kg, water %, muscle kg, visceral fat, BMR and BioCharge / Hybrid Charge.
+- Adds simple trend insights for weight, composition and recovery.
+- Keeps bioimpedance framed as weekly trend context.
+- Keeps the broken experimental dashboard `weight-2-link` removed.
+- Keeps private body-composition data out of the repository.
+
 ### `v0.0.15.1` — Mobile dashboard rescue and Food Intelligence truth
 
 - Adds mobile-only dashboard rescue CSS.
@@ -286,7 +300,7 @@ Body composition:
 
 ## Roadmap
 
-- Weight 2.0 with composition graphs.
+- Weight 2.0 with composition trends: shipped in v0.0.16. Next: richer charts.
 - Weekly trend interpretation.
 - Apple Health import/export path.
 - Planned vs real meal workflow.
