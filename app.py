@@ -3142,5 +3142,14 @@ def _dpp_v0141_after_request_sanitize_api_state(response):
 # DPP_V0141_API_STATE_SANITIZER_END
 
 
+
+# DPP_V0151_TRUTH_PATCH_REGISTER_START
+try:
+    from dpp_food_intel_truth_patch import register_food_intel_truth_patch
+    register_food_intel_truth_patch(app)
+except Exception as exc:
+    print(f"[DPP] food-intel truth patch not registered: {exc}")
+# DPP_V0151_TRUTH_PATCH_REGISTER_END
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))
