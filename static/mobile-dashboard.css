@@ -475,3 +475,148 @@
     border-radius: 16px !important;
   }
 }
+
+/* DPP v0.0.15.5 mobile section header polish */
+@media (max-width: 760px), (pointer: coarse) {
+  /*
+   * Top page/section cards: title, actions and version pill.
+   * Fixes the squeezed desktop layout visible in Resumen / Registrar deporte.
+   */
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child,
+  body.dpp-mobile-bottom-nav-enabled .page > section:first-child,
+  body.dpp-mobile-bottom-nav-enabled .dashboard > section:first-child,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child > *,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child > *,
+  body.dpp-mobile-bottom-nav-enabled .page > section:first-child > *,
+  body.dpp-mobile-bottom-nav-enabled .dashboard > section:first-child > *,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child > *,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .page > section:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .page > section:first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .dashboard > section:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .dashboard > section:first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child h2 {
+    margin: 0 !important;
+    width: 100% !important;
+    text-align: left !important;
+    line-height: 1.05 !important;
+    font-size: clamp(24px, 7vw, 32px) !important;
+    letter-spacing: -.055em !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child .toolbar,
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child .actions,
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child .page-actions,
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child .dashboard-actions,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child .toolbar,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child .actions,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child .page-actions,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child .dashboard-actions,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child .toolbar,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child .actions,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child .page-actions,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child .dashboard-actions,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child .toolbar,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child .actions,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child .page-actions,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child .dashboard-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    justify-items: stretch !important;
+    align-items: center !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child button,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child button,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child button,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child button {
+    width: 100% !important;
+    min-height: 42px !important;
+    border-radius: 15px !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  /*
+   * The tiny section eyebrow and version pill should be compact, not a full fake progress bar.
+   */
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child [class*="version"],
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child [class*="Version"],
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child .badge,
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child .pill,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child [class*="version"],
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child [class*="Version"],
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child .badge,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child .pill,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child [class*="version"],
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child [class*="Version"],
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child .badge,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child .pill,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child [class*="version"],
+  body.dpp-mobile-bottom-nav-enabled .card:first-child [class*="Version"],
+  body.dpp-mobile-bottom-nav-enabled .card:first-child .badge,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child .pill {
+    width: fit-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 26px !important;
+    padding: 7px 10px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+  }
+
+  /*
+   * Date card: date input and "Ir a hoy real" should line up cleanly.
+   */
+  body.dpp-mobile-bottom-nav-enabled input[type="date"] {
+    text-align: center !important;
+  }
+
+  body.dpp-mobile-bottom-nav-enabled .date-row,
+  body.dpp-mobile-bottom-nav-enabled .day-row,
+  body.dpp-mobile-bottom-nav-enabled [class*="date"] + .actions,
+  body.dpp-mobile-bottom-nav-enabled [class*="day"] + .actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+}
+
+@media (max-width: 430px) {
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled main > section:first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .main > section:first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .dashboard-card:first-child h2,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child h1,
+  body.dpp-mobile-bottom-nav-enabled .card:first-child h2 {
+    font-size: clamp(23px, 7.4vw, 29px) !important;
+  }
+}
