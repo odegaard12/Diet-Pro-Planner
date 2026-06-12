@@ -49,8 +49,13 @@
   function findHero() {
     return (
       document.querySelector(".fi13-hero") ||
-      findTextElement("Inteligencia del día")?.closest("section, article, .card")
+      findTextElement("Inteligencia del día")?.closest("section, article, .card") ||
+      findTextElement("Coach del día")?.closest("section, article, .card")
     );
+  }
+
+  function chip(label, value) {
+    return `<span class="dpp-coach-chip"><b>${esc(value)}</b><small>${esc(label)}</small></span>`;
   }
 
   function render(data) {
@@ -58,6 +63,7 @@
     const totals = c.totals || {};
     const next = c.next_meal || {};
     const messages = c.messages || {};
+    const pantry = c.pantry || {};
     const flags = c.flags || [];
 
     const hero = findHero();
@@ -72,7 +78,7 @@
       if (kicker) kicker.textContent = "Coach del día · v0.0.17";
 
       const h2 = hero.querySelector("h2");
-      if (h2) h2.textContent = c.headline || "Coach del día";
+      if (h2) h2.textContent = c.status === "base_insuficiente" ? "Aún no hay score, pero sí hay decisión" : (c.headline || "Coach del día");
 
       const p = hero.querySelector("p");
       if (p) p.textContent = next.primary || "Registra comida real para calcular mejor.";
@@ -90,6 +96,7 @@
 
     if (panel) {
       panel.dataset.dppCoachV17 = "1";
+      panel.classList.add("dpp-coach-panel-v17");
 
       const h3 = panel.querySelector("h3") || findTextElement("Qué hacer ahora");
       if (h3) h3.textContent = "Coach del día";
@@ -99,12 +106,9 @@
         sub.textContent = `${totals.meals || 0} comidas · ${fmt(totals.kcal, " kcal")} · ${fmt(totals.protein, " g proteína")} · ${c.training_type || "sin_entreno"}`;
       }
 
-      const btn =
-        panel.querySelector("#fi13SuggestBtn") ||
-        panel.querySelector("button");
-
+      const btn = panel.querySelector("#fi13SuggestBtn") || panel.querySelector("button");
       if (btn) {
-        btn.textContent = "Actualizar coach";
+        btn.textContent = "Actualizar";
         btn.removeAttribute("id");
         btn.onclick = null;
         if (!btn.dataset.dppCoachBound) {
@@ -123,25 +127,49 @@
         panel.appendChild(ul);
       }
 
-      const items = [];
-      if (next.primary) items.push(`<li><b>Siguiente mejor comida:</b> ${esc(next.primary)}</li>`);
-      if (next.why) items.push(`<li>${esc(next.why)}</li>`);
-      if (messages.protein) items.push(`<li>💪 ${esc(messages.protein)}</li>`);
-      if (messages.biocharge) items.push(`<li>⚡ ${esc(messages.biocharge)}</li>`);
-      if (messages.weight) items.push(`<li>⚖️ ${esc(messages.weight)}</li>`);
-      if (messages.yesterday) items.push(`<li>🧠 ${esc(messages.yesterday)}</li>`);
-
+      const used = Array.isArray(pantry.used) ? pantry.used : [];
       const avoid = Array.isArray(next.avoid) ? next.avoid.filter(Boolean) : [];
-      if (avoid.length) items.push(`<li><b>Evitar ahora:</b> ${esc(avoid.join(", "))}</li>`);
 
-      ul.innerHTML = items.length ? items.join("") : "<li>Registra comida real antes de valorar el día.</li>";
+      ul.outerHTML = `
+        <div class="dpp-coach-visual">
+          <div class="dpp-coach-main">
+            <div class="dpp-coach-label">MEJOR COMIDA AHORA</div>
+            <div class="dpp-coach-decision">${esc(next.primary || "Registra comida real para calcular mejor.")}</div>
+            <div class="dpp-coach-why">${esc(next.why || c.headline || "")}</div>
+          </div>
+
+          <div class="dpp-coach-grid">
+            <div class="dpp-coach-box">
+              <span>💪</span>
+              <b>Proteína</b>
+              <small>${esc(messages.protein || "Prioriza proteína útil.")}</small>
+            </div>
+            <div class="dpp-coach-box">
+              <span>⚡</span>
+              <b>Recuperación</b>
+              <small>${esc(messages.biocharge || "BioCharge no disponible.")}</small>
+            </div>
+            <div class="dpp-coach-box">
+              <span>🧠</span>
+              <b>Contexto</b>
+              <small>${esc(messages.yesterday || "Sin señales fuertes de ayer.")}</small>
+            </div>
+          </div>
+
+          <div class="dpp-coach-row">
+            ${chip("kcal", fmt(totals.kcal, ""))}
+            ${chip("proteína", fmt(totals.protein, " g"))}
+            ${chip("entreno", fmt(totals.workout_kcal, " kcal"))}
+            ${chip("despensa", used.length ? used.join(" · ") : "sin datos")}
+          </div>
+
+          ${avoid.length ? `<div class="dpp-coach-avoid"><b>Evita ahora:</b> ${esc(avoid.join(" · "))}</div>` : ""}
+          ${flags.length ? `<div class="dpp-coach-signals">Señales: ${flags.map(esc).join(" · ")}</div>` : ""}
+        </div>
+      `;
 
       const box = panel.querySelector("#fi13Suggestions");
-      if (box) {
-        box.innerHTML = flags.length
-          ? `<div class="muted">Señales: ${flags.map(esc).join(" · ")}</div>`
-          : "";
-      }
+      if (box) box.innerHTML = "";
     }
 
     const eyebrow = document.querySelector(".eyebrow");
@@ -172,14 +200,8 @@
     } catch (err) {
       const panel = findPanel();
       if (panel) {
-        const h3 = panel.querySelector("h3");
-        if (h3) h3.textContent = "Coach del día";
-        let ul = panel.querySelector("ul");
-        if (!ul) {
-          ul = document.createElement("ul");
-          panel.appendChild(ul);
-        }
-        ul.innerHTML = `<li>No se pudo cargar Smart Coach: ${esc(err.message || err)}</li>`;
+        panel.dataset.dppCoachV17 = "1";
+        panel.innerHTML += `<div class="dpp-coach-avoid">No se pudo cargar Smart Coach: ${esc(err.message || err)}</div>`;
       }
     } finally {
       busy = false;
@@ -218,6 +240,5 @@
     schedule(false);
   });
 
-  // Reintentos iniciales porque la app antigua pinta después de cargar datos.
   [300, 800, 1500, 3000].forEach((ms) => setTimeout(() => schedule(true), ms));
 })();

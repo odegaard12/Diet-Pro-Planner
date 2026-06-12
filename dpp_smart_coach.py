@@ -9,6 +9,7 @@ from flask import jsonify, request
 
 
 DEFAULT_DB = os.environ.get("DPP_DB", "data/dieta.db")
+DEFAULT_PANTRY = os.environ.get("DPP_PANTRY", "data/pantry.json")
 
 
 def _q(name: str) -> str:
@@ -353,6 +354,167 @@ def _fetch_metric(cur: sqlite3.Cursor, day: str, metrics: List[str]) -> Optional
     }
 
 
+
+def _norm_text(value: Any) -> str:
+    s = str(value or "").lower()
+    repl = {
+        "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u",
+        "ü": "u", "ñ": "n"
+    }
+    for a, b in repl.items():
+        s = s.replace(a, b)
+    return s
+
+
+def _load_pantry(path: str = DEFAULT_PANTRY) -> Dict[str, Any]:
+    if not os.path.exists(path):
+        return {
+            "available": False,
+            "items": [],
+            "message": "No hay despensa configurada."
+        }
+
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        if not isinstance(data, dict):
+            raise ValueError("pantry root is not object")
+        items = data.get("items") or []
+        if not isinstance(items, list):
+            items = []
+        return {
+            "available": True,
+            "path": path,
+            "version": data.get("version"),
+            "updated_at": data.get("updated_at"),
+            "items": items,
+        }
+    except Exception as exc:
+        return {
+            "available": False,
+            "items": [],
+            "error": str(exc),
+            "message": "No pude leer despensa."
+        }
+
+
+def _pantry_available_items(pantry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    items = pantry.get("items") or []
+    out = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if item.get("available") is True:
+            out.append(item)
+    return out
+
+
+def _pantry_names(pantry: Dict[str, Any], include_avoid: bool = False) -> List[str]:
+    names = []
+    for item in _pantry_available_items(pantry):
+        priority = _norm_text(item.get("priority"))
+        if not include_avoid and priority == "avoid":
+            continue
+        name = item.get("name")
+        if name:
+            names.append(str(name))
+    return names
+
+
+def _pantry_find(pantry: Dict[str, Any], categories: List[str], names: List[str] | None = None) -> Optional[Dict[str, Any]]:
+    cats = {_norm_text(x) for x in categories}
+    wanted = [_norm_text(x) for x in (names or [])]
+
+    candidates = []
+    for item in _pantry_available_items(pantry):
+        priority = _norm_text(item.get("priority"))
+        if priority == "avoid":
+            continue
+
+        cat = _norm_text(item.get("category"))
+        name = _norm_text(item.get("name"))
+
+        if cat in cats or any(w in name for w in wanted):
+            candidates.append(item)
+
+    if not candidates:
+        return None
+
+    priority_order = {"prefer": 0, "normal": 1, "secondary": 2}
+    candidates.sort(key=lambda x: priority_order.get(_norm_text(x.get("priority")), 5))
+    return candidates[0]
+
+
+def _pantry_avoid_items(pantry: Dict[str, Any]) -> List[str]:
+    avoid = []
+    for item in _pantry_available_items(pantry):
+        priority = _norm_text(item.get("priority"))
+        risk = item.get("risk")
+        if priority == "avoid" or risk:
+            name = item.get("name")
+            if name:
+                avoid.append(str(name))
+    return avoid
+
+
+def _build_pantry_next_meal(pantry: Dict[str, Any], training_type: str, breakfast_only: bool) -> Optional[Dict[str, Any]]:
+    if not pantry.get("available"):
+        return None
+
+    protein = _pantry_find(
+        pantry,
+        ["protein", "protein_drink", "protein_fat"],
+        ["pollo", "atun", "huevo", "jamon", "yogur", "alpro"],
+    )
+    vegetable = _pantry_find(
+        pantry,
+        ["vegetable", "verdura"],
+        ["judias", "ensalada", "verdura", "brocoli"],
+    )
+    carb = _pantry_find(
+        pantry,
+        ["carb", "hidrato"],
+        ["arroz", "pasta", "patata", "pan"],
+    )
+
+    used = [x.get("name") for x in [protein, vegetable, carb] if x and x.get("name")]
+    avoid = _pantry_avoid_items(pantry)
+
+    if not protein:
+        return {
+            "title": "Siguiente mejor comida",
+            "primary": "No veo proteína principal en despensa: usa una proteína magra disponible + verdura + hidrato medido.",
+            "why": "El desayuno fue bajo en proteína; sin proteína disponible concreta, recomiendo por categoría para no inventar.",
+            "avoid": avoid,
+            "pantry_used": used,
+            "source": "pantry_rules"
+        }
+
+    protein_name = protein.get("name", "proteína")
+    vegetable_name = vegetable.get("name", "verdura") if vegetable else "verdura"
+    carb_name = carb.get("name", "arroz/pasta") if carb else "hidrato medido"
+
+    protein_amount = "220-250 g" if _norm_text(protein_name).find("pollo") >= 0 else "1 ración alta"
+    vegetable_amount = "250-300 g"
+    carb_amount = "50-60 g en seco" if training_type in ["padel", "entreno_fuerte", "carrera", "bici"] or breakfast_only else "40-50 g en seco"
+
+    primary = f"{protein_name} {protein_amount} + {vegetable_name} {vegetable_amount} + {carb_name} {carb_amount}."
+
+    why = "Uso tu despensa: priorizo proteína disponible, verdura y un hidrato medido."
+    if breakfast_only:
+        why += " Solo llevas desayuno bajo en proteína; esta comida corrige el día."
+    if training_type in ["padel", "entreno_fuerte", "carrera", "bici"]:
+        why += " Como hay entreno o gasto previsto/registrado, no conviene recortar hidrato en exceso."
+
+    return {
+        "title": "Siguiente mejor comida",
+        "primary": primary,
+        "why": why,
+        "avoid": avoid,
+        "pantry_used": used,
+        "source": "pantry_rules"
+    }
+
 def _previous_day(day: str) -> str:
     return (date.fromisoformat(day) - timedelta(days=1)).isoformat()
 
@@ -494,6 +656,12 @@ def _build_recommendations(
         },
         "flags": flags,
         "next_meal": next_meal,
+        "pantry": {
+            "available": _load_pantry().get("available"),
+            "used": next_meal.get("pantry_used", []),
+            "available_names": _pantry_names(_load_pantry())[:20],
+            "avoid_names": _pantry_avoid_items(_load_pantry())[:20],
+        },
         "quick_actions": quick_actions,
     }
 
@@ -537,3 +705,37 @@ def register_smart_coach_routes(app):
         day = request.args.get("date") or date.today().isoformat()
         db_path = os.environ.get("DPP_DB", DEFAULT_DB)
         return jsonify(build_smart_coach_day(db_path, day))
+
+    @app.get("/api/pantry")
+    def pantry_get():
+        pantry = _load_pantry(os.environ.get("DPP_PANTRY", DEFAULT_PANTRY))
+        return jsonify({
+            "ok": True,
+            "pantry": pantry,
+        })
+
+    @app.post("/api/pantry")
+    def pantry_post():
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict):
+            return jsonify({"ok": False, "error": "payload must be object"}), 400
+
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return jsonify({"ok": False, "error": "items must be list"}), 400
+
+        safe = {
+            "version": 1,
+            "updated_at": str(date.today()),
+            "items": items,
+        }
+
+        path = os.environ.get("DPP_PANTRY", DEFAULT_PANTRY)
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(safe, fh, ensure_ascii=False, indent=2)
+
+        return jsonify({
+            "ok": True,
+            "pantry": _load_pantry(path),
+        })
