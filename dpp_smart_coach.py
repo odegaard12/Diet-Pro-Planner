@@ -121,6 +121,81 @@ def _sum_meal_items(cur: sqlite3.Cursor, meal_id: Any) -> Dict[str, float]:
     return {k: round(v, 1) for k, v in totals.items()}
 
 
+def _food_per100(cur: sqlite3.Cursor, food_id: Any, names: List[str]) -> float:
+    if food_id in (None, "") or not _table_exists(cur, "foods"):
+        return 0.0
+
+    fc = _cols(cur, "foods")
+    col = _pick(fc, names)
+    if not col:
+        return 0.0
+
+    try:
+        row = cur.execute(f"SELECT {_q(col)} FROM foods WHERE id=? LIMIT 1", (food_id,)).fetchone()
+        if not row:
+            return 0.0
+        return _num(row[0])
+    except Exception:
+        return 0.0
+
+
+def _sum_meal_items(cur: sqlite3.Cursor, meal_id: Any) -> Dict[str, float]:
+    item_table = None
+    for table in ["meal_items", "meal_foods", "meal_entries"]:
+        if _table_exists(cur, table):
+            item_table = table
+            break
+
+    if not item_table:
+        return {"kcal": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}
+
+    ic = _cols(cur, item_table)
+    meal_id_col = _pick(ic, ["meal_id", "mealId", "parent_id"])
+    if not meal_id_col:
+        return {"kcal": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}
+
+    kcal_col = _pick(ic, ["kcal", "calories"])
+    protein_col = _pick(ic, ["protein", "protein_g"])
+    carbs_col = _pick(ic, ["carbs", "carbs_g"])
+    fat_col = _pick(ic, ["fat", "fat_g"])
+    grams_col = _pick(ic, ["grams", "g", "quantity", "amount"])
+    food_id_col = _pick(ic, ["food_id", "foodId"])
+
+    rows = cur.execute(
+        f"SELECT * FROM {_q(item_table)} WHERE {_q(meal_id_col)}=?",
+        (meal_id,),
+    ).fetchall()
+
+    totals = {"kcal": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}
+
+    for r in rows:
+        grams = _num(r[grams_col]) if grams_col else 0.0
+        food_id = r[food_id_col] if food_id_col else None
+
+        kcal = _num(r[kcal_col]) if kcal_col else 0.0
+        protein = _num(r[protein_col]) if protein_col else 0.0
+        carbs = _num(r[carbs_col]) if carbs_col else 0.0
+        fat = _num(r[fat_col]) if fat_col else 0.0
+
+        # Fallback: si el item no trae totales, calcular desde foods por 100 g.
+        if grams > 0 and food_id not in (None, ""):
+            if kcal == 0:
+                kcal = grams * _food_per100(cur, food_id, ["kcal_100", "kcal_per_100g", "calories_100g", "kcal"]) / 100
+            if protein == 0:
+                protein = grams * _food_per100(cur, food_id, ["protein_100", "protein_per_100g", "protein"]) / 100
+            if carbs == 0:
+                carbs = grams * _food_per100(cur, food_id, ["carbs_100", "carbs_per_100g", "carbs"]) / 100
+            if fat == 0:
+                fat = grams * _food_per100(cur, food_id, ["fat_100", "fat_per_100g", "fat"]) / 100
+
+        totals["kcal"] += kcal
+        totals["protein"] += protein
+        totals["carbs"] += carbs
+        totals["fat"] += fat
+
+    return {k: round(v, 1) for k, v in totals.items()}
+
+
 def _fetch_meals(cur: sqlite3.Cursor, day: str) -> List[Dict[str, Any]]:
     if not _table_exists(cur, "meals"):
         return []
