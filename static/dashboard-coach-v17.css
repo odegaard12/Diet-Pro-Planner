@@ -124,3 +124,74 @@ html[data-ui="ui5"] .dpp-coach-signals{
     font-size:18px;
   }
 }
+/* DPP_COACH_V17E_COMPACT_LAYOUT_START */
+html[data-ui="ui5"] .dpp-coach-panel-v17{
+  min-height:auto!important;
+}
+
+html[data-ui="ui5"] .dpp-coach-panel-v17 header{
+  margin-bottom:10px!important;
+}
+
+html[data-ui="ui5"] .dpp-coach-visual{
+  width:100%!important;
+  max-width:none!important;
+  grid-template-columns:minmax(360px,.85fr) minmax(520px,1.15fr)!important;
+  align-items:stretch!important;
+  gap:12px!important;
+}
+
+html[data-ui="ui5"] .dpp-coach-main{
+  grid-column:1!important;
+  grid-row:1!important;
+  min-height:100%!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+}
+
+html[data-ui="ui5"] .dpp-coach-grid{
+  grid-column:2!important;
+  grid-row:1!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  align-items:stretch!important;
+}
+
+html[data-ui="ui5"] .dpp-coach-row,
+html[data-ui="ui5"] .dpp-coach-avoid,
+html[data-ui="ui5"] .dpp-coach-signals{
+  grid-column:1 / -1!important;
+}
+
+html[data-ui="ui5"] .dpp-coach-box{
+  min-height:124px!important;
+}
+
+html[data-ui="ui5"] .dpp-coach-decision{
+  max-width:780px!important;
+}
+
+html[data-ui="ui5"] .dpp-coach-signals{
+  opacity:.72;
+}
+
+@media (max-width:1050px){
+  html[data-ui="ui5"] .dpp-coach-visual{
+    grid-template-columns:1fr!important;
+  }
+
+  html[data-ui="ui5"] .dpp-coach-main,
+  html[data-ui="ui5"] .dpp-coach-grid,
+  html[data-ui="ui5"] .dpp-coach-row,
+  html[data-ui="ui5"] .dpp-coach-avoid,
+  html[data-ui="ui5"] .dpp-coach-signals{
+    grid-column:1!important;
+  }
+}
+
+@media (max-width:720px){
+  html[data-ui="ui5"] .dpp-coach-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+/* DPP_COACH_V17E_COMPACT_LAYOUT_END */
