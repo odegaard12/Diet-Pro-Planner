@@ -1,5 +1,8 @@
 (function () {
   const ENDPOINT = "/api/smart-coach/day";
+  let lastAppliedKey = "";
+  let busy = false;
+  let timer = null;
 
   function todayLocal() {
     const d = new Date();
@@ -12,14 +15,18 @@
     return dateInput && dateInput.value ? dateInput.value : todayLocal();
   }
 
-  function txt(v) {
-    return v === null || v === undefined ? "" : String(v);
+  function esc(v) {
+    return String(v ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
   function fmt(n, suffix) {
     const x = Number(n || 0);
-    const clean = Math.round(x * 10) / 10;
-    return `${clean}${suffix || ""}`;
+    return `${Math.round(x * 10) / 10}${suffix || ""}`;
   }
 
   function findTextElement(needle) {
@@ -31,77 +38,37 @@
     return null;
   }
 
-  function blockContaining(needles) {
-    const seed = findTextElement(needles[0]);
-    if (!seed) return null;
-
-    let cur = seed;
-    for (let i = 0; i < 8 && cur && cur.parentElement; i++) {
-      const s = cur.textContent || "";
-      if (needles.every((x) => s.includes(x))) return cur;
-      cur = cur.parentElement;
-    }
-    return seed.closest("section, article, .card") || seed.parentElement;
+  function findPanel() {
+    return (
+      document.querySelector(".fi13-next") ||
+      findTextElement("Qué hacer ahora")?.closest("article, section, .card") ||
+      findTextElement("Sugerir comida")?.closest("article, section, .card")
+    );
   }
 
-  function listItem(text) {
-    return `<li>${escapeHtml(text)}</li>`;
+  function findHero() {
+    return (
+      document.querySelector(".fi13-hero") ||
+      findTextElement("Inteligencia del día")?.closest("section, article, .card")
+    );
   }
 
-  function escapeHtml(s) {
-    return txt(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function ensureRefreshButton(panel) {
-    let btn = panel.querySelector("[data-dpp-coach-refresh]");
-    const oldSuggest = panel.querySelector("#fi13SuggestBtn");
-
-    if (oldSuggest) {
-      oldSuggest.id = "";
-      oldSuggest.dataset.dppCoachRefresh = "1";
-      oldSuggest.textContent = "Actualizar coach";
-      oldSuggest.onclick = null;
-      btn = oldSuggest;
-    }
-
-    if (!btn) {
-      const header = panel.querySelector("header");
-      if (header) {
-        btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn small";
-        btn.dataset.dppCoachRefresh = "1";
-        btn.textContent = "Actualizar coach";
-        header.appendChild(btn);
-      }
-    }
-
-    if (btn && !btn.dataset.boundCoach) {
-      btn.dataset.boundCoach = "1";
-      btn.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        loadCoach();
-      });
-    }
-  }
-
-  function renderCoach(data) {
+  function render(data) {
     const c = data.coach || {};
     const totals = c.totals || {};
     const next = c.next_meal || {};
     const messages = c.messages || {};
     const flags = c.flags || [];
 
-    const hero = document.querySelector(".fi13-hero");
+    const hero = findHero();
+    const panel = findPanel();
+
+    if (!hero && !panel) return false;
+
     if (hero) {
       hero.dataset.dppCoachV17 = "1";
 
-      const kicker = hero.querySelector(".fi13-kicker");
+      const kicker = hero.querySelector(".fi13-kicker") || findTextElement("Inteligencia del día");
       if (kicker) kicker.textContent = "Coach del día · v0.0.17";
 
       const h2 = hero.querySelector("h2");
@@ -113,104 +80,144 @@
       const tags = hero.querySelector(".fi13-hero-tags");
       if (tags) {
         tags.innerHTML = `
-          <span>${escapeHtml(totals.meals || 0)} comidas</span>
-          <span>${escapeHtml(fmt(totals.kcal, " kcal"))}</span>
-          <span>${escapeHtml(fmt(totals.protein, " g proteína"))}</span>
-          <span>${escapeHtml(fmt(totals.workout_kcal, " kcal entreno"))}</span>
+          <span>${esc(totals.meals || 0)} comidas</span>
+          <span>${esc(fmt(totals.kcal, " kcal"))}</span>
+          <span>${esc(fmt(totals.protein, " g proteína"))}</span>
+          <span>${esc(fmt(totals.workout_kcal, " kcal entreno"))}</span>
         `;
       }
     }
 
-    const panel = document.querySelector(".fi13-next") || blockContaining(["Qué hacer ahora"]);
-    if (!panel) return;
+    if (panel) {
+      panel.dataset.dppCoachV17 = "1";
 
-    panel.dataset.dppCoachV17 = "1";
+      const h3 = panel.querySelector("h3") || findTextElement("Qué hacer ahora");
+      if (h3) h3.textContent = "Coach del día";
 
-    const h3 = panel.querySelector("h3");
-    if (h3) h3.textContent = "Coach del día";
+      const sub = panel.querySelector("header p");
+      if (sub) {
+        sub.textContent = `${totals.meals || 0} comidas · ${fmt(totals.kcal, " kcal")} · ${fmt(totals.protein, " g proteína")} · ${c.training_type || "sin_entreno"}`;
+      }
 
-    const sub = panel.querySelector("header p");
-    if (sub) {
-      sub.textContent = `${totals.meals || 0} comidas · ${fmt(totals.kcal, " kcal")} · ${fmt(totals.protein, " g proteína")} · ${c.training_type || "sin_entreno"}`;
-    }
+      const btn =
+        panel.querySelector("#fi13SuggestBtn") ||
+        panel.querySelector("button");
 
-    ensureRefreshButton(panel);
+      if (btn) {
+        btn.textContent = "Actualizar coach";
+        btn.removeAttribute("id");
+        btn.onclick = null;
+        if (!btn.dataset.dppCoachBound) {
+          btn.dataset.dppCoachBound = "1";
+          btn.addEventListener("click", function (ev) {
+            ev.preventDefault();
+            lastAppliedKey = "";
+            loadCoach(true);
+          });
+        }
+      }
 
-    const ul = panel.querySelector("ul") || document.createElement("ul");
-    if (!ul.parentElement) panel.appendChild(ul);
+      let ul = panel.querySelector("ul");
+      if (!ul) {
+        ul = document.createElement("ul");
+        panel.appendChild(ul);
+      }
 
-    const items = [];
+      const items = [];
+      if (next.primary) items.push(`<li><b>Siguiente mejor comida:</b> ${esc(next.primary)}</li>`);
+      if (next.why) items.push(`<li>${esc(next.why)}</li>`);
+      if (messages.protein) items.push(`<li>💪 ${esc(messages.protein)}</li>`);
+      if (messages.biocharge) items.push(`<li>⚡ ${esc(messages.biocharge)}</li>`);
+      if (messages.weight) items.push(`<li>⚖️ ${esc(messages.weight)}</li>`);
+      if (messages.yesterday) items.push(`<li>🧠 ${esc(messages.yesterday)}</li>`);
 
-    if (next.primary) items.push(`Siguiente mejor comida: ${next.primary}`);
-    if (next.why) items.push(next.why);
-    if (messages.protein) items.push(messages.protein);
-    if (messages.biocharge) items.push(messages.biocharge);
-    if (messages.weight) items.push(messages.weight);
-    if (messages.yesterday) items.push(messages.yesterday);
+      const avoid = Array.isArray(next.avoid) ? next.avoid.filter(Boolean) : [];
+      if (avoid.length) items.push(`<li><b>Evitar ahora:</b> ${esc(avoid.join(", "))}</li>`);
 
-    const avoid = Array.isArray(next.avoid) ? next.avoid.filter(Boolean) : [];
-    if (avoid.length) items.push(`Evitar ahora: ${avoid.join(", ")}.`);
+      ul.innerHTML = items.length ? items.join("") : "<li>Registra comida real antes de valorar el día.</li>";
 
-    if (!items.length) items.push("Registra comida real antes de valorar el día.");
-
-    ul.innerHTML = items.map(listItem).join("");
-
-    const suggestions = panel.querySelector("#fi13Suggestions");
-    if (suggestions) {
-      suggestions.innerHTML = flags.length
-        ? `<div class="muted">Señales: ${flags.map(escapeHtml).join(" · ")}</div>`
-        : "";
-    }
-
-    const oldSuggestionTitle = findTextElement("Sugerir comida");
-    if (oldSuggestionTitle && oldSuggestionTitle.textContent.trim() === "Sugerir comida") {
-      oldSuggestionTitle.textContent = "Recomendación";
+      const box = panel.querySelector("#fi13Suggestions");
+      if (box) {
+        box.innerHTML = flags.length
+          ? `<div class="muted">Señales: ${flags.map(esc).join(" · ")}</div>`
+          : "";
+      }
     }
 
     const eyebrow = document.querySelector(".eyebrow");
     if (eyebrow && eyebrow.textContent.includes("v0.0.16")) {
       eyebrow.textContent = eyebrow.textContent.replace("v0.0.16", "v0.0.17");
     }
+
+    return true;
   }
 
-  async function loadCoach() {
+  async function loadCoach(force) {
+    if (busy) return;
     const day = currentDay();
+    const key = day + "|" + document.body.textContent.slice(0, 300);
+    if (!force && key === lastAppliedKey) return;
+
+    const hero = findHero();
+    const panel = findPanel();
+    if (!hero && !panel) return;
+
+    busy = true;
     try {
       const res = await fetch(`${ENDPOINT}?date=${encodeURIComponent(day)}`, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      renderCoach(data);
+      const ok = render(data);
+      if (ok) lastAppliedKey = key;
     } catch (err) {
-      const panel = document.querySelector(".fi13-next") || blockContaining(["Qué hacer ahora"]);
+      const panel = findPanel();
       if (panel) {
         const h3 = panel.querySelector("h3");
         if (h3) h3.textContent = "Coach del día";
-        const ul = panel.querySelector("ul") || document.createElement("ul");
-        if (!ul.parentElement) panel.appendChild(ul);
-        ul.innerHTML = `<li>No se pudo cargar Smart Coach: ${escapeHtml(err.message || err)}</li>`;
+        let ul = panel.querySelector("ul");
+        if (!ul) {
+          ul = document.createElement("ul");
+          panel.appendChild(ul);
+        }
+        ul.innerHTML = `<li>No se pudo cargar Smart Coach: ${esc(err.message || err)}</li>`;
       }
+    } finally {
+      busy = false;
     }
   }
 
-  function scheduleLoad() {
-    window.clearTimeout(window.__dppCoachV17Timer);
-    window.__dppCoachV17Timer = window.setTimeout(loadCoach, 350);
+  function schedule(force) {
+    clearTimeout(timer);
+    timer = setTimeout(() => loadCoach(force), 250);
   }
 
-  window.DPPCoachV17 = { load: loadCoach };
+  window.DPPCoachV17 = {
+    load: () => {
+      lastAppliedKey = "";
+      return loadCoach(true);
+    }
+  };
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", scheduleLoad);
+    document.addEventListener("DOMContentLoaded", () => schedule(true));
   } else {
-    scheduleLoad();
+    schedule(true);
   }
 
+  const observer = new MutationObserver(() => schedule(false));
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
   document.addEventListener("change", function (ev) {
-    if (ev.target && ev.target.matches("input[type='date'], #dashDate")) scheduleLoad();
+    if (ev.target && ev.target.matches("input[type='date'], #dashDate")) {
+      lastAppliedKey = "";
+      schedule(true);
+    }
   });
 
-  document.addEventListener("click", function (ev) {
-    const t = ev.target;
-    if (t && (t.matches("button") || t.matches("a"))) scheduleLoad();
+  document.addEventListener("click", function () {
+    schedule(false);
   });
+
+  // Reintentos iniciales porque la app antigua pinta después de cargar datos.
+  [300, 800, 1500, 3000].forEach((ms) => setTimeout(() => schedule(true), ms));
 })();
