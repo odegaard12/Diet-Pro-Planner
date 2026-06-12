@@ -121,16 +121,18 @@
         }
       }
 
-      let ul = panel.querySelector("ul");
-      if (!ul) {
-        ul = document.createElement("ul");
-        panel.appendChild(ul);
-      }
+      // Idempotente: antes de pintar, elimina cualquier Coach anterior dentro del panel.
+      panel.querySelectorAll(".dpp-coach-visual, [data-dpp-coach-holder='1']").forEach((node) => node.remove());
+      panel.querySelectorAll("ul").forEach((node) => node.remove());
+
+      const holder = document.createElement("div");
+      holder.dataset.dppCoachHolder = "1";
+      panel.appendChild(holder);
 
       const used = Array.isArray(pantry.used) ? pantry.used : [];
       const avoid = Array.isArray(next.avoid) ? next.avoid.filter(Boolean) : [];
 
-      ul.outerHTML = `
+      holder.innerHTML = `
         <div class="dpp-coach-visual">
           <div class="dpp-coach-main">
             <div class="dpp-coach-label">MEJOR COMIDA AHORA</div>
@@ -183,8 +185,8 @@
   async function loadCoach(force) {
     if (busy) return;
     const day = currentDay();
-    const key = day + "|" + document.body.textContent.slice(0, 300);
-    if (!force && key === lastAppliedKey) return;
+    const key = day;
+    if (!force && key === lastAppliedKey && document.querySelector(".dpp-coach-visual")) return;
 
     const hero = findHero();
     const panel = findPanel();

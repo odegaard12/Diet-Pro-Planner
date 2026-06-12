@@ -366,25 +366,56 @@ def _norm_text(value: Any) -> str:
     return s
 
 
+def _candidate_pantry_paths(path: str = DEFAULT_PANTRY) -> List[str]:
+    candidates: List[str] = []
+
+    def add(value: Any) -> None:
+        if not value:
+            return
+        s = str(value)
+        if s not in candidates:
+            candidates.append(s)
+
+    add(path)
+    add(os.environ.get("DPP_PANTRY"))
+    add(os.path.join(os.getcwd(), "data", "pantry.json"))
+    add(os.path.join(os.path.dirname(__file__), "data", "pantry.json"))
+    add("/app/data/pantry.json")
+
+    return candidates
+
+
 def _load_pantry(path: str = DEFAULT_PANTRY) -> Dict[str, Any]:
-    if not os.path.exists(path):
+    candidates = _candidate_pantry_paths(path)
+
+    chosen = None
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            chosen = candidate
+            break
+
+    if not chosen:
         return {
             "available": False,
             "items": [],
-            "message": "No hay despensa configurada."
+            "candidates": candidates,
+            "message": "No hay despensa configurada o no se encuentra pantry.json."
         }
 
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(chosen, "r", encoding="utf-8") as fh:
             data = json.load(fh)
+
         if not isinstance(data, dict):
             raise ValueError("pantry root is not object")
+
         items = data.get("items") or []
         if not isinstance(items, list):
             items = []
+
         return {
             "available": True,
-            "path": path,
+            "path": chosen,
             "version": data.get("version"),
             "updated_at": data.get("updated_at"),
             "items": items,
@@ -392,6 +423,7 @@ def _load_pantry(path: str = DEFAULT_PANTRY) -> Dict[str, Any]:
     except Exception as exc:
         return {
             "available": False,
+            "path": chosen,
             "items": [],
             "error": str(exc),
             "message": "No pude leer despensa."
