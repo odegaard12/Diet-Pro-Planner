@@ -3160,5 +3160,14 @@ except Exception as exc:
     print(f"WARN: body trends routes not registered: {exc}")
 # DPP_BODY_TRENDS_V2_END
 
+
+# BEGIN DPP_SMART_COACH_ROUTE
+try:
+    from dpp_smart_coach import register_smart_coach_routes
+    register_smart_coach_routes(app)
+except Exception as exc:
+    print("WARN: smart coach routes disabled:", exc)
+# END DPP_SMART_COACH_ROUTE
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))

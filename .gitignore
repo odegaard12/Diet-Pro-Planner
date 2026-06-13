@@ -11,3 +11,8 @@ backups/
 __pycache__/
 .pytest_cache/
 .DS_Store
+
+# DPP local private runtime files
+data/pantry.json
+data/secrets*.json
+*.local.env
