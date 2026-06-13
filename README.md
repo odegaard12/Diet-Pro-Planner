@@ -1,5 +1,15 @@
 # Diet Pro Planner
 
+## v0.0.17 — Smart Coach + Pantry foundation
+
+- Añade Smart Coach diario con endpoint `/api/smart-coach/day`.
+- Integra el Coach en el dashboard sin tarjeta suelta.
+- Añade despensa local privada (`data/pantry.json`) y ejemplo público (`data/pantry.example.json`).
+- Mantiene IA externa como futura opción BYOK: cada instancia usa su propia clave OpenAI/Gemini.
+- Mantiene fallback local sin IA externa.
+- Respeta guardrails de monolito frontend.
+
+
 **Self-hosted, local-first cockpit for nutrition, body composition, sport and daily diet decisions.**
 
 [![release](https://img.shields.io/github/v/release/odegaard12/Diet-Pro-Planner?label=release)](https://github.com/odegaard12/Diet-Pro-Planner/releases)

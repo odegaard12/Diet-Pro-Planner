@@ -386,6 +386,7 @@ def _candidate_pantry_paths(path: str = DEFAULT_PANTRY) -> List[str]:
 
 
 def _load_pantry(path: str = DEFAULT_PANTRY) -> Dict[str, Any]:
+    import json as _json
     candidates = _candidate_pantry_paths(path)
 
     chosen = None
@@ -404,7 +405,7 @@ def _load_pantry(path: str = DEFAULT_PANTRY) -> Dict[str, Any]:
 
     try:
         with open(chosen, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
+            data = _json.load(fh)
 
         if not isinstance(data, dict):
             raise ValueError("pantry root is not object")
@@ -487,6 +488,7 @@ def _pantry_avoid_items(pantry: Dict[str, Any]) -> List[str]:
             if name:
                 avoid.append(str(name))
     return avoid
+
 
 
 def _build_pantry_next_meal(pantry: Dict[str, Any], training_type: str, breakfast_only: bool) -> Optional[Dict[str, Any]]:
@@ -724,6 +726,7 @@ def build_smart_coach_day(db_path: str, day: str) -> Dict[str, Any]:
 
     conn.close()
 
+
     return {
         "ok": True,
         "version": "v0.0.17-smart-coach",
@@ -748,6 +751,7 @@ def register_smart_coach_routes(app):
 
     @app.post("/api/pantry")
     def pantry_post():
+        import json as _json
         payload = request.get_json(silent=True) or {}
         if not isinstance(payload, dict):
             return jsonify({"ok": False, "error": "payload must be object"}), 400
@@ -765,7 +769,7 @@ def register_smart_coach_routes(app):
         path = os.environ.get("DPP_PANTRY", DEFAULT_PANTRY)
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "w", encoding="utf-8") as fh:
-            json.dump(safe, fh, ensure_ascii=False, indent=2)
+            _json.dump(safe, fh, ensure_ascii=False, indent=2)
 
         return jsonify({
             "ok": True,
