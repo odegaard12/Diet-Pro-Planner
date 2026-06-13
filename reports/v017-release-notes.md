@@ -1,7 +1,5 @@
 # Diet Pro Planner v0.0.17 — Smart Coach + Pantry foundation
 
-## Highlights
-
 v0.0.17 introduces the first Smart Coach foundation for local daily nutrition decisions.
 
 ## New
@@ -16,9 +14,7 @@ v0.0.17 introduces the first Smart Coach foundation for local daily nutrition de
 
 ## Privacy and AI policy
 
-No central AI key is shipped.
-
-Each deployment remains local-first and may later configure its own OpenAI/Gemini key if desired.
+No central AI key is shipped. Each deployment remains local-first and may later configure its own OpenAI/Gemini key if desired.
 
 ## Known limitations
 
@@ -27,14 +23,3 @@ Each deployment remains local-first and may later configure its own OpenAI/Gemin
 - “No tengo esto / cambiar comida” is not included yet.
 - OpenAI/Gemini settings are not included yet.
 - Strava cleanup tools are not included yet.
-
-## Next
-
-Planned v0.0.18:
-
-- editable pantry screen;
-- “no tengo esto / cambiar comida” action;
-- planned activity input;
-- OpenAI/Gemini BYOK settings;
-- AI cache and daily limit;
-- Strava cleanup.
