@@ -1,0 +1,230 @@
+# Dashboard v0.0.17a inspection
+
+================================================================================
+static/app.js
+================================================================================
+lines: 2205
+
+## Inteligencia del día — 2 hits
+-- hit line 1646, context 1643-1649
+1643: 
+1644:       <section class="fi13-hero ${fiEsc(a.semaphore || 'green')}">
+1645:         <div>
+1646:           <span class="fi13-kicker">Inteligencia del día · v0.0.16</span>
+1647:           <h2>${fiEsc(fiClean(a.label || 'Análisis'))}</h2>
+1648:           <p>${fiEsc(fiClean(a.main_action || 'Analizando día.'))}</p>
+1649:           <div class="fi13-hero-tags">
+-- hit line 1702, context 1699-1705
+1699:     $('#view').innerHTML = `
+1700:       ${dateBar()}
+1701:       <section class="card fi13-loading">
+1702:         <h3>Cargando inteligencia del día.</h3>
+1703:         <p class="muted">Calculando comida, peso, deporte, confianza y recomendaciones.</p>
+1704:       </section>`;
+1705: 
+
+## Qué hacer ahora — 1 hits
+-- hit line 1675, context 1672-1678
+1672:         <article class="card fi13-panel fi13-next">
+1673:           <header>
+1674:             <div>
+1675:               <h3>Qué hacer ahora</h3>
+1676:               <p>${meals.length} comidas · ${workouts.length} entrenos · sal ${salt.status === 'watch' ? 'a vigilar' : 'ok'}</p>
+1677:             </div>
+1678:             <button id="fi13SuggestBtn" class="btn small">Sugerir comida</button>
+
+## Sugerir comida — 2 hits
+-- hit line 1678, context 1675-1681
+1675:               <h3>Qué hacer ahora</h3>
+1676:               <p>${meals.length} comidas · ${workouts.length} entrenos · sal ${salt.status === 'watch' ? 'a vigilar' : 'ok'}</p>
+1677:             </div>
+1678:             <button id="fi13SuggestBtn" class="btn small">Sugerir comida</button>
+1679:           </header>
+1680:           <ul>${fiRecommendations(data)}</ul>
+1681:           <div id="fi13Suggestions" class="fi13-suggestions"></div>
+-- hit line 1725, context 1722-1728
+1722:             if(box) box.innerHTML = '<div class="empty">No pude generar sugerencias.</div>';
+1723:           }finally{
+1724:             btn.disabled = false;
+1725:             btn.textContent = 'Sugerir comida';
+1726:           }
+1727:         };
+1728:       }
+
+## Foto corporal — 2 hits
+-- hit line 1587, context 1584-1590
+1584:         <section id="dppBodySnapshotCard" class="bs14-card bs14-compact">
+1585:           <div class="bs14-topline">
+1586:             <div>
+1587:               <span>Foto corporal · v0.0.16</span>
+1588:               <h3>Composición corporal</h3>
+1589:               <p>${data.date || ''} ${data.time ? '· ' + data.time : ''} · lectura opcional de báscula</p>
+1590:             </div>
+-- hit line 2154, context 2151-2157
+2151:   }
+2152: 
+2153:   function moveBodyCompositionDown(){
+2154:     const bio = bestBlockContaining(["Foto corporal", "BioCharge"]);
+2155:     if (!bio || bio.dataset.dppMovedBio === "1") return;
+2156: 
+2157:     const meals = bestBlockContaining(["Comidas registradas"]);
+
+## Composición corporal — 1 hits
+-- hit line 1588, context 1585-1591
+1585:           <div class="bs14-topline">
+1586:             <div>
+1587:               <span>Foto corporal · v0.0.16</span>
+1588:               <h3>Composición corporal</h3>
+1589:               <p>${data.date || ''} ${data.time ? '· ' + data.time : ''} · lectura opcional de báscula</p>
+1590:             </div>
+1591:             <div class="bs14-status-pill">
+
+## Peso oficial — 9 hits
+-- hit line 201, context 198-204
+198:   const hasCarb=/pasta|arroz|pan|plátano|platano|tortita/.test(names);
+199:   const dinnerDone=meals.some(m=>/cena/i.test(m.name));
+200: 
+201:   if(!lw) tips.push('Registra un peso oficial por la mañana para empezar tendencia.');
+202:   else if(!lw.official) tips.push('Último peso es referencia: el bueno es por la mañana, después baño y antes de desayunar.');
+203: 
+204:   if(mt.protein<90) tips.push('Proteína baja: prioriza pollo, huevos, atún, yogur proteico, jamón cocido extra o queso fresco batido.');
+-- hit line 229, context 226-232
+226: function metric(icon,title,value,sub){return `<div class="card metric"><span class="icon">${icon}</span><div><small>${title}</small><br><b>${value}</b></div><small>${sub}</small></div>`}
+227: function dateBar(){const label=day()===today()?'Día de hoy':'Día seleccionado';return `<div class="datebar"><div class="field"><label>${label}</label><input id="dashDate" type="date" value="${day()}" onchange="selectedDa
+228: function quickActions(){return `<div class="quick-actions"><button class="quick primary" onclick="go('register')"><span>🍽️</span><b>Registrar comida</b><small>alimentos + gramos</small></button><button class="quick sport
+229: function renderHome(){const lw=latestWeight(); const meals=byDate(state.meals); const workouts=byDate(state.workouts); const mt=mealTotals(meals); const sport=workoutTotals(workouts); $('#view').innerHTML=`${dateBar()}<d
+230: function weightChart(){const ws=officialWeights().slice(-10); if(ws.length<2)return '<div class="empty">Cuando tengas 2+ pesos oficiales aparece la gráfica.</div>'; const vals=ws.map(w=>+w.kg),min=Math.min(...vals)-.2,ma
+231: function mealCard(m){return `<article class="list-card"><header><div><h4>${m.date} · ${m.time} · ${m.name}</h4><p class="muted">${m.notes||''}</p></div><button class="btn small danger" onclick="deleteMeal(${m.id})">×</bu
+232: function workoutCard(w){return `<article class="list-card"><header><div><h4>${w.date} · ${w.time} · ${w.name}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km?`· ${fmt(w.distance_km)} km`:''} · ${w.notes||''}</
+-- hit line 367, context 364-370
+364: function renderPlan(){const p=state.plans[0]?JSON.parse(state.plans[0].payload):null; $('#view').innerHTML=`<div class="grid cols-2"><div class="card"><h3>📥 Importar plan semanal</h3><p class="muted">Pega JSON que te pas
+365: function renderPlanPayload(p){return `<h3>${p.name}</h3><p class="muted">${p.notes||''}</p><div class="grid">${(p.days||[]).map(d=>`<div class="plan-day"><b>${d.day}</b><p><b>Desayuno:</b> ${d.breakfast||''}</p><p><b>Com
+366: async function savePlan(){await api('/api/plans',{method:'POST',body:JSON.stringify({raw:$('#planRaw').value})}); toast('Plan importado'); await load(); page='plan'; renderNav(); render()}
+367: function renderWeights(){const all=[...state.weights].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)); $('#view').innerHTML=`<div class="grid cols-2"><div class="card"><h3>📉 Gráfica peso oficial</h3>${weightCha
+368: async function deleteWeight(id){if(!confirm('¿Borrar peso?'))return; await api('/api/weights/'+id,{method:'DELETE'}); toast('Peso borrado'); await load(); render()}
+369: 
+370: function renderIntegrations(){
+-- hit line 706, context 703-709
+703: function ui5OfficialWeights(){return state.weights.filter(w=>w.official).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))}
+704: function ui5Trend(){const ws=ui5OfficialWeights(); if(ws.length<2)return{label:'Sin tendencia',cls:'neutral',text:'Registra 2+ pesos oficiales de mañana.'}; const f=ws[0],l=ws.at(-1),days=Math.max(1,(new Date(l.date)-new
+705: function weightChart(){const ws=ui5OfficialWeights().slice(-14); if(ws.length<2)return '<div class="empty">Cuando tengas 2+ pesos oficiales aparece la gráfica.</div>'; const vals=ws.map(w=>Number(w.kg)),min=Math.min(...v
+706: function assistantFor(d=day()){const meals=byDate(state.meals,d),workouts=byDate(state.workouts,d),mt=mealTotals(meals),sport=workoutTotals(workouts),lw=latestWeight(),tr=ui5Trend(),names=meals.flatMap(m=>[m.name,m.notes
+707: function ui5Progress(label,value,pct,sub,tone='good'){return `<article class="ui5-progress ${tone}"><div><span>${label}</span><b>${value}</b></div><i><em style="width:${Math.max(4,Math.min(100,pct))}%"></em></i><small>${
+708: function quickActions(){return `<section class="quick-actions ui5-actions"><button class="quick primary" onclick="go('register')"><span>🍽️</span><b>Comida</b><small>alimentos + gramos</small></button><button class="quick
+709: function renderHome(){const lw=latestWeight(),meals=byDate(state.meals),workouts=byDate(state.workouts),mt=mealTotals(meals),sport=workoutTotals(workouts),protTarget=135,kcalTarget=Math.max(1500,1900+Math.min(sport,900)*
+-- hit line 709, context 706-712
+706: function assistantFor(d=day()){const meals=byDate(state.meals,d),workouts=byDate(state.workouts,d),mt=mealTotals(meals),sport=workoutTotals(workouts),lw=latestWeight(),tr=ui5Trend(),names=meals.flatMap(m=>[m.name,m.notes
+707: function ui5Progress(label,value,pct,sub,tone='good'){return `<article class="ui5-progress ${tone}"><div><span>${label}</span><b>${value}</b></div><i><em style="width:${Math.max(4,Math.min(100,pct))}%"></em></i><small>${
+708: function quickActions(){return `<section class="quick-actions ui5-actions"><button class="quick primary" onclick="go('register')"><span>🍽️</span><b>Comida</b><small>alimentos + gramos</small></button><button class="quick
+709: function renderHome(){const lw=latestWeight(),meals=byDate(state.meals),workouts=byDate(state.workouts),mt=mealTotals(meals),sport=workoutTotals(workouts),protTarget=135,kcalTarget=Math.max(1500,1900+Math.min(sport,900)*
+710: function ui5ApplyShell(){document.documentElement.dataset.ui='ui5'; const e=document.querySelector('.eyebrow'); if(e)e.textContent='Dieta controlada · v0.0.16'; const r=document.querySelector('.rule-banner'); if(r&&r.dat
+711: function openHelpModal(){closeHelpModal(); const o=document.createElement('div');o.id='helpOverlay';o.className='help-overlay';o.innerHTML=`<div class="help-modal"><button class="help-close" onclick="closeHelpModal()">×<
+712: function closeHelpModal(){document.getElementById('helpOverlay')?.remove()}
+
+## Comidas registradas — 2 hits
+-- hit line 1519, context 1516-1522
+1516:         <article class="card fi13-panel">
+1517:           <header>
+1518:             <div>
+1519:               <h3>Comidas registradas</h3>
+1520:               <p>${fiFmt(mt.kcal,1)} kcal · ${fiFmt(mt.protein,1)} g proteína</p>
+1521:             </div>
+1522:             <button class="btn small" onclick="go('register')">+ Comida</button>
+-- hit line 2157, context 2154-2160
+2154:     const bio = bestBlockContaining(["Foto corporal", "BioCharge"]);
+2155:     if (!bio || bio.dataset.dppMovedBio === "1") return;
+2156: 
+2157:     const meals = bestBlockContaining(["Comidas registradas"]);
+2158:     const activity = bestBlockContaining(["Actividad"]);
+2159: 
+2160:     // Lo colocamos después de comidas si existe, antes de actividad si puede.
+
+## Actividad — 27 hits
+-- hit line 215, context 212-218
+212:   if(hasSweet && sport>=500) tips.push('Hubo dulce, pero también deporte: no castigues; cena proteica y carbo controlado si hay hambre real.');
+213: 
+214:   if(sport>=900) tips.push('Día de mucho gasto: puedes meter carbo controlado, pero mantén proteína y no conviertas el deporte en barra libre.');
+215:   else if(sport>=300) tips.push('Buen gasto de actividad: recupera con proteína, no con picoteo.');
+216: 
+217:   if(mt.kcal>2300) tips.push('Kcal altas: resto del día limpio, agua/infusión y sin más snacks.');
+218:   else if(mt.kcal<900 && !dinnerDone) tips.push('Aún vas bajo de comida registrada: no llegues con hambre brutal a la noche.');
+-- hit line 227, context 224-230
+224: }
+225: function render(){const titles={home:'Resumen',register:'Registrar / comida',templates:'Plantillas rápidas',foods:'Alimentos comprados',sport:'Registrar deporte',plan:'Plan semanal',weights:'Historial de peso',integratio
+226: function metric(icon,title,value,sub){return `<div class="card metric"><span class="icon">${icon}</span><div><small>${title}</small><br><b>${value}</b></div><small>${sub}</small></div>`}
+227: function dateBar(){const label=day()===today()?'Día de hoy':'Día seleccionado';return `<div class="datebar"><div class="field"><label>${label}</label><input id="dashDate" type="date" value="${day()}" onchange="selectedDa
+228: function quickActions(){return `<div class="quick-actions"><button class="quick primary" onclick="go('register')"><span>🍽️</span><b>Registrar comida</b><small>alimentos + gramos</small></button><button class="quick sport
+229: function renderHome(){const lw=latestWeight(); const meals=byDate(state.meals); const workouts=byDate(state.workouts); const mt=mealTotals(meals); const sport=workoutTotals(workouts); $('#view').innerHTML=`${dateBar()}<d
+230: function weightChart(){const ws=officialWeights().slice(-10); if(ws.length<2)return '<div class="empty">Cuando tengas 2+ pesos oficiales aparece la gráfica.</div>'; const vals=ws.map(w=>+w.kg),min=Math.min(...vals)-.2,ma
+-- hit line 229, context 226-232
+226: function metric(icon,title,value,sub){return `<div class="card metric"><span class="icon">${icon}</span><div><small>${title}</small><br><b>${value}</b></div><small>${sub}</small></div>`}
+227: function dateBar(){const label=day()===today()?'Día de hoy':'Día seleccionado';return `<div class="datebar"><div class="field"><label>${label}</label><input id="dashDate" type="date" value="${day()}" onchange="selectedDa
+228: function quickActions(){return `<div class="quick-actions"><button class="quick primary" onclick="go('register')"><span>🍽️</span><b>Registrar comida</b><small>alimentos + gramos</small></button><button class="quick sport
+229: function renderHome(){const lw=latestWeight(); const meals=byDate(state.meals); const workouts=byDate(state.workouts); const mt=mealTotals(meals); const sport=workoutTotals(workouts); $('#view').innerHTML=`${dateBar()}<d
+230: function weightChart(){const ws=officialWeights().slice(-10); if(ws.length<2)return '<div class="empty">Cuando tengas 2+ pesos oficiales aparece la gráfica.</div>'; const vals=ws.map(w=>+w.kg),min=Math.min(...vals)-.2,ma
+231: function mealCard(m){return `<article class="list-card"><header><div><h4>${m.date} · ${m.time} · ${m.name}</h4><p class="muted">${m.notes||''}</p></div><button class="btn small danger" onclick="deleteMeal(${m.id})">×</bu
+232: function workoutCard(w){return `<article class="list-card"><header><div><h4>${w.date} · ${w.time} · ${w.name}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km?`· ${fmt(w.distance_km)} km`:''} · ${w.notes||''}</
+-- hit line 371, context 368-374
+368: async function deleteWeight(id){if(!confirm('¿Borrar peso?'))return; await api('/api/weights/'+id,{method:'DELETE'}); toast('Peso borrado'); await load(); render()}
+369: 
+370: function renderIntegrations(){
+371:   $('#view').innerHTML=`<div class="grid cols-2"><div class="card integration-card"><h3>🔗 Strava</h3><p class="muted">Sincroniza actividades autorizadas de tu cuenta. Los tokens se guardan solo en la Raspberry, dentro de
+372:   loadStravaStatus();
+373: }
+374: async function loadStravaStatus(){
+-- hit line 382, context 379-385
+379:   }catch(e){$('#stravaStatus').textContent='No se pudo comprobar Strava: '+e.message}
+380: }
+381: function connectStrava(){ if(window.__stravaConnectUrl) location.href=window.__stravaConnectUrl; else toast('Primero configura Strava en .env') }
+382: async function syncStrava(){ try{const r=await api('/api/strava/sync',{method:'POST',body:JSON.stringify({days:14})}); toast(`Strava sincronizado: ${r.imported} nuevas actividades`); await load(); page='home'; renderNav(
+383: 
+384: function renderHistory(){ $('#view').innerHTML=`<div class="grid cols-2"><div><div class="section-title"><h3>Comidas</h3></div><div class="list">${state.meals.map(mealCard).join('')}</div></div><div><div class="section-t
+385: $('#btnRefresh').onclick=load; load().catch(e=>{document.body.innerHTML='<pre style="padding:20px">Error cargando app: '+e.message+'</pre>'})
+
+================================================================================
+static/styles.css
+================================================================================
+lines: 1775
+
+## Qué hacer ahora — 2 hits
+-- hit line 1172, context 1169-1175
+1169: 
+1170: /* DPP_FI_SINGLE_HOME_COMPACT_NEXT_START */
+1171: 
+1172: /* Evita que "Qué hacer ahora" se estire hasta la altura de la gráfica */
+1173: html[data-ui="ui5"] .fi13-main-grid{
+1174:   align-items:start!important;
+1175:   grid-template-columns:minmax(320px,.72fr) minmax(420px,1.28fr)!important;
+-- hit line 1252, context 1249-1255
+1249: /* DPP_FI_HORIZONTAL_ACTION_ROW_START */
+1250: 
+1251: /* La fila principal pasa a ser vertical:
+1252:    1) Qué hacer ahora full width
+1253:    2) Peso oficial full width */
+1254: html[data-ui="ui5"] .fi13-main-grid{
+1255:   grid-template-columns:1fr!important;
+
+## Foto corporal — 1 hits
+-- hit line 1569, context 1566-1572
+1566: 
+1567: /* DPP_BODY_SNAPSHOT_COMPACT_UX_START */
+1568: 
+1569: /* Foto corporal compacta para Resumen: snapshot, no tabla técnica */
+1570: html[data-ui="ui5"] .bs14-card.bs14-compact{
+1571:   display:block!important;
+1572:   margin:0 0 12px!important;
+
+## Peso oficial — 1 hits
+-- hit line 1253, context 1250-1256
+1250: 
+1251: /* La fila principal pasa a ser vertical:
+1252:    1) Qué hacer ahora full width
+1253:    2) Peso oficial full width */
+1254: html[data-ui="ui5"] .fi13-main-grid{
+1255:   grid-template-columns:1fr!important;
+1256:   gap:12px!important;
+
+================================================================================
+static/index.html
+================================================================================
+lines: 55

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "updated_at": "",
+  "items": [
+    {"name":"Pollo","available":true,"category":"protein","priority":"prefer","notes":"Proteína principal limpia."},
+    {"name":"Judías verdes","available":true,"category":"vegetable","priority":"prefer","notes":"Verdura saciante."},
+    {"name":"Arroz","available":true,"category":"carb","priority":"normal","notes":"Medir en seco."},
+    {"name":"Nocilla","available":false,"category":"sweet","priority":"avoid","risk":"anxiety","notes":"Alimento de riesgo para ansiedad."}
+  ]
+}
