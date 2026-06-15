@@ -7,11 +7,16 @@
   let currentUsed = [];
 
   function syncVersion() {
-    document.title = `Diet Pro Planner · ${VERSION}`;
+    const title = `Diet Pro Planner · ${VERSION}`;
+    const eyebrowText = `Dieta controlada · ${VERSION}`;
+    if (document.title !== title) document.title = title;
+
     const eyebrow = document.querySelector('.eyebrow');
-    if (eyebrow && eyebrow.textContent.trim() !== `Dieta controlada · ${VERSION}`) {
-      eyebrow.textContent = `Dieta controlada · ${VERSION}`;
-    }
+    if (eyebrow && eyebrow.textContent.trim() !== eyebrowText) eyebrow.textContent = eyebrowText;
+
+    const badge = document.querySelector('#ui5Badge');
+    if (badge && badge.textContent.trim() !== VERSION) badge.textContent = VERSION;
+
     document.querySelectorAll('.topbar *, [class*="version"], [data-version]').forEach((node) => {
       if (node.children.length) return;
       const text = String(node.textContent || '').trim();
@@ -84,7 +89,7 @@
   };
 
   const observer = new MutationObserver(syncVersion);
-  observer.observe(document.documentElement, {childList: true, subtree: true});
+  observer.observe(document.documentElement, {childList: true, characterData: true, subtree: true});
   syncVersion();
-  [200, 600, 1200, 2500].forEach((delay) => setTimeout(syncVersion, delay));
+  setInterval(syncVersion, 500);
 })();
