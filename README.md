@@ -1,13 +1,25 @@
 # Diet Pro Planner
 
-**Current version:** v0.0.18  
-**Latest release:** v0.0.18 — Strava stability and web settings  
+**Current version:** v0.0.19  
+**Latest release:** v0.0.19 — Editable pantry and practical Coach actions  
 **License:** MIT  
 **Stack:** Python · Flask · Vanilla JS · Docker · Local-first
 
 Self-hosted, local-first cockpit for nutrition, body composition, sport and daily diet decisions.
 
 Built for private daily use on a Raspberry Pi with Docker. Public code stays in GitHub; private food logs, SQLite databases, Strava tokens, uploads and body-composition records stay local.
+
+## v0.0.19 — Editable pantry and practical Coach actions
+
+- Adds a professional editable pantry screen.
+- Adds quick activation and manual food creation.
+- Tracks availability, low stock, categories, priorities and notes.
+- Adds “No tengo esto” to mark missing ingredients and recalculate the suggestion.
+- Adds “Dame otra comida” with complete pantry-aware alternatives.
+- Prefers solid protein for main meals when available.
+- Keeps drinks and dairy as secondary or fallback options.
+- Stores the real pantry privately in `data/pantry.json`.
+- Keeps the implementation modular without growing `app.py` or `static/app.js`.
 
 ## v0.0.18 — Strava stability and web settings
 
