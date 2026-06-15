@@ -23,6 +23,9 @@ except ModuleNotFoundError:
     sys.modules["flask"] = flask_stub
 
 import dpp_pantry_v019 as pantry
+from dpp_pantry_v019_policy import apply_pantry_v019_policy
+
+apply_pantry_v019_policy(pantry)
 
 
 def main() -> None:
@@ -33,28 +36,31 @@ def main() -> None:
         saved = pantry._write_pantry([
             {"name": "Pollo", "available": True, "stock": "ok", "category": "protein", "priority": "prefer"},
             {"name": "Atún", "available": True, "stock": "ok", "category": "protein", "priority": "normal"},
+            {"name": "Alpro Protein cacao", "available": True, "stock": "ok", "category": "protein_drink", "priority": "prefer"},
             {"name": "Judías verdes", "available": True, "stock": "low", "category": "vegetable", "priority": "prefer"},
             {"name": "Arroz", "available": True, "stock": "ok", "category": "carb", "priority": "normal"},
             {"name": "Nocilla", "available": False, "stock": "out", "category": "sweet", "priority": "avoid", "risk": "anxiety"},
         ])
         assert target.exists(), "pantry.json was not created"
-        assert len(saved["items"]) == 5
-        assert len({item["id"] for item in saved["items"]}) == 5
+        assert len(saved["items"]) == 6
+        assert len({item["id"] for item in saved["items"]}) == 6
 
         loaded = pantry._read_pantry()
         stats = pantry._stats(loaded)
-        assert stats == {"total": 5, "available": 4, "low": 1, "out": 1, "preferred": 2, "avoid": 1}, stats
+        assert stats == {"total": 6, "available": 5, "low": 1, "out": 1, "preferred": 3, "avoid": 1}, stats
 
         options = pantry._meal_options(loaded, "padel", [])
         assert len(options) >= 2, options
         assert "Pollo" in options[0]["primary"]
+        assert "Alpro Protein cacao" not in " ".join(option["primary"] for option in options)
         assert "50-60 g en seco" in options[0]["primary"]
 
-        alternatives = pantry._meal_options(loaded, "sin_entreno", options[0]["pantry_used"])
-        assert alternatives, "expected an alternative after excluding first option"
+        alternatives = pantry._meal_options(loaded, "sin_entreno", [options[0]["pantry_used"][0]])
+        assert alternatives, "expected an alternative after excluding first protein"
         assert "Atún" in alternatives[0]["primary"]
+        assert "Alpro Protein cacao" not in alternatives[0]["primary"]
 
-        print("OK v0.0.19 pantry: normalization, stats and alternatives")
+        print("OK v0.0.19 pantry: normalization, stats, solid-protein policy and alternatives")
 
 
 if __name__ == "__main__":
