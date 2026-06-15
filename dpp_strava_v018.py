@@ -14,7 +14,7 @@ import requests
 from flask import jsonify, redirect, request
 
 
-VERSION = "v0.0.18-dev"
+VERSION = "v0.0.18"
 _SYNC_LOCK = threading.Lock()
 
 
