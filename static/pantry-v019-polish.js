@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v0.0.19-dev';
+  const VERSION = 'v0.0.19';
   let excludedProteins = [];
   let currentUsed = [];
 

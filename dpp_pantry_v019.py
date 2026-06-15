@@ -14,7 +14,7 @@ from flask import jsonify, request
 import dpp_smart_coach as smart
 
 
-VERSION = "v0.0.19-dev"
+VERSION = "v0.0.19"
 CATEGORIES = {
     "protein", "protein_drink", "protein_fat", "vegetable", "carb",
     "fruit", "dairy", "sweet", "drink", "other",

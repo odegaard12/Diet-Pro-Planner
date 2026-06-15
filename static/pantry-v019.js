@@ -375,9 +375,9 @@
   observer.observe(document.documentElement, {childList: true, subtree: true});
   [200, 600, 1200, 2500].forEach((delay) => setTimeout(injectCoachActions, delay));
 
-  document.title = 'Diet Pro Planner · v0.0.19-dev';
+  document.title = 'Diet Pro Planner · v0.0.19';
   setTimeout(() => {
     const eyebrow = document.querySelector('.eyebrow');
-    if (eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.19-dev';
+    if (eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.19';
   }, 100);
 })();
