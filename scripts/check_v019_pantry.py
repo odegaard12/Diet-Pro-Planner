@@ -4,11 +4,23 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+# The Raspberry host does not need Flask installed because production runs in Docker.
+# These smoke tests only exercise pure pantry functions, so provide a tiny import stub
+# when Flask is absent instead of modifying the host Python environment.
+try:
+    import flask  # noqa: F401
+except ModuleNotFoundError:
+    flask_stub = types.ModuleType("flask")
+    flask_stub.jsonify = lambda *args, **kwargs: args[0] if len(args) == 1 else args
+    flask_stub.request = types.SimpleNamespace()
+    sys.modules["flask"] = flask_stub
 
 import dpp_pantry_v019 as pantry
 
