@@ -3,10 +3,12 @@ from __future__ import annotations
 import os
 
 import app as legacy
+from dpp_pantry_v019 import register_pantry_v019
 from dpp_strava_v018 import register_strava_v018
 
 
 register_strava_v018(legacy.app, legacy)
+register_pantry_v019(legacy.app, legacy)
 
 try:
     legacy.start_strava_auto_thread()
