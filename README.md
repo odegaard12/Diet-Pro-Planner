@@ -1,13 +1,25 @@
 # Diet Pro Planner
 
-**Current version:** v0.0.17  
-**Latest release:** v0.0.17 — Smart Coach + Pantry foundation  
+**Current version:** v0.0.18  
+**Latest release:** v0.0.18 — Strava stability and web settings  
 **License:** MIT  
 **Stack:** Python · Flask · Vanilla JS · Docker · Local-first
 
 Self-hosted, local-first cockpit for nutrition, body composition, sport and daily diet decisions.
 
 Built for private daily use on a Raspberry Pi with Docker. Public code stays in GitHub; private food logs, SQLite databases, Strava tokens, uploads and body-composition records stay local.
+
+## v0.0.18 — Strava stability and web settings
+
+- Adds private Strava configuration from the web.
+- Removes the daily dependency on `.env` editing and PowerShell tunnels.
+- Adds connection testing, OAuth renewal and diagnostics.
+- Shows API rate-limit consumption and handles HTTP 429 cleanly.
+- Lists activities with one request and fetches detail only when importing new activities.
+- Adds local detail cache and duplicate protection.
+- Adds protected auto-sync with recent windows and concurrency locking.
+- Adds a compact professional Strava integration screen.
+- Keeps credentials, tokens, cache and diagnostics private under `data/`.
 
 ## v0.0.17 — Smart Coach + Pantry foundation
 
