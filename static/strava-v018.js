@@ -1,4 +1,4 @@
-/* Diet Pro Planner v0.0.18 · Strava stability/settings UI */
+/* Diet Pro Planner v0.0.18 · polished Strava integration */
 (function () {
   'use strict';
 
@@ -16,20 +16,54 @@
     return window.location.origin + '/api/strava/callback';
   }
 
-  function rateText(rate) {
-    if (!rate || typeof rate !== 'object') return 'Sin datos de consumo todavía.';
+  function rateParts(rate) {
+    if (!rate || typeof rate !== 'object') return null;
     const usage = Array.isArray(rate.read_usage) && rate.read_usage.length ? rate.read_usage : rate.usage;
     const limit = Array.isArray(rate.read_limit) && rate.read_limit.length ? rate.read_limit : rate.limit;
-    if (!Array.isArray(usage) || !Array.isArray(limit) || !usage.length || !limit.length) {
-      return rate.status_code === 429
-        ? `Límite temporal alcanzado · prueba de nuevo sobre las ${rate.next_reset_local || 'próximo cuarto de hora'}`
-        : 'Strava todavía no devolvió información de límites.';
+    if (!Array.isArray(usage) || !Array.isArray(limit) || !usage.length || !limit.length) return null;
+    return {
+      shortUsed: Number(usage[0] || 0),
+      shortLimit: Number(limit[0] || 0),
+      dailyUsed: Number(usage[1] || 0),
+      dailyLimit: Number(limit[1] || 0),
+      reset: rate.next_reset_local || ''
+    };
+  }
+
+  function rateText(rate) {
+    const parts = rateParts(rate);
+    if (!parts) {
+      return rate && rate.status_code === 429
+        ? `Límite temporal alcanzado · disponible sobre las ${rate.next_reset_local || 'próximo cuarto de hora'}`
+        : 'Consumo disponible después de la primera consulta.';
     }
-    return `Lecturas: ${usage[0] || 0}/${limit[0] || '?'} en 15 min · ${usage[1] || 0}/${limit[1] || '?'} hoy`;
+    return `${parts.shortUsed}/${parts.shortLimit || '?'} en 15 min · ${parts.dailyUsed}/${parts.dailyLimit || '?'} hoy`;
+  }
+
+  function rateShort(rate) {
+    const parts = rateParts(rate);
+    if (!parts) return 'API sin medir';
+    return `API ${parts.shortUsed}/${parts.shortLimit || '?'}`;
   }
 
   function statusTone(configured, connected) {
     return connected ? 'ok' : configured ? 'warn' : 'bad';
+  }
+
+  function setText(selector, value) {
+    const node = document.querySelector(selector);
+    if (node) node.textContent = value;
+  }
+
+  function setStatusPill(selector, tone, eyebrow, value) {
+    const node = document.querySelector(selector);
+    if (!node) return;
+    node.className = `strava-status-pill ${tone}`;
+    node.innerHTML = `<span>${esc(eyebrow)}</span><b>${esc(value)}</b>`;
+  }
+
+  function syncBodyClass() {
+    document.body.classList.toggle('dpp-strava-page', page === 'integrations');
   }
 
   window.useCurrentStravaCallback = function () {
@@ -43,6 +77,8 @@
     const input = document.querySelector('#stravaClientSecret');
     if (!input) return;
     input.type = input.type === 'password' ? 'text' : 'password';
+    const button = document.querySelector('#stravaSecretToggle');
+    if (button) button.textContent = input.type === 'password' ? 'Mostrar' : 'Ocultar';
   };
 
   window.loadStravaV018 = async function () {
@@ -53,18 +89,26 @@
         api('/api/strava/status'),
         api('/api/strava/auto-status')
       ]);
+
       stravaConfig = config;
       stravaDiagnostics = diagnostics;
       window.__stravaConnectUrl = status.connect_url || '';
 
-      const statusBox = document.querySelector('#stravaStatus');
-      if (statusBox) {
-        statusBox.innerHTML = `
-          <div class="status ${statusTone(status.configured, status.connected)}">
-            <b>${status.connected ? 'Conectado' : status.configured ? 'Configurado, falta conectar' : 'No configurado'}</b>
-            <span>${status.connected ? 'Cuenta autorizada y lista para sincronizar.' : esc(status.message || 'Guarda la configuración para continuar.')}</span>
-          </div>`;
-      }
+      const connectionLabel = status.connected
+        ? 'Conectado'
+        : status.configured
+          ? 'Pendiente de autorizar'
+          : 'Sin configurar';
+      const connectionDetail = status.connected
+        ? 'Cuenta autorizada · permisos de actividades activos'
+        : status.message || 'Abre la configuración avanzada para continuar.';
+
+      setStatusPill('#stravaConnectionPill', statusTone(status.configured, status.connected), 'Conexión', connectionLabel);
+      setStatusPill('#stravaApiPill', diagnostics.rate?.status_code === 429 ? 'warn' : 'neutral', 'Consumo', rateShort(diagnostics.rate));
+      setStatusPill('#stravaAutoPill', auto.enabled ? 'ok' : 'neutral', 'Auto-sync', auto.enabled ? 'Activo' : 'Desactivado');
+      setText('#stravaConnectionDetail', connectionDetail);
+      setText('#stravaRateSummary', rateText(diagnostics.rate));
+      setText('#stravaLastSync', auto.last_success_at ? `Última sincronización: ${auto.last_success_at}` : 'Todavía sin sincronización automática');
 
       const idInput = document.querySelector('#stravaClientId');
       const redirectInput = document.querySelector('#stravaRedirectUri');
@@ -73,41 +117,49 @@
       if (idInput) idInput.value = config.client_id || '';
       if (redirectInput) redirectInput.value = config.redirect_uri || config.suggested_redirect_uri || currentCallback();
       if (domain) domain.textContent = config.callback_domain || new URL(config.suggested_redirect_uri || currentCallback()).hostname;
-      if (storage) storage.textContent = config.storage === 'data/integrations.json' ? 'Guardado privado en la Raspberry' : 'Cargado desde .env';
+      if (storage) storage.textContent = config.storage === 'data/integrations.json' ? 'Guardado local' : 'Usando .env';
 
       const secretInput = document.querySelector('#stravaClientSecret');
-      if (secretInput) secretInput.placeholder = config.client_secret_set ? '•••••••••••••••• (guardado)' : 'Pega el Client Secret';
+      if (secretInput) secretInput.placeholder = config.client_secret_set ? 'Secreto guardado · dejar vacío para conservar' : 'Pega el Client Secret';
 
       const diagnosticBox = document.querySelector('#stravaDiagnostics');
       if (diagnosticBox) {
         diagnosticBox.innerHTML = `
           <div class="strava-diagnostic-grid">
             <div><span>Credenciales</span><b>${diagnostics.configured ? 'Correctas' : 'Incompletas'}</b></div>
-            <div><span>Autorización</span><b>${diagnostics.connected ? 'Conectado' : 'Pendiente'}</b></div>
+            <div><span>Autorización</span><b>${diagnostics.connected ? 'Activa' : 'Pendiente'}</b></div>
             <div><span>Permisos</span><b>${esc(diagnostics.scope || 'Sin token')}</b></div>
-            <div><span>Consumo API</span><b>${esc(rateText(diagnostics.rate))}</b></div>
+            <div><span>Uso API</span><b>${esc(rateText(diagnostics.rate))}</b></div>
           </div>`;
       }
 
+      const settingsPanel = document.querySelector('#stravaSettingsPanel');
+      if (settingsPanel && !status.configured) settingsPanel.open = true;
+
+      const result = auto.last_result || {};
       const autoBox = document.querySelector('#stravaAutoStatus');
       if (autoBox) {
-        const result = auto.last_result || {};
         autoBox.innerHTML = `
-          <div class="status ${auto.enabled ? 'ok' : 'warn'}">
-            <b>${auto.enabled ? 'Auto-sync activado' : 'Auto-sync desactivado'}</b>
-            <span>${esc(auto.last_message || 'Aún no sincronizado')}</span>
-          </div>
-          <p class="muted">Último resultado: ${fmt(result.imported || 0)} nuevas · ${fmt(result.skipped || 0)} ya existentes · ${fmt(result.details_requested || 0)} detalles consultados</p>`;
+          <div class="strava-auto-result">
+            <b>${auto.enabled ? 'Sincronización automática activa' : 'Sincronización automática desactivada'}</b>
+            <span>${esc(auto.last_message || 'Sin actividad todavía')}</span>
+            <small>${fmt(result.imported || 0)} nuevas · ${fmt(result.skipped || 0)} ya existentes · ${fmt(result.details_requested || 0)} detalles</small>
+          </div>`;
       }
+
       const enabled = document.querySelector('#stravaAutoEnabled');
       const interval = document.querySelector('#stravaAutoInterval');
       const from = document.querySelector('#stravaAutoFrom');
       if (enabled) enabled.checked = !!auto.enabled;
-      if (interval) interval.value = String(auto.interval_minutes || 180);
+      if (interval) {
+        const valid = ['30', '60', '180', '360', '720'];
+        const value = String(auto.interval_minutes || 180);
+        interval.value = valid.includes(value) ? value : '180';
+      }
       if (from) from.value = auto.after_date || auto.latest_import_date || today();
     } catch (error) {
-      const statusBox = document.querySelector('#stravaStatus');
-      if (statusBox) statusBox.innerHTML = `<div class="empty">No se pudo cargar Strava: ${esc(error.message)}</div>`;
+      setStatusPill('#stravaConnectionPill', 'bad', 'Conexión', 'Error');
+      setText('#stravaConnectionDetail', `No se pudo cargar el estado: ${error.message}`);
     }
   };
 
@@ -133,7 +185,7 @@
     try {
       const result = await api('/api/integrations/strava/test', {method: 'POST', body: '{}'});
       const athlete = result.athlete || {};
-      toast(`Strava correcto${athlete.firstname ? ': ' + athlete.firstname : ''}`);
+      toast(`Conexión correcta${athlete.firstname ? ': ' + athlete.firstname : ''}`);
       await loadStravaV018();
     } catch (error) {
       toast('Prueba Strava: ' + error.message);
@@ -143,7 +195,7 @@
   };
 
   window.disconnectStravaWeb = async function () {
-    if (!confirm('¿Desconectar Strava? Se conservarán las credenciales y se hará copia del token.')) return;
+    if (!confirm('¿Desconectar Strava? Las credenciales se conservarán y se hará copia del token.')) return;
     try {
       const result = await api('/api/integrations/strava/disconnect', {method: 'POST', body: '{}'});
       toast(result.message || 'Strava desconectado');
@@ -155,28 +207,69 @@
 
   window.connectStrava = function () {
     if (!window.__stravaConnectUrl) {
-      toast('Guarda primero la configuración Strava en esta pantalla');
+      const panel = document.querySelector('#stravaSettingsPanel');
+      if (panel) panel.open = true;
+      toast('Guarda primero la configuración');
       return;
     }
     window.location.href = window.__stravaConnectUrl;
   };
 
+  function activityRow(activity, selectable) {
+    const title = activity.title || activity.sport_type || activity.type || 'Actividad';
+    const sport = activity.sport_type || activity.type || 'Strava';
+    const state = activity.already_imported ? 'Importada' : 'Nueva';
+    const stateClass = activity.already_imported ? 'done' : 'new';
+    return `
+      <article class="strava-activity-row ${stateClass}">
+        <div class="strava-activity-date"><b>${esc(activity.date || '')}</b><span>${esc(activity.time || '')}</span></div>
+        <div class="strava-activity-main"><b>${esc(title)}</b><span>${esc(sport)} · ${fmt(activity.minutes)} min${Number(activity.distance_km || 0) ? ` · ${fmt(activity.distance_km)} km` : ''}</span></div>
+        <div class="strava-activity-energy"><b>~${fmt(activity.kcal)} kcal</b><span>vista rápida</span></div>
+        <div class="strava-activity-state"><span class="strava-state ${stateClass}">${state}</span>${selectable ? `<input type="checkbox" data-strava-id="${esc(activity.id)}" checked aria-label="Seleccionar ${esc(title)}">` : ''}</div>
+      </article>`;
+  }
+
+  function renderPreviewV018() {
+    const list = document.querySelector('#stravaList');
+    if (!list) return;
+    const activities = Array.isArray(__stravaPreview) ? __stravaPreview : [];
+    if (!activities.length) {
+      list.innerHTML = '<div class="strava-empty-state"><b>Sin actividades</b><span>No hay resultados en el rango seleccionado.</span></div>';
+      return;
+    }
+
+    const pending = activities.filter((activity) => !activity.already_imported);
+    const imported = activities.filter((activity) => activity.already_imported);
+
+    list.innerHTML = `
+      <div class="strava-list-head">
+        <div><b>${pending.length ? `${pending.length} actividades nuevas` : 'Todo al día'}</b><span>${activities.length} encontradas en total</span></div>
+        ${pending.length ? `<button class="btn" onclick="importSelectedStrava()">Importar ${pending.length}</button>` : ''}
+      </div>
+      ${pending.length ? `<div class="strava-activity-list">${pending.map((activity) => activityRow(activity, true)).join('')}</div>` : '<div class="strava-empty-state success"><b>No hay nada pendiente</b><span>Las actividades de este intervalo ya están guardadas.</span></div>'}
+      ${imported.length ? `<details class="strava-imported-details"><summary><span>Ya importadas</span><b>${imported.length}</b></summary><div class="strava-activity-list imported">${imported.map((activity) => activityRow(activity, false)).join('')}</div></details>` : ''}`;
+  }
+
+  window.renderStravaPreview = renderPreviewV018;
+  try { renderStravaPreview = renderPreviewV018; } catch (error) {}
+
   window.previewStrava = async function () {
     const afterDate = document.querySelector('#stravaFrom')?.value;
     const beforeDate = document.querySelector('#stravaTo')?.value;
     const list = document.querySelector('#stravaList');
-    if (list) list.innerHTML = '<div class="empty">Buscando actividades… solo 1 llamada de listado.</div>';
+    if (list) list.innerHTML = '<div class="strava-empty-state loading"><b>Consultando Strava</b><span>La búsqueda usa una sola llamada y no descarga detalles.</span></div>';
     try {
       const result = await api('/api/strava/preview', {
         method: 'POST',
         body: JSON.stringify({after_date: afterDate, before_date: beforeDate})
       });
       __stravaPreview = result.activities || [];
-      renderStravaPreview();
-      const info = document.querySelector('#stravaRequestInfo');
-      if (info) info.textContent = `${result.received || 0} actividades · ${result.details_requested || 0} detalles consultados · ${rateText(result.rate)}`;
+      renderPreviewV018();
+      setText('#stravaRequestInfo', `${result.received || 0} actividades · ${result.details_requested || 0} detalles · ${rateText(result.rate)}`);
+      setStatusPill('#stravaApiPill', 'neutral', 'Consumo', rateShort(result.rate));
+      setText('#stravaRateSummary', rateText(result.rate));
     } catch (error) {
-      if (list) list.innerHTML = `<div class="empty">Strava: ${esc(error.message)}</div>`;
+      if (list) list.innerHTML = `<div class="strava-empty-state error"><b>No se pudo consultar Strava</b><span>${esc(error.message)}</span></div>`;
     }
   };
 
@@ -195,7 +288,7 @@
           ids
         })
       });
-      toast(`Importadas: ${result.imported || 0} · existentes: ${result.skipped || 0} · detalles: ${result.details_requested || 0}`);
+      toast(`Importadas: ${result.imported || 0} · detalles consultados: ${result.details_requested || 0}`);
       await load();
       page = 'integrations';
       renderNav();
@@ -224,7 +317,7 @@
 
   window.runStravaAutoNow = async function () {
     const box = document.querySelector('#stravaAutoStatus');
-    if (box) box.innerHTML = '<div class="empty">Sincronizando solo actividades recientes…</div>';
+    if (box) box.innerHTML = '<div class="strava-auto-result"><b>Sincronizando…</b><span>Solo se consultarán actividades recientes y nuevas.</span></div>';
     try {
       const result = await api('/api/strava/auto-run', {method: 'POST', body: '{}'});
       toast(result.message || `Importadas: ${result.imported || 0}`);
@@ -238,66 +331,82 @@
     }
   };
 
-  renderIntegrations = function () {
+  function renderIntegrationsV018() {
+    syncBodyClass();
     const to = today();
     const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+
     document.querySelector('#view').innerHTML = `
-      <section class="strava-v018-head">
-        <div><span class="ui5-kicker">Integración local · v0.0.18</span><h2>Strava estable y controlado</h2><p>Configura, conecta, prueba y sincroniza desde aquí. Las claves nunca se muestran después de guardarlas.</p></div>
-        <div id="stravaStatus" class="empty">Comprobando Strava…</div>
+      <section class="strava-overview">
+        <div class="strava-overview-title">
+          <div class="strava-mark">S</div>
+          <div><span>Integración deportiva</span><h2>Strava</h2><p id="stravaConnectionDetail">Comprobando conexión…</p></div>
+        </div>
+        <div class="strava-overview-status">
+          <div id="stravaConnectionPill" class="strava-status-pill neutral"><span>Conexión</span><b>Comprobando</b></div>
+          <div id="stravaApiPill" class="strava-status-pill neutral"><span>Consumo</span><b>API sin medir</b></div>
+          <div id="stravaAutoPill" class="strava-status-pill neutral"><span>Auto-sync</span><b>Comprobando</b></div>
+        </div>
       </section>
 
-      <div class="grid cols-2 strava-v018-grid">
-        <section class="card integration-card">
-          <div class="section-title compact-title"><div><h3>🔐 Configuración Strava</h3><p id="stravaStorage">Solo red local</p></div></div>
-          <div class="row">
-            <div class="field span-4"><label>Client ID</label><input id="stravaClientId" inputmode="numeric" autocomplete="off" placeholder="ID numérico"></div>
-            <div class="field span-8"><label>Client Secret</label><div class="strava-secret-row"><input id="stravaClientSecret" type="password" autocomplete="new-password"><button class="btn secondary small" type="button" onclick="toggleStravaSecret()">Ver</button></div><small>Déjalo vacío para conservar el secreto guardado.</small></div>
-            <div class="field span-12"><label>Callback URL</label><input id="stravaRedirectUri" autocomplete="off"><div class="strava-inline-help"><button class="btn secondary small" type="button" onclick="useCurrentStravaCallback()">Usar esta dirección</button><span>En Strava, Authorization Callback Domain debe ser: <b id="stravaCallbackDomain">—</b></span></div></div>
+      <div class="strava-workspace">
+        <section class="card strava-activities-card">
+          <header class="strava-card-head">
+            <div><span class="strava-section-kicker">ACTIVIDADES</span><h3>Importar desde Strava</h3><p>Busca primero; el detalle exacto solo se consulta al importar una actividad nueva.</p></div>
+          </header>
+          <div class="strava-searchbar">
+            <label><span>Desde</span><input id="stravaFrom" type="date" value="${from}"></label>
+            <label><span>Hasta</span><input id="stravaTo" type="date" value="${to}"></label>
+            <button class="btn" onclick="previewStrava()">Buscar</button>
           </div>
-          <div class="action-row">
-            <button class="btn" onclick="saveStravaWebConfig()">Guardar configuración</button>
-            <button class="btn secondary" onclick="connectStrava()">Conectar / renovar permisos</button>
-            <button id="stravaTestButton" class="btn secondary" onclick="testStravaConnection()">Probar conexión</button>
-            <button class="btn danger" onclick="disconnectStravaWeb()">Desconectar</button>
-          </div>
-          <p class="muted">Se guarda en <code>data/integrations.json</code>, privado y fuera de Git. No hace falta editar <code>.env</code> para cambios futuros.</p>
+          <div class="strava-request-line"><span id="stravaRequestInfo">Sin consulta reciente</span><small>Las kcal de la búsqueda son una vista rápida; al importar se guarda el detalle de Strava.</small></div>
+          <div id="stravaList"><div class="strava-empty-state"><b>Listo para buscar</b><span>Selecciona un intervalo corto para revisar actividades.</span></div></div>
         </section>
 
-        <section class="card">
-          <div class="section-title compact-title"><div><h3>🩺 Diagnóstico</h3><p>Estado real, permisos y límites</p></div></div>
-          <div id="stravaDiagnostics" class="empty">Leyendo diagnóstico…</div>
-          <div class="strava-note"><b>Sin puente PowerShell</b><p>Abre Diet Pro Planner por su dirección LAN, pulsa “Usar esta dirección” y copia únicamente el dominio indicado en la aplicación API de Strava.</p></div>
-        </section>
+        <aside class="card strava-auto-card">
+          <header class="strava-card-head compact"><div><span class="strava-section-kicker">AUTOMATIZACIÓN</span><h3>Auto-sync</h3><p id="stravaLastSync">Comprobando…</p></div></header>
+          <div id="stravaAutoStatus" class="strava-auto-status"></div>
+          <label class="strava-switch-row"><span><b>Sincronizar automáticamente</b><small>Solo actividades nuevas</small></span><input id="stravaAutoEnabled" type="checkbox"></label>
+          <div class="strava-auto-fields">
+            <label><span>Cada</span><select id="stravaAutoInterval"><option value="30">30 min</option><option value="60">1 hora</option><option value="180" selected>3 horas</option><option value="360">6 horas</option><option value="720">12 horas</option></select></label>
+            <label><span>Desde</span><input id="stravaAutoFrom" type="date" value="${from}"></label>
+          </div>
+          <div class="strava-auto-actions"><button class="btn" onclick="saveStravaAutoConfig()">Guardar</button><button class="btn secondary" onclick="runStravaAutoNow()">Sincronizar ahora</button></div>
+          <div class="strava-api-meter"><span id="stravaRateSummary">Consumo disponible después de consultar</span></div>
+        </aside>
       </div>
 
-      <div class="grid cols-2 strava-v018-grid">
-        <section class="card integration-card">
-          <div class="section-title compact-title"><div><h3>📥 Actividades</h3><p>La búsqueda ya no descarga el detalle de todas las actividades.</p></div></div>
-          <div class="row">
-            <div class="field span-4"><label>Desde</label><input id="stravaFrom" type="date" value="${from}"></div>
-            <div class="field span-4"><label>Hasta</label><input id="stravaTo" type="date" value="${to}"></div>
-            <div class="field span-4"><label>&nbsp;</label><button class="btn secondary" onclick="previewStrava()">Buscar actividades</button></div>
-          </div>
-          <p id="stravaRequestInfo" class="muted">Se consultará el detalle solo de las actividades nuevas que selecciones.</p>
-          <div id="stravaList" style="margin-top:14px"></div>
-        </section>
+      <details id="stravaSettingsPanel" class="card strava-settings-panel">
+        <summary><div><span class="strava-settings-icon">⚙</span><span><b>Configuración y diagnóstico</b><small>Credenciales, callback, permisos y conexión</small></span></div><em id="stravaStorage">Solo red local</em></summary>
+        <div class="strava-settings-body">
+          <section class="strava-settings-form">
+            <div class="strava-settings-intro"><h3>Credenciales de la aplicación</h3><p>Se guardan únicamente en la Raspberry. El secreto no vuelve a mostrarse después de guardarlo.</p></div>
+            <div class="row">
+              <div class="field span-4"><label>Client ID</label><input id="stravaClientId" inputmode="numeric" autocomplete="off" placeholder="ID numérico"></div>
+              <div class="field span-8"><label>Client Secret</label><div class="strava-secret-row"><input id="stravaClientSecret" type="password" autocomplete="new-password"><button id="stravaSecretToggle" class="btn secondary small" type="button" onclick="toggleStravaSecret()">Mostrar</button></div></div>
+              <div class="field span-12"><label>Callback URL</label><input id="stravaRedirectUri" autocomplete="off"><div class="strava-inline-help"><button class="btn secondary small" type="button" onclick="useCurrentStravaCallback()">Usar dirección actual</button><span>En Strava configura como Callback Domain: <b id="stravaCallbackDomain">—</b></span></div></div>
+            </div>
+            <div class="action-row strava-settings-actions"><button class="btn" onclick="saveStravaWebConfig()">Guardar</button><button class="btn secondary" onclick="connectStrava()">Conectar / renovar</button><button id="stravaTestButton" class="btn secondary" onclick="testStravaConnection()">Probar</button><button class="btn danger" onclick="disconnectStravaWeb()">Desconectar</button></div>
+          </section>
+          <section class="strava-diagnostics-panel"><h3>Diagnóstico</h3><div id="stravaDiagnostics" class="empty">Leyendo estado…</div><p>Archivo privado: <code>data/integrations.json</code>. No se sube al repositorio.</p></section>
+        </div>
+      </details>`;
 
-        <section class="card note-box">
-          <div class="section-title compact-title"><div><h3>⚙️ Auto-sync protegido</h3><p>Ventana reciente, caché y bloqueo de concurrencia</p></div></div>
-          <div id="stravaAutoStatus" class="empty">Comprobando auto-sync…</div>
-          <div class="row" style="margin-top:12px">
-            <div class="field span-5"><label>Fecha mínima</label><input id="stravaAutoFrom" type="date" value="${from}"></div>
-            <div class="field span-4"><label>Cada</label><select id="stravaAutoInterval"><option value="60">1 hora</option><option value="180" selected>3 horas</option><option value="360">6 horas</option><option value="720">12 horas</option></select></div>
-            <div class="field span-3"><label>&nbsp;</label><button class="btn secondary" onclick="runStravaAutoNow()">Sincronizar ahora</button></div>
-          </div>
-          <label class="check-line"><input id="stravaAutoEnabled" type="checkbox"> Sincronizar automáticamente solo actividades nuevas</label>
-          <div class="action-row"><button class="btn" onclick="saveStravaAutoConfig()">Guardar auto-sync</button></div>
-          <p class="muted">Recomendado: cada 3 horas. Las actividades ya importadas no consumen llamadas de detalle.</p>
-        </section>
-      </div>`;
     loadStravaV018();
-  };
+  }
+
+  window.renderIntegrations = renderIntegrationsV018;
+  try { renderIntegrations = renderIntegrationsV018; } catch (error) {}
+
+  try {
+    const previousRender = window.render || render;
+    const wrappedRender = function () {
+      syncBodyClass();
+      return previousRender.apply(this, arguments);
+    };
+    window.render = wrappedRender;
+    render = wrappedRender;
+  } catch (error) {}
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('strava') === 'connected') {
