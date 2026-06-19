@@ -1,11 +1,11 @@
-/* Diet Pro Planner v0.0.20 · planned vs real activity */
+/* Diet Pro Planner v0.0.21-dev · planned vs real activity */
 (function () {
   'use strict';
 
   if (window.__DPP_ACTIVITY_PLAN_V020__) return;
   window.__DPP_ACTIVITY_PLAN_V020__ = true;
 
-  const VERSION = 'v0.0.20';
+  const VERSION = 'v0.0.21-dev';
   let weekStart = mondayOf(new Date());
   let activityData = null;
   let editingId = null;
@@ -359,11 +359,11 @@
     window.render = wrappedRender;
     render = wrappedRender;
   } catch (error) {
-    console.warn('Activity plan v0.0.20 render wrapper', error);
+    console.warn('Activity plan v0.0.21-dev render wrapper', error);
   }
 
   try { renderNav(); } catch (error) {
-    console.warn('Activity plan v0.0.20 navigation', error);
+    console.warn('Activity plan v0.0.21-dev navigation', error);
   }
   syncVersion();
 })();
