@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Diet Pro Planner · v0.0.20</title>
+  <title>Diet Pro Planner · v0.0.21-dev</title>
   <link rel="icon" type="image/png" href="/static/app-icon.png" />
   <link rel="apple-touch-icon" href="/static/app-icon.png" />
   <link rel="stylesheet" href="/static/styles.css?v=v016-release" />
 
 <style id="ui5-boot">
-html[data-ui="ui5"],html[data-ui="ui5"] body{margin:0;min-height:100%;background:#edf5ff;color:#0b1726;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
-html[data-ui="ui5"] .app-shell{min-height:100vh;display:grid;grid-template-columns:310px minmax(0,1fr);background:linear-gradient(135deg,#edf5ff,#f8fbff 45%,#fff7ed);}
-html[data-ui="ui5"] .sidebar{background:#081a2e;color:white;min-height:100vh;padding:22px 16px;}
-html[data-ui="ui5"] .main{padding:22px;min-width:0;}
+html[data-ui="ui5"],html[data-ui="ui5"] body{margin:0;min-height:100%;background:#f5f1ea;color:#16201f;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+html[data-ui="ui5"] .app-shell{min-height:100vh;display:grid;grid-template-columns:232px minmax(0,1fr);background:#f5f1ea;}
+html[data-ui="ui5"] .sidebar{background:#13231f;color:white;min-height:100vh;padding:24px 18px;}
+html[data-ui="ui5"] .main{padding:26px 28px;min-width:0;}
 </style>
 <script>document.documentElement.dataset.ui='ui5';</script>
   <link rel="stylesheet" href="/static/mobile-dashboard.css?v=0.0.15.5">
@@ -21,8 +21,11 @@ html[data-ui="ui5"] .main{padding:22px;min-width:0;}
   <link rel="stylesheet" href="/static/strava-v018.css?v=018b">
   <link rel="stylesheet" href="/static/pantry-v019.css?v=019a">
   <link rel="stylesheet" href="/static/activity-plan-v020.css?v=020b">
+  <link rel="stylesheet" href="/static/v021/core.css?v=021a">
+  <link rel="stylesheet" href="/static/v021/dashboard.css?v=021a">
+  <link rel="stylesheet" href="/static/v021/modules.css?v=021a">
 </head>
-<body>
+<body class="dpp-v021">
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><img class="brand-logo" src="/static/app-icon.png" alt="Diet Pro Planner"><div><h1>Diet Pro Planner</h1><p>Raspberry · local · privado</p></div></div>
@@ -31,7 +34,7 @@ html[data-ui="ui5"] .main{padding:22px;min-width:0;}
     </aside>
     <main class="main">
       <header class="topbar">
-        <div><div class="eyebrow">Dieta controlada · v0.0.20</div><h2 id="pageTitle">Resumen</h2></div>
+        <div><div class="eyebrow">Diet Pro Planner · v0.0.21-dev</div><h2 id="pageTitle">Resumen</h2></div>
         <div class="top-actions"><button id="btnRefresh" class="ghost">Actualizar</button><a class="ghost" href="/api/export" target="_blank">Exportar DB</a></div>
       </header>
       <div class="rule-banner" role="note" aria-label="Regla de hoy">
@@ -58,5 +61,6 @@ html[data-ui="ui5"] .main{padding:22px;min-width:0;}
   <script src="/static/pantry-v019.js?v=020-version-truth"></script>
   <script src="/static/pantry-v019-polish.js?v=020-version-truth"></script>
   <script src="/static/activity-plan-v020.js?v=020-version-truth"></script>
+  <script src="/static/v021/runtime.js?v=021a"></script>
 </body>
 </html>
