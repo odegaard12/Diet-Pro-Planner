@@ -1,0 +1,28 @@
+/* Diet Pro Planner v0.0.21 · dashboard */
+body.dpp-v021 .dpp12-home{gap:14px!important}
+body.dpp-v021 .dpp12-hero{min-height:230px!important;padding:28px!important;border:0!important;border-radius:26px!important;color:var(--v21-text)!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow)!important}
+body.dpp-v021 .dpp12-hero h2{max-width:760px!important;margin:12px 0 8px!important;color:var(--v21-text)!important;font-size:clamp(31px,4vw,46px)!important;line-height:1.03!important;letter-spacing:-.05em!important}
+body.dpp-v021 .dpp12-hero p,body.dpp-v021 .dpp12-hero small{color:var(--v21-muted)!important}
+body.dpp-v021 .dpp12-hero>div:first-child>span,body.dpp-v021 .dpp12-kicker{display:inline-flex!important;width:auto!important;color:var(--v21-primary)!important;background:var(--v21-primary-soft)!important;border-radius:999px!important;padding:7px 10px!important}
+body.dpp-v021 .dpp12-score{width:116px!important;height:116px!important;min-width:116px!important;min-height:116px!important;display:grid!important;place-content:center!important;border:0!important;border-radius:50%!important;color:#fff!important;background:linear-gradient(145deg,var(--v21-primary),var(--v21-primary2))!important;box-shadow:0 16px 35px rgba(54,91,216,.24)!important}
+body.dpp-v021 .dpp12-score b,body.dpp-v021 .dpp12-score small{color:#fff!important}
+body.dpp-v021 .dpp12-weight,body.dpp-v021 .dpp12-card,body.dpp-v021 .dpp12-mini,body.dpp-v021 .dpp12-panel,body.dpp-v021 .dpp12-details{border:1px solid var(--v21-line)!important;border-radius:20px!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow-sm)!important}
+body.dpp-v021 .dpp12-weight{padding:20px!important}
+body.dpp-v021 .dpp12-cards{gap:12px!important}
+body.dpp-v021 .dpp12-card{min-height:142px!important;padding:18px!important}
+body.dpp-v021 .dpp12-card b{font-size:1.8rem!important;letter-spacing:-.04em!important}
+body.dpp-v021 .dpp12-grid{gap:16px!important}
+body.dpp-v021 .dpp12-panel{padding:20px!important}
+body.dpp-v021 .dpp-coach-panel-v17{padding:22px!important;border:1px solid var(--v21-line)!important;border-radius:22px!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow-sm)!important}
+body.dpp-v021 .dpp-coach-main{border:0!important;border-radius:17px!important;color:var(--v21-text)!important;background:var(--v21-soft)!important}
+body.dpp-v021 .dpp-coach-decision{color:var(--v21-text)!important;letter-spacing:-.03em!important}
+body.dpp-v021 .dpp-coach-why{color:var(--v21-muted)!important}
+body.dpp-v021 .dpp-coach-label{color:var(--v21-primary)!important}
+body.dpp-v021 .dpp-coach-box{border-color:var(--v21-line)!important;background:#fff!important}
+body.dpp-v021 .coach-action{color:var(--v21-text)!important;border-color:var(--v21-line)!important;background:#fff!important}
+body.dpp-v021 .coach-action.alternative{color:var(--v21-primary)!important;border-color:#cfd7ff!important;background:#f4f6ff!important}
+body.dpp-v021 .coach-action.pantry{color:var(--v21-success)!important;border-color:#bfe3d4!important;background:#f2fbf7!important}
+body.dpp-v021 .fi13-hero,body.dpp-v021 .fi13-panel,body.dpp-v021 .body-photo-v17{border-color:var(--v21-line)!important;border-radius:20px!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow-sm)!important}
+body.dpp-v021 .fi13-kicker,body.dpp-v021 .body-photo-v17 .eyebrow{color:var(--v21-primary)!important}
+@media(max-width:760px),(pointer:coarse){body.dpp-v021 .dpp12-hero{min-height:0!important;padding:20px!important;border-radius:20px!important}body.dpp-v021 .dpp12-hero h2{font-size:29px!important}body.dpp-v021 .dpp12-score{width:82px!important;height:82px!important;min-width:82px!important;min-height:82px!important}body.dpp-v021 .dpp12-cards{grid-template-columns:1fr 1fr!important}body.dpp-v021 .dpp12-grid{grid-template-columns:1fr!important}}
+@media(max-width:540px){body.dpp-v021 .dpp12-cards{grid-template-columns:1fr!important}body.dpp-v021 .dpp-coach-panel-v17{padding:15px!important}}
