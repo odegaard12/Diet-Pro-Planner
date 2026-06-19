@@ -29,6 +29,7 @@ def register_strava_v018(app, legacy) -> None:
     config_file = data_dir / "integrations.json"
     rate_file = data_dir / "strava_rate.json"
     cache_file = data_dir / "strava_activity_cache.json"
+    ignored_ids_file = data_dir / "strava_ignored_ids.json"
     token_file = Path(getattr(legacy, "STRAVA_TOKEN_FILE", data_dir / "strava_tokens.json"))
     state_file = Path(getattr(legacy, "STRAVA_STATE_FILE", data_dir / "strava_oauth_state.txt"))
 
@@ -155,6 +156,14 @@ def register_strava_v018(app, legacy) -> None:
             value = {key: value[key] for key in keys}
         write_private_json(cache_file, value)
 
+    def read_ignored_ids() -> set[str]:
+        value = read_json(ignored_ids_file, [])
+        if isinstance(value, dict):
+            value = value.get("ids", [])
+        if not isinstance(value, list):
+            return set()
+        return {str(item).strip() for item in value if str(item).strip()}
+
     def fetch_detail(access_token: str, activity_id: str) -> dict[str, Any] | None:
         if not activity_id:
             return None
@@ -195,18 +204,18 @@ def register_strava_v018(app, legacy) -> None:
 
     def imported_ids(db) -> set[str]:
         rows = db.execute("SELECT notes FROM workouts WHERE notes LIKE '%id=%'").fetchall()
-        output: set[str] = set()
+        output: set[str] = set(read_ignored_ids())
         for row in rows:
             text = row["notes"] if hasattr(row, "keys") else row[0]
-            match = re.search(r"\bid=(\d+)", str(text or ""))
-            if match:
-                output.add(match.group(1))
+            output.update(re.findall(r"\bid=(\d+)", str(text or "")))
         return output
 
     def upsert_activity(db, item: dict[str, Any], exact: bool) -> str:
         card = legacy._strava_card(item)
         activity_id = str(card.get("id") or "")
         if not activity_id:
+            return "skipped"
+        if activity_id in read_ignored_ids():
             return "skipped"
         source = "detalle Strava" if exact else "estimación local"
         notes = f"Strava · {card['title']} · id={activity_id} · kcal desde {source}"

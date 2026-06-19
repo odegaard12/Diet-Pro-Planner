@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 import app as legacy
+import dpp_activity_plan_v020 as activity_plan_v020
 import dpp_pantry_v019 as pantry_v019
 from dpp_pantry_v019_policy import apply_pantry_v019_policy
 from dpp_strava_v018 import register_strava_v018
@@ -11,6 +12,7 @@ from dpp_strava_v018 import register_strava_v018
 apply_pantry_v019_policy(pantry_v019)
 register_strava_v018(legacy.app, legacy)
 pantry_v019.register_pantry_v019(legacy.app, legacy)
+activity_plan_v020.register_activity_plan_v020(legacy.app, legacy)
 
 try:
     legacy.start_strava_auto_thread()

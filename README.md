@@ -1,13 +1,31 @@
 # Diet Pro Planner
 
-**Current version:** v0.0.19  
-**Latest release:** v0.0.19 — Editable pantry and practical Coach actions  
+[![CI](https://github.com/odegaard12/Diet-Pro-Planner/actions/workflows/ci.yml/badge.svg)](https://github.com/odegaard12/Diet-Pro-Planner/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
+
+**Current version:** v0.0.20  
+**Latest release:** v0.0.20 — Planned versus real activity  
 **License:** MIT  
 **Stack:** Python · Flask · Vanilla JS · Docker · Local-first
 
 Diet Pro Planner is a self-hosted cockpit for nutrition, body composition, sport and daily diet decisions.
 
 It is built for private daily use on a Raspberry Pi with Docker. Public application code stays in GitHub; food logs, SQLite databases, Strava tokens, uploads, pantry contents and body-composition records stay local.
+
+## v0.0.20 — Planned versus real activity
+
+- Adds a dedicated **Plan deporte** weekly view.
+- Plans activities by date, time, type, duration, distance, target kcal, intensity and notes.
+- Matches planned sessions automatically with Strava or manual workouts.
+- Shows completed, changed, pending, upcoming, missed, skipped and cancelled states.
+- Shows unplanned workouts as **Extra real**.
+- Adds weekly adherence, planned minutes, real minutes and real kcal summaries.
+- Supports editing, skipping, reactivating and deleting activity plans.
+- Stores activity plans privately in the local SQLite database.
+- Prevents known duplicate Strava sessions from being imported again.
+- Includes CI, Docker smoke tests, privacy guardrails and security documentation.
 
 ## v0.0.19 — Editable pantry and practical Coach actions
 
@@ -81,6 +99,17 @@ Private/local files are excluded from Git, including:
 - backups and ZIP files
 - local label photos and OCR cache files
 
+Public CI includes a tracked-file privacy guard so these runtime files cannot be added accidentally.
+
+## Development and security
+
+Pull requests run Python and JavaScript checks, public route tests, the frontend anti-monolith guard, the privacy guard and a real Docker `/health` smoke test.
+
+- Contribution workflow: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Vulnerability reporting: [`SECURITY.md`](SECURITY.md)
+- CI workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+- Dependency policy: [`.github/dependabot.yml`](.github/dependabot.yml)
+
 ## Docker
 
 Build and start:
@@ -125,6 +154,13 @@ http://raspberrypi.local:8099
 - `GET /api/pantry/v2`
 - `POST /api/pantry/v2`
 
+### Activity planning
+
+- `GET /api/activity-plan`
+- `POST /api/activity-plan`
+- `PUT /api/activity-plan/<id>`
+- `DELETE /api/activity-plan/<id>`
+
 ### Body composition
 
 - `GET /api/body-snapshot/latest`
@@ -145,6 +181,14 @@ http://raspberrypi.local:8099
 - `POST /api/integrations/strava/disconnect`
 
 ## Releases
+
+### v0.0.20 — Planned versus real activity
+
+- Weekly planned-versus-real activity view.
+- Automatic matching with Strava and manual workouts.
+- Activity status, adherence and weekly volume summaries.
+- Duplicate Strava-session suppression.
+- CI, Docker smoke tests and privacy guardrails.
 
 ### v0.0.19 — Editable pantry and practical Coach actions
 
@@ -185,7 +229,6 @@ v0.0.15, v0.0.14.2, v0.0.14.1, v0.0.14, v0.0.13, v0.0.12, v0.0.11, v0.0.10, v0.0
 
 ## Roadmap
 
-- Planned activity input and planned-versus-real activity view.
 - Automatic day closing when nutrition goals are reached.
 - OpenAI/Gemini BYOK settings.
 - AI response cache and daily limits.
