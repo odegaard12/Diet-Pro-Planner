@@ -4,24 +4,15 @@ cd "$HOME/Diet-Pro-Planner" || exit 1
 BRANCH="feature/v020-planned-vs-real-activity"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
-echo "== SINCRONIZAR MAIN =="
+echo "== SINCRONIZAR RAMA V0.0.20 =="
 git fetch origin --prune
-git checkout main
-git reset --hard origin/main
-git branch -D "$BRANCH" 2>/dev/null || true
-git checkout -b "$BRANCH"
+git checkout -B "$BRANCH" "origin/$BRANCH"
 
 if [ -f data/dieta.db ]; then
   cp data/dieta.db "data/dieta.db.bak-v020-$STAMP"
   echo "Backup DB: data/dieta.db.bak-v020-$STAMP"
 fi
 
-echo "== DESCARGAR ARCHIVOS V0.0.20 =="
-BASE="https://raw.githubusercontent.com/odegaard12/Diet-Pro-Planner/$BRANCH"
-curl -fsSL "$BASE/dpp_activity_plan_v020.py" -o dpp_activity_plan_v020.py
-curl -fsSL "$BASE/static/activity-plan-v020.js" -o static/activity-plan-v020.js
-curl -fsSL "$BASE/static/activity-plan-v020.css" -o static/activity-plan-v020.css
-curl -fsSL "$BASE/scripts/check_v020_activity_plan.py" -o scripts/check_v020_activity_plan.py
 chmod +x scripts/check_v020_activity_plan.py
 
 python3 - <<'PY'
@@ -63,9 +54,13 @@ node --check static/activity-plan-v020.js
 python3 scripts/check_v020_activity_plan.py
 
 echo "== COMMIT Y PUSH =="
-git add dpp_activity_plan_v020.py dpp_entrypoint.py static/index.html static/activity-plan-v020.js static/activity-plan-v020.css scripts/check_v020_activity_plan.py
-git commit -m "feat: add planned versus real activity v0.0.20"
-git push -u origin "$BRANCH"
+git add dpp_entrypoint.py static/index.html scripts/check_v020_activity_plan.py
+if ! git diff --cached --quiet; then
+  git commit -m "feat: wire planned versus real activity v0.0.20"
+  git push origin "$BRANCH"
+else
+  echo "Sin cambios pendientes para commit"
+fi
 
 cat > /tmp/dpp-v020-pr.md <<'MD'
 ## Objetivo
