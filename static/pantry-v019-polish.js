@@ -1,28 +1,9 @@
-/* Diet Pro Planner v0.0.19 · candidate polish */
+/* Diet Pro Planner v0.0.19 · Coach meal rotation */
 (function () {
   'use strict';
 
-  const VERSION = 'v0.0.19';
   let excludedProteins = [];
   let currentUsed = [];
-
-  function syncVersion() {
-    const title = `Diet Pro Planner · ${VERSION}`;
-    const eyebrowText = `Dieta controlada · ${VERSION}`;
-    if (document.title !== title) document.title = title;
-
-    const eyebrow = document.querySelector('.eyebrow');
-    if (eyebrow && eyebrow.textContent.trim() !== eyebrowText) eyebrow.textContent = eyebrowText;
-
-    const badge = document.querySelector('#ui5Badge');
-    if (badge && badge.textContent.trim() !== VERSION) badge.textContent = VERSION;
-
-    document.querySelectorAll('.topbar *, [class*="version"], [data-version]').forEach((node) => {
-      if (node.children.length) return;
-      const text = String(node.textContent || '').trim();
-      if (/^v0\.0\.18(?:\b|$)/.test(text)) node.textContent = VERSION;
-    });
-  }
 
   function selectedDay() {
     const input = document.querySelector('#dashDate');
@@ -87,9 +68,4 @@
       if (typeof toast === 'function') toast(`Coach: ${error.message}`);
     }
   };
-
-  const observer = new MutationObserver(syncVersion);
-  observer.observe(document.documentElement, {childList: true, characterData: true, subtree: true});
-  syncVersion();
-  setInterval(syncVersion, 500);
 })();
