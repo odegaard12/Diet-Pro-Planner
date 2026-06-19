@@ -1,0 +1,36 @@
+/* Diet Pro Planner v0.0.21 · modules */
+body.dpp-v021 .pantry-hero,body.dpp-v021 .activity-plan-hero,body.dpp-v021 .strava-overview{border:1px solid var(--v21-line)!important;border-radius:22px!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow-sm)!important}
+body.dpp-v021 .pantry-hero h2,body.dpp-v021 .activity-plan-hero h2,body.dpp-v021 .strava-overview-title h2{color:var(--v21-text)!important}
+body.dpp-v021 .pantry-hero p,body.dpp-v021 .activity-plan-hero p,body.dpp-v021 .strava-overview-title p{color:var(--v21-muted)!important}
+body.dpp-v021 .pantry-kicker,body.dpp-v021 .activity-kicker{color:var(--v21-primary)!important}
+body.dpp-v021 .pantry-stat,body.dpp-v021 .activity-summary-grid>div,body.dpp-v021 .strava-status-pill{border-color:var(--v21-line)!important;background:var(--v21-soft)!important;box-shadow:none!important}
+body.dpp-v021 .pantry-stat.good{color:var(--v21-success)!important;background:var(--v21-success-soft)!important}
+body.dpp-v021 .pantry-stat.info{color:var(--v21-primary)!important;background:var(--v21-primary-soft)!important}
+body.dpp-v021 .pantry-filters button.active{color:#fff!important;background:var(--v21-primary)!important}
+body.dpp-v021 .pantry-item-card{border-color:var(--v21-line)!important;border-radius:16px!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow-sm)!important}
+body.dpp-v021 .pantry-item-card.available{border-left-color:var(--v21-primary)!important}
+body.dpp-v021 .pantry-availability input:checked+span{background:var(--v21-primary)!important}
+body.dpp-v021 .pantry-quick-chip.active{color:var(--v21-primary)!important;border-color:#cfd7ff!important;background:var(--v21-primary-soft)!important}
+body.dpp-v021 .pantry-quick-chip.active span{background:var(--v21-primary)!important}
+body.dpp-v021 .pantry-search,body.dpp-v021 .pantry-item-fields select,body.dpp-v021 .pantry-notes input{border-color:var(--v21-line)!important;background:#fff!important}
+body.dpp-v021 .activity-summary-main{border-color:var(--v21-primary)!important;background:linear-gradient(145deg,var(--v21-primary),var(--v21-primary2))!important}
+body.dpp-v021 .activity-plan-calendar,body.dpp-v021 .activity-plan-form-card{border-color:var(--v21-line)!important;border-radius:20px!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow-sm)!important}
+body.dpp-v021 .activity-day{border-color:var(--v21-line)!important;background:var(--v21-soft)!important}
+body.dpp-v021 .activity-day.today{border-color:#aab8ff!important;box-shadow:0 0 0 3px rgba(54,91,216,.08)!important}
+body.dpp-v021 .activity-day>header b,body.dpp-v021 .activity-status.info{color:var(--v21-primary)!important;background:var(--v21-primary-soft)!important}
+body.dpp-v021 .activity-plan-card.info{border-left-color:var(--v21-primary)!important}
+body.dpp-v021 .activity-plan-card.good{border-left-color:var(--v21-success)!important}
+body.dpp-v021 .activity-plan-card.warn{border-left-color:var(--v21-orange)!important}
+body.dpp-v021 .activity-plan-card.bad{border-left-color:var(--v21-danger)!important}
+body.dpp-v021 .strava-workspace>.card,body.dpp-v021 .strava-settings-panel{border-color:var(--v21-line)!important;border-radius:20px!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow-sm)!important}
+body.dpp-v021 .strava-searchbar,body.dpp-v021 .strava-auto-result,body.dpp-v021 .strava-diagnostic-grid>div{border-color:var(--v21-line)!important;background:var(--v21-soft)!important}
+body.dpp-v021 .strava-activity-row{border-color:var(--v21-line)!important;background:#fff!important}
+body.dpp-v021 .strava-state.new{color:#b54812!important;background:#fff0e8!important}
+body.dpp-v021 .strava-settings-panel>summary,body.dpp-v021 .strava-settings-icon{background:var(--v21-soft)!important}
+body.dpp-v021 .weight2-shell,body.dpp-v021 .weight2-card,body.dpp-v021 .weight2-panel{border-color:var(--v21-line)!important;background:var(--v21-surface)!important;box-shadow:var(--v21-shadow-sm)!important}
+body.dpp-v021 table{border-collapse:separate!important;border-spacing:0 7px!important}
+body.dpp-v021 th{color:var(--v21-muted)!important;font-size:10px!important;letter-spacing:.07em!important;text-transform:uppercase!important}
+body.dpp-v021 td{border-top:1px solid var(--v21-line)!important;border-bottom:1px solid var(--v21-line)!important;background:#fff!important}
+body.dpp-v021 td:first-child{border-left:1px solid var(--v21-line)!important;border-radius:12px 0 0 12px!important}
+body.dpp-v021 td:last-child{border-right:1px solid var(--v21-line)!important;border-radius:0 12px 12px 0!important}
+@media(max-width:760px),(pointer:coarse){body.dpp-v021 .pantry-items-grid{grid-template-columns:1fr!important}body.dpp-v021 .activity-plan-layout,body.dpp-v021 .strava-workspace{grid-template-columns:1fr!important}body.dpp-v021 .activity-summary-grid{grid-template-columns:1fr 1fr!important}body.dpp-v021 .activity-summary-main{grid-column:1/-1!important}}
