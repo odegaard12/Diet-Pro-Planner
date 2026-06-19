@@ -1,0 +1,139 @@
+/* Diet Pro Planner v0.0.21 · desktop-only hotfix */
+@media (min-width:981px){
+  html[data-ui="ui5"] body.dpp-modern-shell .app-shell{
+    grid-template-columns:176px minmax(0,1fr)!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .sidebar{
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    padding:18px 12px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .brand{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:10px!important;
+    padding:2px 6px 18px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .brand-logo{
+    width:44px!important;
+    height:44px!important;
+    flex:0 0 44px!important;
+    border-radius:14px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .brand>div{
+    display:block!important;
+    min-width:0!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .brand h1{
+    display:block!important;
+    margin:0!important;
+    font-size:13px!important;
+    line-height:1.05!important;
+    white-space:nowrap!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .brand p{
+    display:none!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .nav{
+    gap:5px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .nav button,
+  html[data-ui="ui5"] body.dpp-modern-shell .nav a{
+    min-height:50px!important;
+    display:grid!important;
+    grid-template-columns:32px minmax(0,1fr)!important;
+    grid-template-rows:1fr!important;
+    align-items:center!important;
+    justify-items:start!important;
+    gap:8px!important;
+    padding:8px 10px!important;
+    border-radius:14px!important;
+    font-size:18px!important;
+    text-align:left!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .nav button span,
+  html[data-ui="ui5"] body.dpp-modern-shell .nav button b,
+  html[data-ui="ui5"] body.dpp-modern-shell .nav a span,
+  html[data-ui="ui5"] body.dpp-modern-shell .nav a b{
+    min-width:0!important;
+    max-width:100%!important;
+    display:block!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    font-size:12px!important;
+    line-height:1.1!important;
+    font-weight:800!important;
+    text-align:left!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .nav small{
+    display:none!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .main{
+    padding-left:26px!important;
+    padding-right:26px!important;
+    padding-bottom:104px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .global-cta{
+    position:fixed!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:18px!important;
+    left:calc(50% + 88px)!important;
+    transform:translateX(-50%)!important;
+    width:min(700px,calc(100vw - 230px))!important;
+    min-width:0!important;
+    max-width:700px!important;
+    height:66px!important;
+    min-height:66px!important;
+    max-height:66px!important;
+    margin:0!important;
+    padding:7px!important;
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:center!important;
+    grid-template-columns:none!important;
+    grid-auto-flow:initial!important;
+    gap:6px!important;
+    overflow:hidden!important;
+    border-radius:20px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .global-cta button{
+    flex:1 1 0!important;
+    align-self:center!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:52px!important;
+    min-height:52px!important;
+    max-height:52px!important;
+    margin:0!important;
+    padding:8px 10px!important;
+    overflow:hidden!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .global-cta button b{
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+}
