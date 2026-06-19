@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f1eb">
+  <title>Diet Pro Planner · Prototipo moderno</title>
+  <link rel="icon" href="/static/app-icon.png">
+  <link rel="stylesheet" href="/static/prototype-v021.css?v=1">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/static/app-icon.png" alt="">
+      <div>
+        <strong>Diet Pro</strong>
+        <small>Planner</small>
+      </div>
+    </div>
+
+    <nav class="desktop-nav">
+      <button class="nav-item active" data-view="today">
+        <span>⌂</span><b>Hoy</b>
+      </button>
+      <button class="nav-item" data-view="register">
+        <span>＋</span><b>Registrar</b>
+      </button>
+      <button class="nav-item" data-view="coach">
+        <span>✦</span><b>Coach</b>
+      </button>
+      <button class="nav-item" data-view="progress">
+        <span>↗</span><b>Progreso</b>
+      </button>
+      <button class="nav-item" data-view="more">
+        <span>•••</span><b>Más</b>
+      </button>
+    </nav>
+
+    <div class="privacy">
+      <i></i>
+      <div>
+        <strong>Modo local</strong>
+        <small>Datos privados</small>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Viernes, 19 de junio</p>
+        <h1>Buenos días, Óscar</h1>
+      </div>
+      <div class="top-actions">
+        <button class="round-btn">⌕</button>
+        <button class="avatar">OG</button>
+      </div>
+    </header>
+
+    <section id="today" class="view active-view">
+      <div class="hero-grid">
+        <article class="decision-card">
+          <div class="card-top">
+            <span class="status">Plan para hoy</span>
+            <span class="subtle">Sin comidas registradas</span>
+          </div>
+
+          <p class="kicker">Tu siguiente mejor decisión</p>
+          <h2>Pollo, judías verdes y arroz</h2>
+
+          <div class="meal-values">
+            <span><b>220–250 g</b> pollo</span>
+            <span><b>250–300 g</b> verdura</span>
+            <span><b>40–50 g</b> arroz seco</span>
+          </div>
+
+          <div class="actions">
+            <button class="primary">Usar esta comida</button>
+            <button class="secondary">Otra opción</button>
+          </div>
+        </article>
+
+        <article class="day-card">
+          <div class="score">
+            <strong>--</strong>
+            <span>score</span>
+          </div>
+          <div>
+            <p class="eyebrow light">Estado del día</p>
+            <h3>Necesitamos una comida</h3>
+            <p>Registra lo primero que comas y el Coach ajustará el resto del día.</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="metrics">
+        <article>
+          <div class="metric-title"><span>Proteína</span><b>0%</b></div>
+          <strong>0 <small>/ 140 g</small></strong>
+          <div class="bar"><i style="width:0%"></i></div>
+          <p>Prioridad en la próxima comida.</p>
+        </article>
+
+        <article>
+          <div class="metric-title"><span>Energía</span><b>Disponible</b></div>
+          <strong>1.900 <small>kcal</small></strong>
+          <p>Margen diario antes de actividad.</p>
+        </article>
+
+        <article>
+          <div class="metric-title"><span>Peso</span><b>−3 kg</b></div>
+          <strong>83,7 <small>kg</small></strong>
+          <p>Objetivo: 80 kg · tendencia correcta.</p>
+        </article>
+
+        <article>
+          <div class="metric-title"><span>Actividad</span><b>Hoy</b></div>
+          <strong>0 <small>min</small></strong>
+          <p>Sin entrenamiento planificado.</p>
+        </article>
+      </div>
+
+      <div class="content-grid">
+        <section class="panel coach-panel">
+          <header class="section-head">
+            <div>
+              <p class="eyebrow">Smart Coach</p>
+              <h2>Qué hacer ahora</h2>
+            </div>
+            <button class="text-btn">Detalle</button>
+          </header>
+
+          <div class="coach-message">
+            <span>✦</span>
+            <div>
+              <h3>Proteína y verdura primero</h3>
+              <p>
+                No hace falta compensar ni pasar hambre.
+                Mide el aceite y mantén el hidrato controlado.
+              </p>
+            </div>
+          </div>
+
+          <div class="coach-buttons">
+            <button>No tengo esto</button>
+            <button>Dame otra comida</button>
+            <button>Editar despensa</button>
+          </div>
+        </section>
+
+        <section class="panel race-panel">
+          <header class="section-head">
+            <div>
+              <p class="eyebrow">Próxima actividad</p>
+              <h2>Estranoite 8K</h2>
+            </div>
+            <div class="date-chip"><b>20</b><span>JUN</span></div>
+          </header>
+
+          <div class="race-data">
+            <div><span>Objetivo</span><strong>41:30–42:00</strong></div>
+            <div><span>Distancia</span><strong>8 km</strong></div>
+          </div>
+
+          <div class="race-line"><i></i></div>
+          <p class="subtle">Ataque al 5K sobre 25:30 y final controlado.</p>
+          <button class="secondary full">Abrir plan de carrera</button>
+        </section>
+      </div>
+
+      <section class="panel recent-panel">
+        <header class="section-head">
+          <div>
+            <p class="eyebrow">Actividad reciente</p>
+            <h2>Esta semana</h2>
+          </div>
+          <button class="text-btn">Ver todo</button>
+        </header>
+
+        <div class="activities">
+          <article>
+            <span class="activity-icon blue">🏋</span>
+            <div><strong>Tren superior</strong><small>Martes · 79 min</small></div>
+            <b>526 kcal</b>
+          </article>
+          <article>
+            <span class="activity-icon green">🚲</span>
+            <div><strong>Vía Verde do Salnés</strong><small>Domingo · 19 km</small></div>
+            <b>929 kcal</b>
+          </article>
+          <article>
+            <span class="activity-icon violet">🎾</span>
+            <div><strong>Pádel</strong><small>Sábado · 86 min</small></div>
+            <b>1.095 kcal</b>
+          </article>
+        </div>
+      </section>
+    </section>
+
+    <section id="register" class="view placeholder">
+      <p class="eyebrow">Prototipo</p>
+      <h2>Registro rápido</h2>
+      <p>Aquí probaremos un registro de comida en menos de diez segundos.</p>
+    </section>
+
+    <section id="coach" class="view placeholder">
+      <p class="eyebrow">Prototipo</p>
+      <h2>Coach visual</h2>
+      <p>Propuestas con cantidades, ingredientes disponibles y acciones directas.</p>
+    </section>
+
+    <section id="progress" class="view placeholder">
+      <p class="eyebrow">Prototipo</p>
+      <h2>Progreso</h2>
+      <p>Peso, composición, recuperación y actividad en una única vista.</p>
+    </section>
+
+    <section id="more" class="view placeholder">
+      <p class="eyebrow">Prototipo</p>
+      <h2>Más herramientas</h2>
+      <p>Despensa, alimentos, plantillas, integraciones e historial.</p>
+    </section>
+  </main>
+
+  <nav class="mobile-nav">
+    <button class="active" data-view="today"><span>⌂</span><small>Hoy</small></button>
+    <button data-view="register"><span>＋</span><small>Registrar</small></button>
+    <button data-view="coach"><span>✦</span><small>Coach</small></button>
+    <button data-view="progress"><span>↗</span><small>Progreso</small></button>
+    <button data-view="more"><span>•••</span><small>Más</small></button>
+  </nav>
+</div>
+
+<div class="prototype-label">
+  Prototipo aislado · datos ficticios · no modifica la aplicación
+</div>
+
+<script src="/static/prototype-v021.js?v=1"></script>
+</body>
+</html>
