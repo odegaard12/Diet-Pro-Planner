@@ -1,0 +1,114 @@
+.dpp-strava-page .rule-banner,.dpp-strava-page .global-cta,.dpp-strava-page .sidebar .side-rule{display:none!important}
+.dpp-strava-page #view{max-width:1440px;margin:0 auto}
+.dpp-strava-page .topbar{margin-bottom:16px}
+
+.strava-overview{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-bottom:18px;padding:18px 20px;border:1px solid rgba(27,52,78,.12);border-radius:22px;background:linear-gradient(135deg,#fff 0%,#f8fbff 58%,#fff5ef 100%);box-shadow:0 12px 32px rgba(20,48,78,.08)}
+.strava-overview-title{display:flex;align-items:center;gap:14px;min-width:0}
+.strava-mark{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:15px;background:#fc4c02;color:#fff;font-size:1.35rem;font-weight:950;box-shadow:0 10px 22px rgba(252,76,2,.22)}
+.strava-overview-title>div:last-child{min-width:0}
+.strava-overview-title span{display:block;margin-bottom:2px;color:#6a7c90;font-size:.72rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.strava-overview-title h2{margin:0;color:#10243b;font-size:1.65rem;line-height:1.05}
+.strava-overview-title p{margin:5px 0 0;color:#62758a;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strava-overview-status{display:flex;align-items:stretch;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.strava-status-pill{display:flex;flex-direction:column;justify-content:center;min-width:112px;padding:10px 12px;border:1px solid #dbe5ef;border-radius:14px;background:#f8fafc}
+.strava-status-pill span{font-size:.67rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:#718298}
+.strava-status-pill b{margin-top:2px;color:#24394f;font-size:.88rem}
+.strava-status-pill.ok{border-color:#b7ead6;background:#ecfdf5}
+.strava-status-pill.ok b{color:#08745a}
+.strava-status-pill.warn{border-color:#fed7aa;background:#fff7ed}
+.strava-status-pill.warn b{color:#9a4b08}
+.strava-status-pill.bad{border-color:#fecaca;background:#fef2f2}
+.strava-status-pill.bad b{color:#b42318}
+
+.strava-workspace{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.75fr);gap:16px;align-items:start}
+.strava-workspace>.card,.strava-settings-panel{border:1px solid rgba(30,58,86,.1);border-radius:20px;background:#fff;box-shadow:0 10px 28px rgba(24,52,82,.07)}
+.strava-activities-card,.strava-auto-card{padding:20px}
+.strava-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.strava-card-head h3{margin:3px 0 4px;color:#132a43;font-size:1.2rem}
+.strava-card-head p{margin:0;color:#6d7e91;font-size:.88rem;line-height:1.4}
+.strava-card-head.compact{margin-bottom:12px}
+.strava-section-kicker{font-size:.67rem;font-weight:900;letter-spacing:.1em;color:#fc4c02}
+
+.strava-searchbar{display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) auto;gap:10px;align-items:end;padding:12px;border:1px solid #e0e8f0;border-radius:16px;background:#f8fafc}
+.strava-searchbar label,.strava-auto-fields label{display:flex;flex-direction:column;gap:5px}
+.strava-searchbar label>span,.strava-auto-fields label>span{font-size:.72rem;font-weight:800;color:#66798f}
+.strava-searchbar input,.strava-auto-fields input,.strava-auto-fields select{min-height:42px;border-color:#d5e0ea;background:#fff}
+.strava-searchbar .btn{min-height:42px;padding-inline:22px}
+.strava-request-line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:11px 2px 13px;color:#65778b;font-size:.79rem}
+.strava-request-line>span{font-weight:750;color:#344b63}
+.strava-request-line small{text-align:right;color:#8190a2}
+
+.strava-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 10px;padding:0 2px}
+.strava-list-head>div{display:flex;flex-direction:column;gap:2px}
+.strava-list-head b{color:#16304a;font-size:.98rem}
+.strava-list-head span{color:#7a8999;font-size:.78rem}
+.strava-activity-list{display:flex;flex-direction:column;gap:7px}
+.strava-activity-row{display:grid;grid-template-columns:105px minmax(0,1fr) 110px 104px;align-items:center;gap:12px;padding:11px 12px;border:1px solid #e3eaf1;border-radius:14px;background:#fff;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.strava-activity-row.new:hover{transform:translateY(-1px);border-color:#bdcee0;box-shadow:0 7px 18px rgba(25,52,82,.07)}
+.strava-activity-row.done{background:#fafbfd;color:#68798b}
+.strava-activity-date,.strava-activity-main,.strava-activity-energy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.strava-activity-date b,.strava-activity-main b,.strava-activity-energy b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#17324d;font-size:.87rem}
+.strava-activity-date span,.strava-activity-main span,.strava-activity-energy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#7b8b9c;font-size:.73rem}
+.strava-activity-row.done b{color:#64778b}
+.strava-activity-state{display:flex;align-items:center;justify-content:flex-end;gap:9px}
+.strava-activity-state input{width:19px;height:19px;accent-color:#fc4c02}
+.strava-state{display:inline-flex;align-items:center;justify-content:center;min-width:66px;padding:5px 8px;border-radius:999px;font-size:.69rem;font-weight:850}
+.strava-state.new{background:#fff2eb;color:#b53b08}
+.strava-state.done{background:#edf2f7;color:#62758a}
+.strava-imported-details{margin-top:12px;border-top:1px solid #e6edf3}
+.strava-imported-details>summary{display:flex;align-items:center;justify-content:space-between;padding:13px 3px 6px;cursor:pointer;color:#607286;font-size:.82rem;font-weight:800;list-style:none}
+.strava-imported-details>summary::-webkit-details-marker{display:none}
+.strava-imported-details>summary b{display:grid;place-items:center;min-width:28px;height:24px;border-radius:999px;background:#eef3f8;color:#40566d;font-size:.72rem}
+.strava-imported-details[open]>summary{margin-bottom:7px}
+.strava-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:130px;padding:24px;border:1px dashed #cfdae5;border-radius:16px;background:#fbfcfe;text-align:center}
+.strava-empty-state b{color:#29445f;font-size:.98rem}
+.strava-empty-state span{margin-top:4px;color:#7c8c9d;font-size:.82rem}
+.strava-empty-state.success{border-color:#b8e7d3;background:#f1fcf7}
+.strava-empty-state.success b{color:#08745a}
+.strava-empty-state.error{border-color:#fecaca;background:#fff7f7}
+.strava-empty-state.error b{color:#b42318}
+.strava-empty-state.loading{background:linear-gradient(90deg,#f8fafc,#fff,#f8fafc);background-size:200% 100%;animation:stravaPulse 1.4s linear infinite}
+@keyframes stravaPulse{to{background-position:-200% 0}}
+
+.strava-auto-card{position:sticky;top:16px}
+.strava-auto-status{margin-bottom:12px}
+.strava-auto-result{display:flex;flex-direction:column;gap:4px;padding:12px;border:1px solid #e1e9f1;border-radius:14px;background:#f8fafc}
+.strava-auto-result b{color:#203b56;font-size:.88rem}
+.strava-auto-result span{color:#6f8092;font-size:.78rem;line-height:1.35}
+.strava-auto-result small{color:#8896a5;font-size:.7rem}
+.strava-switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid #edf1f5;border-bottom:1px solid #edf1f5}
+.strava-switch-row>span{display:flex;flex-direction:column;gap:2px}
+.strava-switch-row b{color:#233d56;font-size:.86rem}
+.strava-switch-row small{color:#8391a1;font-size:.72rem}
+.strava-switch-row input{width:20px;height:20px;accent-color:#fc4c02}
+.strava-auto-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.strava-auto-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.strava-api-meter{margin-top:12px;padding:9px 10px;border-radius:12px;background:#f4f7fa;color:#687b90;font-size:.73rem;text-align:center}
+
+.strava-settings-panel{margin-top:16px;padding:0;overflow:hidden}
+.strava-settings-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;cursor:pointer;list-style:none;background:#fbfcfe}
+.strava-settings-panel>summary::-webkit-details-marker{display:none}
+.strava-settings-panel>summary>div{display:flex;align-items:center;gap:11px}
+.strava-settings-panel>summary span span{display:flex;flex-direction:column;gap:2px}
+.strava-settings-panel>summary b{color:#1c3853;font-size:.9rem}
+.strava-settings-panel>summary small{color:#7d8b9a;font-size:.74rem}
+.strava-settings-panel>summary em{font-style:normal;padding:6px 9px;border-radius:999px;background:#edf3f8;color:#52687e;font-size:.69rem;font-weight:800}
+.strava-settings-icon{display:grid!important;place-items:center;width:34px;height:34px;border-radius:11px;background:#eaf0f6;color:#29445f;font-size:1rem}
+.strava-settings-panel[open]>summary{border-bottom:1px solid #e6edf3}
+.strava-settings-body{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.6fr);gap:18px;padding:18px}
+.strava-settings-intro h3,.strava-diagnostics-panel h3{margin:0 0 4px;color:#17324d;font-size:1rem}
+.strava-settings-intro p,.strava-diagnostics-panel>p{margin:0 0 14px;color:#748497;font-size:.8rem;line-height:1.45}
+.strava-secret-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.strava-inline-help{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px;color:#697c90;font-size:.78rem}
+.strava-inline-help b{color:#17324d;overflow-wrap:anywhere}
+.strava-settings-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.strava-diagnostics-panel{padding-left:18px;border-left:1px solid #e4ebf2}
+.strava-diagnostic-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.strava-diagnostic-grid>div{display:flex;flex-direction:column;gap:3px;padding:10px;border:1px solid #e3eaf1;border-radius:12px;background:#f9fbfd}
+.strava-diagnostic-grid span{font-size:.65rem;font-weight:850;letter-spacing:.05em;text-transform:uppercase;color:#7b8b9c}
+.strava-diagnostic-grid b{color:#263f58;font-size:.78rem;overflow-wrap:anywhere}
+.strava-settings-panel code{padding:2px 5px;border-radius:6px;background:#edf2f7;font-size:.76rem}
+
+@media(max-width:1050px){.strava-workspace{grid-template-columns:1fr}.strava-auto-card{position:static}.strava-settings-body{grid-template-columns:1fr}.strava-diagnostics-panel{padding:0;border-left:0;border-top:1px solid #e4ebf2;padding-top:16px}}
+@media(max-width:800px){.dpp-strava-page .topbar{margin-bottom:10px}.strava-overview{display:block;padding:15px;border-radius:18px}.strava-overview-status{justify-content:flex-start;margin-top:14px}.strava-status-pill{min-width:0;flex:1 1 30%}.strava-overview-title p{white-space:normal}.strava-activities-card,.strava-auto-card{padding:15px}.strava-searchbar{grid-template-columns:1fr 1fr}.strava-searchbar .btn{grid-column:1/-1}.strava-request-line{display:block}.strava-request-line small{display:block;margin-top:4px;text-align:left}.strava-activity-row{grid-template-columns:78px minmax(0,1fr) 82px}.strava-activity-state{grid-column:1/-1;justify-content:flex-start;border-top:1px solid #edf1f5;padding-top:8px}.strava-settings-body{padding:14px}.strava-settings-panel>summary{padding:14px}.strava-settings-panel>summary em{display:none}.strava-diagnostic-grid{grid-template-columns:1fr}.strava-settings-actions .btn{flex:1 1 44%}}
+@media(max-width:540px){.strava-overview-status{display:grid;grid-template-columns:1fr 1fr}.strava-status-pill:last-child{grid-column:1/-1}.strava-searchbar{grid-template-columns:1fr}.strava-searchbar .btn{grid-column:auto}.strava-auto-fields,.strava-auto-actions{grid-template-columns:1fr}.strava-activity-row{grid-template-columns:68px minmax(0,1fr)}.strava-activity-energy{grid-column:2}.strava-activity-state{grid-column:1/-1}.strava-settings-actions .btn{flex:1 1 100%}}

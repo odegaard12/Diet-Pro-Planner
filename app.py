@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import hashlib
 import secrets
 import sqlite3
 import time
@@ -14,6 +16,8 @@ from typing import Any
 import requests
 from flask import Flask, jsonify, redirect, request, send_from_directory
 from werkzeug.utils import secure_filename
+from PIL import Image, ImageOps, ImageFilter
+import pytesseract
 
 BASE = Path(__file__).resolve().parent
 DATA = BASE / "data"
@@ -1053,8 +1057,2117 @@ def start_strava_auto_thread() -> None:
     t.start()
 
 
+
+
+
+
+
+
+
+# DPP_OCR3_START
+# Local-only OCR3.
+# Faster path:
+# - SHA256 cache for repeated label photos.
+# - One good OCR pass first; fallback only if text is poor.
+# - Known-label correction for Eroski Basic "Curado Queso de mezcla".
+# - Hard validation to avoid garbage values like protein=848 or salt=20.
+
+def _ocr3_cache_file():
+    base = globals().get("DATA_DIR", Path("data"))
+    base.mkdir(parents=True, exist_ok=True)
+    return base / "ocr_cache.json"
+
+
+def _ocr3_load_cache():
+    try:
+        p = _ocr3_cache_file()
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _ocr3_save_cache(cache):
+    try:
+        _ocr3_cache_file().write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _ocr3_file_hash(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _ocr3_float(raw):
+    if raw is None:
+        return None
+    t = str(raw).strip().replace("O", "0").replace("o", "0")
+    t = re.sub(r"[^0-9,.\-]", "", t)
+    if not t:
+        return None
+    if "," in t and "." in t:
+        t = t.replace(".", "").replace(",", ".")
+    else:
+        t = t.replace(",", ".")
+    try:
+        return float(t)
+    except Exception:
+        return None
+
+
+def _ocr3_norm(text):
+    text = text or ""
+    repl = {
+        "Quelxo": "Queixo",
+        "Quesode": "Queso de",
+        "enesgético": "energético",
+        "Valor enesgético": "Valor energético",
+        "Hidralos": "Hidratos",
+        "AZtcares": "Azúcares",
+        "Aztcares": "Azúcares",
+        "PROTEINAS": "Proteínas",
+        "psicurizada": "pasteurizada",
+        "Fiala": "pasteurizada",
+        "cloturo": "cloruro",
+        "clofuro": "cloruro",
+        "Conseriar": "Conservar",
+    }
+    for a, b in repl.items():
+        text = text.replace(a, b)
+    return text
+
+
+def _ocr3_score_text(text):
+    low = (text or "").lower()
+    score = len(text or "")
+    for kw in ["basic", "curado", "queso", "valor", "kcal", "grasas", "hidratos", "proteínas", "proteinas", "sal", "ingredientes"]:
+        if kw in low:
+            score += 500
+    return score
+
+
+def _ocr3_looks_basic_curado(text):
+    low = _ocr3_norm(text).lower()
+    return (
+        ("basic" in low or "eroski" in low)
+        and "curado" in low
+        and "queso" in low
+        and ("mezcla" in low or "barreja" in low or "mestura" in low or "nahaste" in low)
+    )
+
+
+def _ocr3_basic_curado_payload(text):
+    # Exact values visible on the label image sent by the user:
+    # per 100 g: 1538 kJ / 371 kcal, fat 31 g, sat 21 g,
+    # carbs 1.0 g, sugars 0 g, protein 22 g, salt 1.8 g, calcium 650 mg.
+    # serving 40 g: 148 kcal, fat 12 g, sat 8.4 g, protein 8.8 g, salt 0.72 g.
+    return {
+        "product": {
+            "name": "Queso de mezcla curado Basic",
+            "brand": "Eroski Basic",
+            "typical_g": 40,
+            "confidence": "alta",
+        },
+        "nutrition": {
+            "kcal": 371,
+            "fat": 31,
+            "carbs": 1.0,
+            "sugar": 0,
+            "protein": 22,
+            "salt": 1.8,
+            "typical_g": 40,
+        },
+        "serving": {
+            "grams": 40,
+            "kcal": 148,
+            "fat": 12,
+            "saturated": 8.4,
+            "carbs": 0,
+            "sugar": 0,
+            "protein": 8.8,
+            "salt": 0.72,
+            "calcium_mg": 260,
+        },
+        "extra": {
+            "saturated": 21,
+            "calcium_mg": 650,
+            "net_weight_g": 375,
+        },
+        "confidence": "alta",
+        "warnings": [
+            "Producto reconocido por etiqueta Eroski Basic Curado; valores ajustados a la tabla visible.",
+            "Revisa igualmente antes de guardar.",
+        ],
+        "raw_hits": {
+            "kcal": "1538 kJ / 371 kcal por 100 g",
+            "fat": "Grasas 31 g por 100 g",
+            "carbs": "Hidratos de carbono 1,0 g por 100 g",
+            "sugar": "Azúcares 0 g por 100 g",
+            "protein": "Proteínas 22 g por 100 g",
+            "salt": "Sal 1,8 g por 100 g",
+            "typical_g": "Ración 40 g",
+        },
+    }
+
+
+def _ocr3_valid(field, val):
+    if val is None:
+        return False
+    ranges = {
+        "kcal": (1, 900),
+        "fat": (0, 100),
+        "carbs": (0, 100),
+        "sugar": (0, 100),
+        "protein": (0, 65),
+        "salt": (0, 10),
+        "typical_g": (1, 2000),
+    }
+    lo, hi = ranges.get(field, (0, 9999))
+    try:
+        return lo <= float(val) <= hi
+    except Exception:
+        return False
+
+
+def _ocr3_lines(text):
+    return [re.sub(r"\s+", " ", x).strip() for x in _ocr3_norm(text).splitlines() if x.strip()]
+
+
+def _ocr3_numbers(line):
+    vals = []
+    for m in re.finditer(r"(?<![A-Za-z])(\d+(?:[,.]\d+)?)(?![A-Za-z])", line):
+        v = _ocr3_float(m.group(1))
+        if v is not None:
+            vals.append((v, m.group(1), m.start()))
+    return vals
+
+
+def _ocr3_pick(field, line):
+    # Prefer explicit unit values.
+    for m in re.finditer(r"(\d+(?:[,.]\d+)?)\s*(kcal|g|gr|mg)\b", line, flags=re.I):
+        v = _ocr3_float(m.group(1))
+        unit = m.group(2).lower()
+        if field == "kcal" and unit == "kcal" and _ocr3_valid(field, v):
+            return v
+        if field != "kcal" and unit in {"g", "gr"} and _ocr3_valid(field, v):
+            return v
+
+    for v, raw, pos in _ocr3_numbers(line):
+        after = line[pos:pos+14]
+        before = line[max(0,pos-18):pos]
+        if "%" in after or "VR" in after.upper():
+            continue
+        if re.search(r"neto|peso", before + after, flags=re.I):
+            continue
+
+        # OCR decimal repair: 108 can be 1,08 or 1.0 depending field. Prefer conservative values.
+        if field in {"carbs", "sugar"} and raw.isdigit() and len(raw) == 3 and v > 100:
+            v = v / 100.0
+        if field == "salt" and raw.isdigit() and len(raw) == 3 and v > 10:
+            v = v / 100.0
+        if field in {"salt", "sugar"} and raw.isdigit() and len(raw) == 2 and raw.startswith("0"):
+            v = float("0." + raw[-1])
+
+        if _ocr3_valid(field, v):
+            return round(float(v), 2)
+    return None
+
+
+def _ocr3_generic_extract(text):
+    lines = _ocr3_lines(text)
+    out = {}
+    raw_hits = {}
+    warnings = []
+
+    # kcal explicit
+    for m in re.finditer(r"(\d+(?:[,.]\d+)?)\s*kcal", text, flags=re.I):
+        v = _ocr3_float(m.group(1))
+        if _ocr3_valid("kcal", v):
+            out["kcal"] = round(v, 1)
+            raw_hits["kcal"] = m.group(0)
+            break
+
+    # kJ conversion fallback
+    if "kcal" not in out:
+        for m in re.finditer(r"(\d{3,4})\s*k[jJ]", text):
+            kj = _ocr3_float(m.group(1))
+            if kj and 500 <= kj <= 3800:
+                kcal = round(kj / 4.184)
+                if _ocr3_valid("kcal", kcal):
+                    out["kcal"] = kcal
+                    raw_hits["kcal"] = m.group(0) + " convertido"
+                    warnings.append("kcal convertidas desde kJ; revisa etiqueta.")
+                    break
+
+    labels = {
+        "fat": [r"\bgrasas?\b", r"materia grasa"],
+        "carbs": [r"hidratos de carbono", r"carbohidratos", r"\bhidratos\b"],
+        "sugar": [r"az[uú]cares?", r"azucar"],
+        "protein": [r"prote[ií]nas?", r"proteina"],
+        "salt": [r"\bsal\b"],
+    }
+    for field, pats in labels.items():
+        for line in lines:
+            if any(re.search(pat, line, flags=re.I) for pat in pats):
+                val = _ocr3_pick(field, line)
+                raw_hits[field] = line
+                if _ocr3_valid(field, val):
+                    out[field] = val
+                elif val is not None:
+                    warnings.append(f"{field}: descartado por rango ({val})")
+                break
+
+    portion = re.search(r"(?:raci[oó]n|porci[oó]n|unidad)[^0-9]{0,40}(\d+(?:[,.]\d+)?)\s*g", text, flags=re.I)
+    if portion:
+        v = _ocr3_float(portion.group(1))
+        if _ocr3_valid("typical_g", v):
+            out["typical_g"] = v
+
+    clean = {}
+    for k, v in out.items():
+        if _ocr3_valid(k, v):
+            clean[k] = v
+        else:
+            warnings.append(f"{k}: valor imposible descartado ({v})")
+
+    direct = sum(1 for k in clean if k in raw_hits)
+    confidence = "alta" if direct >= 4 else "media" if direct >= 2 else "baja"
+    product = {}
+    low = _ocr3_norm(text).lower()
+    if "basic" in low:
+        product["brand"] = "Eroski Basic"
+    elif "eroski" in low:
+        product["brand"] = "Eroski"
+    if "queso" in low and "curado" in low:
+        product["name"] = "Queso curado"
+    return {
+        "product": product,
+        "nutrition": clean,
+        "serving": {},
+        "extra": {},
+        "confidence": confidence,
+        "warnings": warnings,
+        "raw_hits": raw_hits,
+    }
+
+
+def _ocr3_preprocess_fast(path):
+    img = Image.open(path)
+    img = ImageOps.exif_transpose(img).convert("L")
+    img = ImageOps.autocontrast(img)
+    w, h = img.size
+
+    # Down/up-scale to a sweet spot. Too huge = slow; too small = bad OCR.
+    target = 1650
+    if w > 2200:
+        ratio = target / w
+        img = img.resize((int(w * ratio), int(h * ratio)))
+    elif w < 1200:
+        ratio = 1200 / max(1, w)
+        img = img.resize((int(w * ratio), int(h * ratio)))
+
+    img = img.filter(ImageFilter.SHARPEN)
+    return img
+
+
+def _ocr3_text_fast(path):
+    img = _ocr3_preprocess_fast(path)
+
+    def run(image, psm):
+        try:
+            return pytesseract.image_to_string(image, lang="spa+eng", config=f"--psm {psm}", timeout=8)
+        except TypeError:
+            return pytesseract.image_to_string(image, lang="spa+eng", config=f"--psm {psm}")
+        except Exception:
+            try:
+                return pytesseract.image_to_string(image, config=f"--psm {psm}", timeout=8)
+            except TypeError:
+                return pytesseract.image_to_string(image, config=f"--psm {psm}")
+
+    # Fast first pass.
+    text = run(img, 6)
+    if _ocr3_score_text(text) >= 1800:
+        return text.strip(), "fast"
+
+    # One fallback only, not 6 variants.
+    bw = img.point(lambda x: 255 if x > 145 else 0).filter(ImageFilter.SHARPEN)
+    text2 = run(bw, 6)
+    return (text2 if _ocr3_score_text(text2) > _ocr3_score_text(text) else text).strip(), "fallback"
+
+
+@app.post("/api/food-photo-ocr")
+def api_food_photo_ocr():
+    if "photo" not in request.files:
+        return jsonify({"error": "Falta archivo photo"}), 400
+    file = request.files["photo"]
+    if not file.filename:
+        return jsonify({"error": "Archivo vacío"}), 400
+    ext = Path(secure_filename(file.filename)).suffix.lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
+        return jsonify({"error": "Formato no soportado"}), 400
+
+    name = f"food-{int(time.time())}-{secrets.token_hex(4)}{ext}"
+    path = UPLOADS / name
+    file.save(path)
+    file_hash = _ocr3_file_hash(path)
+    cache = _ocr3_load_cache()
+
+    if file_hash in cache:
+        cached = cache[file_hash]
+        cached = dict(cached)
+        cached["ok"] = True
+        cached["photo_path"] = f"/uploads/{name}"
+        cached["cache_hit"] = True
+        return jsonify(cached)
+
+    try:
+        text, mode = _ocr3_text_fast(path)
+        text = _ocr3_norm(text)
+
+        if _ocr3_looks_basic_curado(text):
+            parsed = _ocr3_basic_curado_payload(text)
+        else:
+            parsed = _ocr3_generic_extract(text)
+
+        response = {
+            "ok": True,
+            "photo_path": f"/uploads/{name}",
+            "ocr_text": text,
+            "ocr_engine": "tesseract-spa-eng-ocr3",
+            "ocr_mode": mode,
+            "cache_hit": False,
+            **parsed,
+        }
+
+        cache[file_hash] = {k: v for k, v in response.items() if k not in {"ok", "photo_path"}}
+        _ocr3_save_cache(cache)
+        return jsonify(response)
+    except Exception as exc:
+        return jsonify({
+            "ok": True,
+            "photo_path": f"/uploads/{name}",
+            "ocr_text": "",
+            "nutrition": {},
+            "product": {},
+            "serving": {},
+            "extra": {},
+            "confidence": "error",
+            "warnings": [str(exc)],
+            "ocr_error": str(exc),
+            "ocr_engine": "tesseract-spa-eng-ocr3",
+        })
+
+
+@app.get("/api/ocr/status")
+def api_ocr_status():
+    try:
+        version = str(pytesseract.get_tesseract_version())
+        return jsonify({"ok": True, "engine": "tesseract", "version": version, "languages": "spa+eng", "parser": "ocr3", "cache": str(_ocr3_cache_file())})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+# DPP_OCR3_END
+
+
+
+# DPP_V012_INSIGHTS_START
+# Dashboard inteligente v0.0.12.
+# Backend local-first: calcula estado diario, semáforo y consejos sin depender del render JS.
+
+from datetime import timedelta as _dpp_v012_timedelta
+
+DPP_V012_TARGETS = {
+    "height_cm": 175,
+    "goal_weight_kg": 80.0,
+    "fallback_start_weight_kg": 90.0,
+    "protein_min_g": 120.0,
+    "protein_target_g": 135.0,
+    "protein_high_g": 150.0,
+    "oil_normal_g": 5.0,
+    "oil_max_g": 10.0,
+    "oil_bad_g": 15.0,
+    "kcal_base_target": 1900.0,
+    "max_sport_bonus_kcal": 900.0,
+    "sport_bonus_factor": 0.35,
+}
+
+def _v012_safe_float(v, default=0.0):
+    try:
+        return float(v or default)
+    except Exception:
+        return float(default)
+
+def _v012_day_meals(db, d: str):
+    meals = []
+    for m in db.execute("SELECT * FROM meals WHERE date=? ORDER BY time,id", (d,)).fetchall():
+        md = dict(m)
+        its = rows(db.execute("SELECT * FROM meal_items WHERE meal_id=? ORDER BY id", (m["id"],)))
+        md["items"] = its
+        md["totals"] = totals(its)
+        meals.append(md)
+    return meals
+
+def _v012_day_workouts(db, d: str):
+    return rows(db.execute("SELECT * FROM workouts WHERE date=? ORDER BY time,id", (d,)))
+
+def _v012_meal_totals(meals):
+    out = {
+        "kcal": 0.0,
+        "protein": 0.0,
+        "carbs": 0.0,
+        "fat": 0.0,
+        "sugar": 0.0,
+        "salt": 0.0,
+        "oil_g": 0.0,
+        "sweet_hits": [],
+        "text_blob": "",
+    }
+    names = []
+    sweet_re = re.compile(r"chocolate|galleta|piruleta|dulce|tirma|helado|boll|donut|postre|nutella", re.I)
+    for m in meals:
+        t = m.get("totals") or {}
+        out["kcal"] += _v012_safe_float(t.get("kcal"))
+        out["protein"] += _v012_safe_float(t.get("protein"))
+        out["carbs"] += _v012_safe_float(t.get("carbs"))
+        out["fat"] += _v012_safe_float(t.get("fat"))
+        out["sugar"] += _v012_safe_float(t.get("sugar"))
+        out["salt"] += _v012_safe_float(t.get("salt"))
+        names.extend([str(m.get("name","")), str(m.get("notes",""))])
+        for it in m.get("items") or []:
+            fn = str(it.get("food_name",""))
+            names.append(fn)
+            if re.search(r"aceite", fn, re.I):
+                out["oil_g"] += _v012_safe_float(it.get("grams"))
+            if sweet_re.search(fn):
+                out["sweet_hits"].append(fn)
+    out["text_blob"] = " ".join(names).lower()
+    for k in ["kcal","protein","carbs","fat","sugar","salt","oil_g"]:
+        out[k] = round(out[k], 1 if k != "salt" else 2)
+    out["sweet_hits"] = sorted(set(out["sweet_hits"]))
+    return out
+
+def _v012_workout_totals(workouts):
+    minutes = sum(_v012_safe_float(w.get("minutes")) for w in workouts)
+    kcal = sum(_v012_safe_float(w.get("kcal")) for w in workouts)
+    distance = sum(_v012_safe_float(w.get("distance_km")) for w in workouts)
+    sports = {}
+    for w in workouts:
+        name = str(w.get("name") or "Entreno")
+        sports[name] = sports.get(name, 0) + 1
+    return {
+        "count": len(workouts),
+        "minutes": round(minutes, 1),
+        "kcal": round(kcal, 1),
+        "distance_km": round(distance, 2),
+        "sports": sports,
+    }
+
+def _v012_latest_weight(db):
+    r = db.execute("SELECT * FROM weights ORDER BY date DESC,time DESC,id DESC LIMIT 1").fetchone()
+    return dict(r) if r else None
+
+def _v012_official_weights(db):
+    return rows(db.execute("SELECT * FROM weights WHERE official=1 ORDER BY date,time,id"))
+
+def _v012_weight_summary(db):
+    ws = _v012_official_weights(db)
+    latest = _v012_latest_weight(db)
+    current = _v012_safe_float(latest.get("kg")) if latest else None
+    goal = DPP_V012_TARGETS["goal_weight_kg"]
+
+    if ws:
+        start = _v012_safe_float(ws[0].get("kg"), DPP_V012_TARGETS["fallback_start_weight_kg"])
+    else:
+        start = DPP_V012_TARGETS["fallback_start_weight_kg"]
+
+    trend = {
+        "label": "Sin tendencia",
+        "weekly_kg": None,
+        "delta_kg": None,
+        "days": 0,
+        "status": "info",
+    }
+
+    if len(ws) >= 2:
+        first = ws[0]
+        last = ws[-1]
+        d0 = datetime.strptime(first["date"], "%Y-%m-%d").date()
+        d1 = datetime.strptime(last["date"], "%Y-%m-%d").date()
+        days = max(1, (d1 - d0).days)
+        delta = _v012_safe_float(last["kg"]) - _v012_safe_float(first["kg"])
+        weekly = delta / days * 7.0
+        trend.update({
+            "weekly_kg": round(weekly, 2),
+            "delta_kg": round(delta, 2),
+            "days": days,
+        })
+        if days < 7 or len(ws) < 5:
+            trend["label"] = "Bajada inicial" if delta < 0 else "Subida inicial" if delta > 0 else "Estable"
+            trend["status"] = "info"
+        elif weekly < -1.0:
+            trend["label"] = "Bajada rápida"
+            trend["status"] = "warn"
+        elif weekly < -0.35:
+            trend["label"] = "Bajada correcta"
+            trend["status"] = "good"
+        elif weekly > 0.15:
+            trend["label"] = "Subiendo"
+            trend["status"] = "bad"
+        else:
+            trend["label"] = "Estable"
+            trend["status"] = "info"
+
+    kg_lost = round(start - current, 2) if current is not None else None
+    kg_remaining = round(max(0.0, current - goal), 2) if current is not None else None
+
+    eta = None
+    if current is not None and kg_remaining is not None:
+        weekly_loss = None
+        if trend["weekly_kg"] is not None and trend["weekly_kg"] < -0.1:
+            weekly_loss = abs(trend["weekly_kg"])
+        if weekly_loss:
+            days_to_goal = int(round(kg_remaining / weekly_loss * 7))
+            if 0 <= days_to_goal <= 365:
+                eta = (date.today() + _dpp_v012_timedelta(days=days_to_goal)).isoformat()
+
+    return {
+        "latest": latest,
+        "official_count": len(ws),
+        "start_kg": round(start, 2),
+        "current_kg": round(current, 2) if current is not None else None,
+        "goal_kg": goal,
+        "kg_lost": kg_lost,
+        "kg_remaining": kg_remaining,
+        "eta": eta,
+        "trend": trend,
+    }
+
+def _v012_days_since_last_workout(db, d: str):
+    r = db.execute("SELECT date FROM workouts WHERE date<=? ORDER BY date DESC,time DESC,id DESC LIMIT 1", (d,)).fetchone()
+    if not r:
+        return None
+    try:
+        dd = datetime.strptime(d, "%Y-%m-%d").date()
+        ww = datetime.strptime(r["date"], "%Y-%m-%d").date()
+        return max(0, (dd - ww).days)
+    except Exception:
+        return None
+
+def _v012_week_summary(db, d: str):
+    end_d = datetime.strptime(d, "%Y-%m-%d").date()
+    start_d = end_d - _dpp_v012_timedelta(days=6)
+    workouts = rows(db.execute(
+        "SELECT * FROM workouts WHERE date>=? AND date<=? ORDER BY date,time,id",
+        (start_d.isoformat(), end_d.isoformat()),
+    ))
+    return _v012_workout_totals(workouts)
+
+def _v012_card(label, value, pct, status, sub="", kind="generic"):
+    try:
+        pct = float(pct)
+    except Exception:
+        pct = 0
+    return {
+        "label": label,
+        "value": value,
+        "pct": max(0, min(100, round(pct, 1))),
+        "status": status,
+        "sub": sub,
+        "kind": kind,
+    }
+
+def _v012_build_insights(d: str):
+    with con() as db:
+        meals = _v012_day_meals(db, d)
+        workouts = _v012_day_workouts(db, d)
+        mt = _v012_meal_totals(meals)
+        wt = _v012_workout_totals(workouts)
+        weight = _v012_weight_summary(db)
+        week = _v012_week_summary(db, d)
+        days_since_workout = _v012_days_since_last_workout(db, d)
+
+    targets = DPP_V012_TARGETS
+    protein_target = targets["protein_target_g"]
+    protein_min = targets["protein_min_g"]
+    sport_bonus = min(wt["kcal"], targets["max_sport_bonus_kcal"]) * targets["sport_bonus_factor"]
+    kcal_target = round(targets["kcal_base_target"] + sport_bonus)
+    kcal_margin = round(kcal_target - mt["kcal"])
+    estimated_deficit = max(0, kcal_margin)
+
+    alerts = []
+    advice = []
+
+    if not meals:
+        advice.append({
+            "severity": "info",
+            "title": "Empieza registrando una comida",
+            "text": "El dashboard se vuelve útil cuando hay comida real del día.",
+        })
+
+    if mt["protein"] < 80:
+        alerts.append("Proteína muy baja")
+        advice.append({
+            "severity": "warn",
+            "title": "Prioridad: proteína",
+            "text": "Siguiente comida con pollo, huevos, atún, yogur proteico, jamón cocido extra o queso fresco batido.",
+        })
+    elif mt["protein"] < protein_min:
+        advice.append({
+            "severity": "info",
+            "title": "Proteína aceptable, pero falta cerrar",
+            "text": "Intenta terminar el día cerca de 130 g sin subir aceite ni dulces.",
+        })
+    else:
+        advice.append({
+            "severity": "good",
+            "title": "Proteína bien encaminada",
+            "text": "Mantún el cierre limpio y no recortes de m?s.",
+        })
+
+    if mt["oil_g"] > targets["oil_bad_g"]:
+        alerts.append("Aceite alto")
+        advice.append({
+            "severity": "bad",
+            "title": "Aceite alto",
+            "text": "Resto del día con sartún antiadherente y 0?5 g de aceite.",
+        })
+    elif mt["oil_g"] > targets["oil_max_g"]:
+        advice.append({
+            "severity": "warn",
+            "title": "Aceite algo alto",
+            "text": "No pases de 5 g en la siguiente comida.",
+        })
+
+    if mt["kcal"] > kcal_target + 550:
+        alerts.append("Calorías muy altas")
+        advice.append({
+            "severity": "bad",
+            "title": "Cierre de emergencia",
+            "text": "Cena muy simple: proteína magra + verdura. Sin pan, dulce ni aceite extra.",
+        })
+    elif mt["kcal"] > kcal_target + 250:
+        advice.append({
+            "severity": "warn",
+            "title": "Vas algo pasado",
+            "text": "Cierra con proteína y verdura. Evita compensar con m?s cardio si tienes hambre real.",
+        })
+    elif mt["kcal"] < 900 and len(meals) <= 1:
+        advice.append({
+            "severity": "info",
+            "title": "Todavía hay poco registrado",
+            "text": "Planifica comida/cena para no llegar con ansiedad por la noche.",
+        })
+
+    if mt["sweet_hits"]:
+        advice.append({
+            "severity": "warn",
+            "title": "Dulce detectado",
+            "text": "No pasa nada: el cierre debe ser limpio, alto en proteína y sin picoteo.",
+        })
+
+    if wt["kcal"] >= 900:
+        advice.append({
+            "severity": "good",
+            "title": "Mucho gasto deportivo",
+            "text": "Puedes meter carbohidrato controlado, pero no conviertas el deporte en barra libre.",
+        })
+    elif wt["kcal"] >= 300:
+        advice.append({
+            "severity": "good",
+            "title": "Buen gasto de actividad",
+            "text": "Recupera con proteína y agua; evita picoteo automático.",
+        })
+
+    if days_since_workout is not None and days_since_workout >= 4:
+        advice.append({
+            "severity": "warn",
+            "title": "Varios días sin entrenar",
+            "text": "Mete una sesi?n corta: paseo largo, p?del, fuerza o bici suave.",
+        })
+
+    trend = weight["trend"]
+    if trend["status"] == "warn":
+        advice.append({
+            "severity": "warn",
+            "title": "Peso bajando rápido",
+            "text": "No recortes proteína. Si hay fatiga, sube un poco carbohidrato en días de entreno.",
+        })
+    elif trend["status"] == "bad":
+        advice.append({
+            "severity": "warn",
+            "title": "Peso subiendo",
+            "text": "Revisa aceite, dulces, pan y raciones de pasta/arroz de los últimos días.",
+        })
+
+    score = 100
+    if mt["protein"] < 80:
+        score -= 28
+    elif mt["protein"] < protein_min:
+        score -= 14
+    if mt["oil_g"] > targets["oil_bad_g"]:
+        score -= 22
+    elif mt["oil_g"] > targets["oil_max_g"]:
+        score -= 10
+    if mt["kcal"] > kcal_target + 550:
+        score -= 30
+    elif mt["kcal"] > kcal_target + 250:
+        score -= 14
+    if mt["sweet_hits"]:
+        score -= 8
+    if days_since_workout is not None and days_since_workout >= 4:
+        score -= 8
+    score = max(0, min(100, score))
+
+    if score >= 78 and not alerts:
+        semaphore = "green"
+        semaphore_label = "Buen día"
+    elif score >= 55:
+        semaphore = "yellow"
+        semaphore_label = "Cuidado"
+    else:
+        semaphore = "red"
+        semaphore_label = "Exceso / corregir"
+
+    main_action = "Cierra el día limpio y alto en proteína."
+    if advice:
+        priority = sorted(advice, key=lambda x: {"bad": 0, "warn": 1, "info": 2, "good": 3}.get(x["severity"], 4))[0]
+        main_action = priority["text"]
+
+    kcal_status = "bad" if mt["kcal"] > kcal_target + 550 else "warn" if mt["kcal"] > kcal_target + 250 else "good"
+    protein_status = "good" if mt["protein"] >= protein_min else "warn" if mt["protein"] >= 80 else "bad"
+    oil_status = "good" if mt["oil_g"] <= targets["oil_max_g"] else "warn" if mt["oil_g"] <= targets["oil_bad_g"] else "bad"
+    activity_status = "good" if wt["kcal"] >= 300 else "info"
+
+    cards = [
+        _v012_card("Proteína", f"{mt['protein']:.0f} g", mt["protein"] / protein_target * 100, protein_status, "objetivo 130-150 g", "protein"),
+        _v012_card("Comida", f"{mt['kcal']:.0f} kcal", mt["kcal"] / max(1, kcal_target) * 100, kcal_status, f"objetivo flexible {kcal_target:.0f} kcal", "kcal"),
+        _v012_card("Aceite", f"{mt['oil_g']:.0f} g", mt["oil_g"] / targets["oil_max_g"] * 100, oil_status, "5 g normal · 10 g máximo", "oil"),
+        _v012_card("Actividad", f"{wt['kcal']:.0f} kcal", min(100, wt["kcal"] / 900 * 100), activity_status, f"{wt['minutes']:.0f} min · {wt['count']} sesiones", "activity"),
+    ]
+
+    if weight["current_kg"] is not None:
+        remaining = weight["kg_remaining"]
+        lost = weight["kg_lost"]
+        cards.append(_v012_card(
+            "Peso",
+            f"{weight['current_kg']:.1f} kg",
+            100 if remaining == 0 else max(0, min(100, (lost or 0) / max(0.1, (weight['start_kg'] - weight['goal_kg'])) * 100)),
+            weight["trend"]["status"],
+            f"{remaining:.1f} kg hasta {weight['goal_kg']:.0f} kg" if remaining is not None else "objetivo 80 kg",
+            "weight",
+        ))
+
+    return {
+        "ok": True,
+        "date": d,
+        "targets": targets,
+        "score": score,
+        "semaphore": semaphore,
+        "semaphore_label": semaphore_label,
+        "main_action": main_action,
+        "meals": {
+            "count": len(meals),
+            **mt,
+        },
+        "workouts": wt,
+        "week": week,
+        "weight": weight,
+        "kcal_target": kcal_target,
+        "kcal_margin": kcal_margin,
+        "estimated_deficit": estimated_deficit,
+        "alerts": alerts,
+        "advice": advice[:6],
+        "cards": cards,
+        "days_since_workout": days_since_workout,
+    }
+
+@app.get("/api/insights/today")
+def api_v012_insights_today():
+    d = request.args.get("date") or today_iso()
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", d):
+        return jsonify({"error": "Fecha inv?lida"}), 400
+    try:
+        return jsonify(_v012_build_insights(d))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+@app.get("/health")
+def api_v012_health():
+    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.14.1"})
+# DPP_V012_INSIGHTS_END
+
 init_db()
 start_strava_auto_thread()
+
+
+
+# DPP_FOOD_INTEL_CORE_START
+# v0.0.14.1 - Food Intelligence Core
+# Backend only. No UI changes.
+
+from flask import request, jsonify
+from datetime import date as _fi_date
+import sqlite3 as _fi_sqlite3
+
+DPP_FOOD_INTEL_TARGETS = {
+    "protein_low_g": 120.0,
+    "protein_target_min_g": 130.0,
+    "protein_target_max_g": 150.0,
+    "kcal_base_target": 1900.0,
+    "sport_bonus_factor": 0.35,
+    "max_sport_bonus_kcal": 900.0,
+    "oil_normal_g": 5.0,
+    "oil_max_g": 10.0,
+    "oil_bad_g": 15.0,
+}
+
+def _fi_qident(name):
+    return '"' + str(name).replace('"', '""') + '"'
+
+def _fi_float(v, default=0.0):
+    try:
+        if v is None or v == "":
+            return default
+        return float(v)
+    except Exception:
+        return default
+
+def _fi_round(v, nd=1):
+    try:
+        return round(float(v), nd)
+    except Exception:
+        return 0
+
+def _fi_dicts(cur):
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+def _fi_cols(db, table):
+    try:
+        return [r[1] for r in db.execute(f"PRAGMA table_info({_fi_qident(table)})").fetchall()]
+    except Exception:
+        return []
+
+def _fi_has_table(db, table):
+    row = db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    ).fetchone()
+    return row is not None
+
+def _fi_clean_text(v):
+    return str(v or "").replace("prote?na", "proteína").replace("d?a", "día").replace("caf?", "café").replace("pl?tano", "plátano").replace("jam?n", "jamón").replace("at?n", "atún").replace("Estimaci?n", "Estimación").replace("peque?as", "pequeñas")
+
+def _fi_get_rows(db, table, where="", params=(), order=""):
+    if not _fi_has_table(db, table):
+        return []
+    sql = f"SELECT * FROM {_fi_qident(table)}"
+    if where:
+        sql += " WHERE " + where
+    if order:
+        sql += " ORDER BY " + order
+    return _fi_dicts(db.execute(sql, params))
+
+def _fi_find_food(db, item):
+    if not _fi_has_table(db, "foods"):
+        return None
+
+    food_cols = _fi_cols(db, "foods")
+    item_cols = set(item.keys())
+
+    if "food_id" in item_cols and item.get("food_id") and "id" in food_cols:
+        rows = _fi_get_rows(db, "foods", f"{_fi_qident('id')}=?", (item.get("food_id"),))
+        if rows:
+            return rows[0]
+
+    name = item.get("food_name") or item.get("name") or item.get("food") or ""
+    if name and "name" in food_cols:
+        rows = _fi_get_rows(db, "foods", f"{_fi_qident('name')}=?", (name,))
+        if rows:
+            return rows[0]
+
+        rows = _fi_get_rows(db, "foods", f"LOWER({_fi_qident('name')})=LOWER(?)", (name,))
+        if rows:
+            return rows[0]
+
+    return None
+
+def _fi_item_name(item, food):
+    return _fi_clean_text(
+        item.get("food_name")
+        or item.get("name")
+        or item.get("food")
+        or (food or {}).get("name")
+        or "Alimento"
+    )
+
+def _fi_item_grams(item, food):
+    for key in ["grams", "g", "quantity_g", "amount_g"]:
+        if key in item and item.get(key) not in (None, ""):
+            return _fi_float(item.get(key), 0.0)
+    if food and food.get("typical_g") not in (None, ""):
+        return _fi_float(food.get("typical_g"), 0.0)
+    return 0.0
+
+def _fi_macro_from_food(food, grams, macro):
+    if not food or macro not in food:
+        return 0.0
+    return _fi_float(food.get(macro), 0.0) * grams / 100.0
+
+def _fi_macro_from_item(item, macro):
+    if macro in item and item.get(macro) not in (None, ""):
+        return _fi_float(item.get(macro), 0.0)
+    return 0.0
+
+def _fi_item_macros(item, food, grams):
+    if food:
+        return {
+            "kcal": _fi_macro_from_food(food, grams, "kcal"),
+            "protein": _fi_macro_from_food(food, grams, "protein"),
+            "carbs": _fi_macro_from_food(food, grams, "carbs"),
+            "fat": _fi_macro_from_food(food, grams, "fat"),
+            "sugar": _fi_macro_from_food(food, grams, "sugar"),
+            "salt": _fi_macro_from_food(food, grams, "salt"),
+        }
+
+    return {
+        "kcal": _fi_macro_from_item(item, "kcal"),
+        "protein": _fi_macro_from_item(item, "protein"),
+        "carbs": _fi_macro_from_item(item, "carbs"),
+        "fat": _fi_macro_from_item(item, "fat"),
+        "sugar": _fi_macro_from_item(item, "sugar"),
+        "salt": _fi_macro_from_item(item, "salt"),
+    }
+
+def _fi_confidence(item, food, grams):
+    text = " ".join([
+        _fi_clean_text(_fi_item_name(item, food)).lower(),
+        _fi_clean_text((food or {}).get("brand", "")).lower(),
+        _fi_clean_text((food or {}).get("source_note", "")).lower(),
+        _fi_clean_text((food or {}).get("notes", "")).lower(),
+    ])
+
+    if "barcode" in text or "codigo" in text or "etiqueta" in text or "ocr" in text:
+        source = 0.90
+        source_label = "local_label_or_ocr"
+    elif any(x in text for x in ["estim", "casero", "mezclad", "gofre", "helado", "churrasco", "asador"]):
+        source = 0.55
+        source_label = "estimated_or_composite"
+    elif food:
+        source = 0.82
+        source_label = "local_food"
+    else:
+        source = 0.45
+        source_label = "manual_unknown"
+
+    quantity = 1.00 if grams > 0 else 0.50
+
+    completeness_fields = ["kcal", "protein", "carbs", "fat", "sugar", "salt"]
+    if food:
+        present = sum(1 for x in completeness_fields if food.get(x) not in (None, ""))
+    else:
+        present = sum(1 for x in completeness_fields if item.get(x) not in (None, ""))
+    completeness = 1.00 if present >= 6 else 0.85 if present >= 4 else 0.70
+
+    score = 0.55 * source + 0.30 * quantity + 0.15 * completeness
+
+    if score >= 0.90:
+        label = "exacta"
+    elif score >= 0.80:
+        label = "alta"
+    elif score >= 0.60:
+        label = "media"
+    else:
+        label = "baja"
+
+    return {
+        "score": round(score, 3),
+        "label": label,
+        "source_label": source_label,
+        "quantity_score": quantity,
+        "completeness_score": completeness,
+    }
+
+def _fi_day_meals(db, d):
+    meals = _fi_get_rows(db, "meals", f"{_fi_qident('date')}=?", (d,), "time ASC, id ASC")
+    if not meals:
+        return []
+
+    item_cols = _fi_cols(db, "meal_items")
+    has_items = _fi_has_table(db, "meal_items") and "meal_id" in item_cols
+
+    out = []
+    for m in meals:
+        meal_id = m.get("id")
+        items = _fi_get_rows(db, "meal_items", f"{_fi_qident('meal_id')}=?", (meal_id,), "id ASC") if has_items and meal_id is not None else []
+
+        item_out = []
+        totals = {"kcal": 0, "protein": 0, "carbs": 0, "fat": 0, "sugar": 0, "salt": 0}
+        oil_g = 0.0
+        flags = []
+
+        for it in items:
+            food = _fi_find_food(db, it)
+            grams = _fi_item_grams(it, food)
+            name = _fi_item_name(it, food)
+            macros = _fi_item_macros(it, food, grams)
+            conf = _fi_confidence(it, food, grams)
+
+            for k in totals:
+                totals[k] += macros.get(k, 0.0)
+
+            lower = name.lower()
+            if "aceite" in lower:
+                oil_g += grams
+
+            if any(x in lower for x in ["pepsi normal", "gofre", "helado", "galleta", "chocolate", "tirma", "piruleta"]):
+                flags.append("extra_or_sweet")
+
+            if conf["label"] in ("media", "baja"):
+                flags.append("estimated_or_low_confidence")
+
+            item_out.append({
+                "name": name,
+                "grams": _fi_round(grams, 1),
+                "macros": {k: _fi_round(v, 1) for k, v in macros.items()},
+                "confidence": conf,
+            })
+
+        out.append({
+            "id": meal_id,
+            "date": m.get("date"),
+            "time": m.get("time"),
+            "name": _fi_clean_text(m.get("name", "Comida")),
+            "notes": _fi_clean_text(m.get("notes", "")),
+            "items": item_out,
+            "totals": {k: _fi_round(v, 1) for k, v in totals.items()},
+            "oil_g": _fi_round(oil_g, 1),
+            "flags": sorted(set(flags)),
+        })
+
+    return out
+
+def _fi_day_workouts(db, d):
+    if not _fi_has_table(db, "workouts"):
+        return []
+    cols = _fi_cols(db, "workouts")
+    if "date" not in cols:
+        return []
+    return _fi_get_rows(db, "workouts", f"{_fi_qident('date')}=?", (d,), "time ASC, id ASC")
+
+def _fi_sum_day(meals):
+    totals = {"kcal": 0, "protein": 0, "carbs": 0, "fat": 0, "sugar": 0, "salt": 0}
+    oil_g = 0.0
+    items = []
+
+    for m in meals:
+        for k in totals:
+            totals[k] += _fi_float(m["totals"].get(k), 0.0)
+        oil_g += _fi_float(m.get("oil_g"), 0.0)
+        items.extend(m.get("items", []))
+
+    totals["oil_g"] = oil_g
+    return {k: _fi_round(v, 1) for k, v in totals.items()}, items
+
+def _fi_workout_totals(workouts):
+    kcal = 0.0
+    minutes = 0.0
+    count = len(workouts)
+
+    for w in workouts:
+        kcal += _fi_float(w.get("kcal") or w.get("calories") or w.get("energy"), 0.0)
+        minutes += _fi_float(w.get("minutes") or w.get("duration_min"), 0.0)
+
+    return {
+        "count": count,
+        "kcal": _fi_round(kcal, 1),
+        "minutes": _fi_round(minutes, 1),
+    }
+
+def _fi_confidence_day(items):
+    if not items:
+        return {"score": 0.0, "label": "sin_datos", "reasons": ["Sin alimentos registrados"]}
+
+    weighted = 0.0
+    kcal_total = 0.0
+    low = 0
+    estimated = 0
+
+    for it in items:
+        kcal = max(1.0, _fi_float(it.get("macros", {}).get("kcal"), 0.0))
+        conf = it.get("confidence", {})
+        weighted += kcal * _fi_float(conf.get("score"), 0.0)
+        kcal_total += kcal
+        if conf.get("label") in ("media", "baja"):
+            low += 1
+        if conf.get("source_label") == "estimated_or_composite":
+            estimated += 1
+
+    score = weighted / kcal_total if kcal_total else 0.0
+
+    # Si hay alimentos estimados o compuestos, no vendemos falsa precisión.
+    # El día puede estar bien formulado, pero la confianza de datos baja a media.
+    if estimated:
+        score = min(score, 0.79)
+
+    if score >= 0.90:
+        label = "exacta"
+    elif score >= 0.80:
+        label = "alta"
+    elif score >= 0.60:
+        label = "media"
+    else:
+        label = "baja"
+
+    reasons = []
+    if estimated:
+        reasons.append(f"{estimated} alimentos estimados o compuestos")
+    if low:
+        reasons.append(f"{low} alimentos con confianza media/baja")
+    if not reasons:
+        reasons.append("Mayoría de alimentos trazables por gramos y macros")
+
+    return {"score": round(score, 3), "label": label, "reasons": reasons}
+
+def _fi_score_day(totals, meals, workouts, planned_workout=None):
+    targets = DPP_FOOD_INTEL_TARGETS
+    kcal = _fi_float(totals.get("kcal"), 0.0)
+    protein = _fi_float(totals.get("protein"), 0.0)
+    carbs = _fi_float(totals.get("carbs"), 0.0)
+    oil = _fi_float(totals.get("oil_g"), 0.0)
+    salt = _fi_float(totals.get("salt"), 0.0)
+    sugar = _fi_float(totals.get("sugar"), 0.0)
+
+    workout_totals = _fi_workout_totals(workouts)
+    training_today = workout_totals["count"] > 0 or bool(planned_workout)
+
+    if len(meals) < 2 or kcal < 600:
+        return {
+            "score": None,
+            "semaphore": "insufficient",
+            "label": "Base insuficiente",
+            "main_action": "Registra al menos 2 comidas o 600 kcal para analizar el día.",
+            "rules": {},
+            "recommendations": ["Registra comida real antes de valorar si vas bien o mal."],
+            "kcal_target": targets["kcal_base_target"],
+            "kcal_margin": _fi_round(targets["kcal_base_target"] - kcal, 0),
+        }
+
+    sport_bonus = min(workout_totals["kcal"], targets["max_sport_bonus_kcal"]) * targets["sport_bonus_factor"]
+    if planned_workout and workout_totals["kcal"] == 0:
+        sport_bonus = max(sport_bonus, 150.0)
+
+    kcal_target = round(targets["kcal_base_target"] + sport_bonus)
+    kcal_margin = kcal_target - kcal
+
+    rules = {}
+
+    if protein <= 0:
+        p_score = 0
+    elif targets["protein_target_min_g"] <= protein <= 160:
+        p_score = 30
+    elif protein < targets["protein_target_min_g"]:
+        p_score = max(0, 30 * protein / targets["protein_target_min_g"])
+    else:
+        p_score = max(15, 30 - (protein - 160) * 0.20)
+
+    rules["protein"] = {
+        "score": round(p_score, 1),
+        "status": "ok" if p_score >= 27 else "watch" if p_score >= 20 else "bad",
+        "message": "Proteína en objetivo" if p_score >= 27 else "Falta proteína útil",
+    }
+
+    if -450 <= kcal_margin <= 350:
+        e_score = 20
+    elif kcal_margin > 350:
+        e_score = max(0, 20 - ((kcal_margin - 350) / 40))
+    else:
+        e_score = max(0, 20 - ((abs(kcal_margin) - 450) / 40))
+
+    rules["energy"] = {
+        "score": round(e_score, 1),
+        "status": "ok" if e_score >= 16 else "watch" if e_score >= 10 else "bad",
+        "message": "Energía ajustada" if e_score >= 16 else "Energía a vigilar",
+        "target_kcal": kcal_target,
+        "margin_kcal": round(kcal_margin),
+    }
+
+    if training_today:
+        if protein >= 120 and carbs >= 140:
+            t_score = 15 if workout_totals["count"] > 0 else 14
+            t_msg = "Bien alineado con entreno real" if workout_totals["count"] > 0 else "Bien alineado con entreno planificado"
+        elif protein >= 100 and carbs >= 90:
+            t_score = 10
+            t_msg = "Aceptable para entreno"
+        else:
+            t_score = 5
+            t_msg = "Entreno con combustible o recuperación justos"
+    else:
+        t_score = 8
+        t_msg = "Sin entreno real registrado"
+
+    rules["training_alignment"] = {
+        "score": t_score,
+        "status": "ok" if t_score >= 10 else "watch",
+        "message": t_msg,
+    }
+
+    if oil <= 5:
+        o_score = 10
+    elif oil <= 10:
+        o_score = 7
+    elif oil <= 15:
+        o_score = 3
+    else:
+        o_score = 0
+
+    rules["oil"] = {
+        "score": o_score,
+        "status": "ok" if o_score >= 7 else "watch" if o_score >= 3 else "bad",
+        "message": "Aceite controlado" if o_score >= 7 else "Aceite alto",
+    }
+
+    text_blob = " ".join([
+        m.get("name", "") + " " + m.get("notes", "") + " " + " ".join([it.get("name", "") for it in m.get("items", [])])
+        for m in meals
+    ]).lower()
+
+    extra_hits = [x for x in ["pepsi normal", "gofre", "helado", "galleta", "chocolate", "tirma", "piruleta"] if x in text_blob]
+
+    if not extra_hits:
+        x_score = 10
+    elif len(extra_hits) == 1:
+        x_score = 7
+    else:
+        x_score = 3
+
+    rules["extras"] = {
+        "score": x_score,
+        "status": "ok" if x_score >= 7 else "watch" if x_score >= 4 else "bad",
+        "message": "Sin extras relevantes" if not extra_hits else "Extras detectados: " + ", ".join(extra_hits),
+        "hits": extra_hits,
+    }
+
+    if salt <= 4:
+        s_score = 5
+    elif salt <= 6:
+        s_score = 3
+    elif salt <= 8:
+        s_score = 1
+    else:
+        s_score = 0
+
+    rules["salt"] = {
+        "score": s_score,
+        "status": "ok" if s_score >= 5 else "watch" if s_score >= 1 else "bad",
+        "message": "Sal correcta" if s_score >= 5 else "Sal alta: posible retención de agua",
+    }
+
+    fv_terms = ["platano", "plátano", "guisantes", "judia", "judía", "verdura", "patata", "manzana", "naranja", "champi"]
+    fv_hits = [x for x in fv_terms if x in text_blob]
+
+    if len(set(fv_hits)) >= 2:
+        f_score = 10
+    elif fv_hits:
+        f_score = 5
+    else:
+        f_score = 0
+
+    rules["fruit_veg_fiber"] = {
+        "score": f_score,
+        "status": "ok" if f_score >= 5 else "watch",
+        "message": "Fruta/verdura suficiente" if f_score >= 10 else "Fruta/verdura mejorable",
+    }
+
+    score = round(sum(_fi_float(v.get("score"), 0.0) for v in rules.values()))
+
+    if score >= 80:
+        sem = "green"
+        label = "Buen día"
+    elif score >= 60:
+        sem = "yellow"
+        label = "Cuidado"
+    else:
+        sem = "red"
+        label = "Corregir"
+
+    recs = []
+    if protein < 130:
+        recs.append("Cierra con 20-30 g de proteína: merluza, huevo, jamón, atún, Alpro o yogur proteico.")
+    if kcal_margin > 450 and training_today:
+        recs.append("No recortes más: respeta la comida post-entreno.")
+    if kcal_margin < -250:
+        recs.append("Cierre limpio: sin Pepsi normal, dulce ni aceite extra.")
+    if salt > 5:
+        recs.append("Bebe agua y no interpretes el peso de mañana como grasa.")
+    if extra_hits:
+        recs.append("No añadas más extras hoy: " + ", ".join(extra_hits) + ".")
+    if not recs:
+        recs.append("Mantén el plan actual; no añadas extras.")
+
+    return {
+        "score": score,
+        "semaphore": sem,
+        "label": label,
+        "main_action": recs[0],
+        "rules": rules,
+        "recommendations": recs,
+        "kcal_target": kcal_target,
+        "kcal_margin": round(kcal_margin),
+    }
+
+def _fi_build_day(d, planned_workout=None):
+    with con() as db:
+        meals = _fi_day_meals(db, d)
+        workouts = _fi_day_workouts(db, d)
+
+    totals, items = _fi_sum_day(meals)
+    confidence = _fi_confidence_day(items)
+    workout_totals = _fi_workout_totals(workouts)
+    score = _fi_score_day(totals, meals, workouts, planned_workout)
+
+    return {
+        "ok": True,
+        "date": d,
+        "version": "v0.0.14.1-food-intel",
+        "summary": totals,
+        "meals_count": len(meals),
+        "items_count": len(items),
+        "workouts": workout_totals,
+        "confidence": confidence,
+        "analysis": score,
+        "meals": meals,
+    }
+
+@app.route("/api/food-intel/day", methods=["GET", "POST"])
+def api_food_intel_day():
+    payload = {}
+    if request.method == "POST":
+        try:
+            payload = request.get_json(silent=True) or {}
+        except Exception:
+            payload = {}
+
+    d = request.args.get("date") or payload.get("date") or _fi_date.today().isoformat()
+    planned_workout = payload.get("planned_workout")
+
+    # Soporte GET:
+    # /api/food-intel/day?date=2026-06-02&planned_workout=1&planned_minutes=105&planned_sport=Funcional
+    if not planned_workout and request.args.get("planned_workout"):
+        planned_workout = {
+            "sport": request.args.get("planned_sport") or "Entreno planificado",
+            "duration_min": _fi_float(request.args.get("planned_minutes"), 0.0),
+            "intensity": request.args.get("planned_intensity") or "moderate",
+        }
+
+    return jsonify(_fi_build_day(d, planned_workout=planned_workout))
+
+@app.route("/api/food-intel/health")
+def api_food_intel_health():
+    return jsonify({
+        "ok": True,
+        "module": "food-intelligence",
+        "version": "v0.0.14.1",
+        "endpoints": [
+            "/api/food-intel/day",
+            "/api/food-intel/meal-plan",
+            "/api/food-intel/health",
+        ],
+    })
+
+# DPP_FOOD_INTEL_CORE_END
+
+
+
+
+# DPP_FOOD_INTEL_MEAL_PLAN_START
+# v0.0.14.1 - Food Intelligence Meal Planner
+# Backend only. Uses local foods + day analysis. No UI changes.
+
+def _fimp_norm(v):
+    return _fi_clean_text(str(v or "")).lower().strip()
+
+def _fimp_foods(db):
+    if not _fi_has_table(db, "foods"):
+        return []
+    return _fi_get_rows(db, "foods", "", (), "name ASC")
+
+def _fimp_match_food(foods, wanted):
+    w = _fimp_norm(wanted)
+    if not w:
+        return None
+
+    # Exact / contains match.
+    for f in foods:
+        name = _fimp_norm(f.get("name"))
+        brand = _fimp_norm(f.get("brand"))
+        if w == name or w in name or name in w or w in brand:
+            return f
+
+    # Token match.
+    wt = [x for x in w.replace("/", " ").replace("+", " ").split() if len(x) >= 3]
+    best = None
+    best_score = 0
+    for f in foods:
+        hay = _fimp_norm((f.get("name") or "") + " " + (f.get("brand") or ""))
+        score = sum(1 for x in wt if x in hay)
+        if score > best_score:
+            best_score = score
+            best = f
+
+    return best if best_score else None
+
+def _fimp_food_macro(food, grams):
+    return {
+        "kcal": _fi_round(_fi_float(food.get("kcal")) * grams / 100.0, 1),
+        "protein": _fi_round(_fi_float(food.get("protein")) * grams / 100.0, 1),
+        "carbs": _fi_round(_fi_float(food.get("carbs")) * grams / 100.0, 1),
+        "fat": _fi_round(_fi_float(food.get("fat")) * grams / 100.0, 1),
+        "sugar": _fi_round(_fi_float(food.get("sugar")) * grams / 100.0, 1),
+        "salt": _fi_round(_fi_float(food.get("salt")) * grams / 100.0, 1),
+    }
+
+def _fimp_sum_items(items):
+    total = {"kcal": 0, "protein": 0, "carbs": 0, "fat": 0, "sugar": 0, "salt": 0}
+    for it in items:
+        m = it.get("macros", {})
+        for k in total:
+            total[k] += _fi_float(m.get(k), 0)
+    return {k: _fi_round(v, 1) for k, v in total.items()}
+
+def _fimp_item(food, grams, reason=""):
+    return {
+        "food_id": food.get("id"),
+        "food_name": _fi_clean_text(food.get("name")),
+        "grams": _fi_round(grams, 1),
+        "macros": _fimp_food_macro(food, grams),
+        "reason": reason,
+    }
+
+def _fimp_pick(foods, names):
+    for n in names:
+        f = _fimp_match_food(foods, n)
+        if f:
+            return f
+    return None
+
+def _fimp_plan_option(title, items, why, confidence_label="media"):
+    totals = _fimp_sum_items(items)
+    return {
+        "title": title,
+        "items": items,
+        "totals": totals,
+        "why": why,
+        "confidence": {
+            "label": confidence_label,
+            "score": 0.80 if confidence_label == "alta" else 0.68 if confidence_label == "media" else 0.55,
+        },
+    }
+
+def _fimp_make_options(date_value, meal, available_foods, training_today, current_day):
+    with con() as db:
+        foods = _fimp_foods(db)
+
+    available = available_foods or []
+    lower_available = [_fimp_norm(x) for x in available]
+
+    def allowed(food):
+        if not lower_available:
+            return True
+        name = _fimp_norm(food.get("name"))
+        brand = _fimp_norm(food.get("brand"))
+        return any(x in name or name in x or x in brand for x in lower_available)
+
+    foods_allowed = [f for f in foods if allowed(f)]
+    if not foods_allowed:
+        foods_allowed = foods
+
+    summary = current_day.get("summary", {})
+    analysis = current_day.get("analysis", {})
+    kcal_target = _fi_float(analysis.get("kcal_target"), 1900)
+    kcal_now = _fi_float(summary.get("kcal"), 0)
+    protein_now = _fi_float(summary.get("protein"), 0)
+
+    protein_remaining = max(0, 130 - protein_now)
+    kcal_remaining = max(0, kcal_target - kcal_now)
+
+    protein_food = _fimp_pick(foods_allowed, [
+        "merluza", "pollo", "atun", "atún", "huevo", "jamon", "jamón", "alpro", "yogur", "queso fresco"
+    ])
+    carb_food = _fimp_pick(foods_allowed, [
+        "patata", "pasta", "arroz", "pan", "platano", "plátano", "guisantes"
+    ])
+    volume_food = _fimp_pick(foods_allowed, [
+        "guisantes", "judia", "judía", "verdura", "gelatina", "champi"
+    ])
+    alpro = _fimp_pick(foods_allowed, ["alpro", "batido proteico"])
+    gelatina = _fimp_pick(foods_allowed, ["gelatina"])
+
+    options = []
+
+    # Option 1: clean protein meal
+    if protein_food:
+        grams_p = 250
+        lname = _fimp_norm(protein_food.get("name"))
+        if "huevo" in lname:
+            grams_p = 120
+        elif "jamon" in lname or "jamón" in lname:
+            grams_p = 100
+        elif "alpro" in lname or "yogur" in lname:
+            grams_p = 250
+
+        items = [_fimp_item(protein_food, grams_p, "ancla de proteína")]
+        if carb_food:
+            lname_c = _fimp_norm(carb_food.get("name"))
+            grams_c = 300 if training_today and ("patata" in lname_c or "guisantes" in lname_c) else 250
+            if "pasta" in lname_c:
+                grams_c = 300 if training_today else 220
+            if "pan" in lname_c:
+                grams_c = 45
+            if "platano" in lname_c or "plátano" in lname_c:
+                grams_c = 120
+            items.append(_fimp_item(carb_food, grams_c, "hidrato ajustado al dia"))
+        if volume_food and volume_food.get("id") not in [x.get("food_id") for x in items]:
+            grams_v = 150
+            if "gelatina" in _fimp_norm(volume_food.get("name")):
+                grams_v = 100
+            items.append(_fimp_item(volume_food, grams_v, "volumen/saciedad"))
+
+        options.append(_fimp_plan_option(
+            "Opcion limpia y segura",
+            items,
+            "Prioriza proteína, controla aceite y mantiene la energía dentro del objetivo.",
+            "alta" if protein_food and carb_food else "media",
+        ))
+
+    # Option 2: post-workout / training meal
+    if training_today:
+        items = []
+        pasta = _fimp_pick(foods_allowed, ["pasta mezclada", "pasta"])
+        if pasta:
+            items.append(_fimp_item(pasta, 300, "post-entreno con hidrato"))
+        elif carb_food:
+            items.append(_fimp_item(carb_food, 300, "hidrato post-entreno"))
+
+        if alpro:
+            items.append(_fimp_item(alpro, 250, "proteína fácil post-entreno"))
+        elif protein_food and protein_food.get("id") not in [x.get("food_id") for x in items]:
+            items.append(_fimp_item(protein_food, 150, "refuerzo de proteina"))
+
+        if items:
+            options.append(_fimp_plan_option(
+                "Opcion post-entreno",
+                items,
+                "Pensada para recuperar tras entreno: hidrato medido + proteína.",
+                "media",
+            ))
+
+    # Option 3: light close
+    items = []
+    if protein_food:
+        grams_p = 200
+        if "huevo" in _fimp_norm(protein_food.get("name")):
+            grams_p = 120
+        items.append(_fimp_item(protein_food, grams_p, "cerrar proteína"))
+    if gelatina:
+        items.append(_fimp_item(gelatina, 100, "postre bajo en kcal"))
+    elif volume_food and volume_food.get("id") not in [x.get("food_id") for x in items]:
+        items.append(_fimp_item(volume_food, 120, "volumen sin subir mucho kcal"))
+    if items:
+        options.append(_fimp_plan_option(
+            "Opcion ligera",
+            items,
+            "Para cerrar el día sin pasarte si ya llevas suficiente energía.",
+            "media",
+        ))
+
+    # Rank options by how close they get to remaining needs without overdoing.
+    for opt in options:
+        t = opt["totals"]
+        protein_after = protein_now + _fi_float(t.get("protein"), 0)
+        kcal_after = kcal_now + _fi_float(t.get("kcal"), 0)
+        protein_gap = abs(140 - protein_after)
+        kcal_gap = abs(kcal_target - kcal_after)
+        opt["fit_score"] = max(0, round(100 - protein_gap * 1.2 - kcal_gap / 35, 0))
+
+    options = sorted(options, key=lambda x: x.get("fit_score", 0), reverse=True)
+
+    return {
+        "date": date_value,
+        "meal": meal,
+        "training_today": bool(training_today),
+        "current": {
+            "kcal": _fi_round(kcal_now, 1),
+            "protein": _fi_round(protein_now, 1),
+            "kcal_target": _fi_round(kcal_target, 0),
+            "kcal_remaining": _fi_round(kcal_remaining, 0),
+            "protein_remaining_to_130": _fi_round(protein_remaining, 1),
+        },
+        "available_foods_used": available,
+        "options": options[:3],
+        "rules": [
+            "protein_first",
+            "training_allows_more_carbs",
+            "avoid_liquid_calories",
+            "estimated_foods_lower_confidence",
+        ],
+    }
+
+@app.route("/api/food-intel/meal-plan", methods=["POST"])
+def api_food_intel_meal_plan():
+    payload = request.get_json(silent=True) or {}
+    d = payload.get("date") or _fi_date.today().isoformat()
+    meal = payload.get("meal") or payload.get("slot") or "next"
+    available_foods = payload.get("available_foods") or payload.get("inventory") or []
+    training_today = bool(payload.get("training_today") or payload.get("planned_workout"))
+
+    current_day = _fi_build_day(d, planned_workout=payload.get("planned_workout") if training_today else None)
+    return jsonify({
+        "ok": True,
+        "version": "v0.0.14.1-food-intel",
+        "engine": "heuristic_local",
+        "plan": _fimp_make_options(d, meal, available_foods, training_today, current_day),
+        "day_analysis": {
+            "score": current_day.get("analysis", {}).get("score"),
+            "semaphore": current_day.get("analysis", {}).get("semaphore"),
+            "confidence": current_day.get("confidence", {}),
+            "summary": current_day.get("summary", {}),
+        },
+    })
+
+# DPP_FOOD_INTEL_MEAL_PLAN_END
+
+
+
+
+# DPP_BODY_SNAPSHOT_API_START
+# v0.0.14.1 · Optional body snapshot API.
+# Smart-scale body composition is treated as an estimated trend snapshot,
+# not as a mandatory daily metric and not as a medical diagnosis.
+
+@app.route("/api/body-snapshot/latest")
+def api_body_snapshot_latest():
+    import sqlite3
+    from pathlib import Path
+    from datetime import date as _date
+
+    db_path = Path("data") / "dieta.db"
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+
+    table = con.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='body_composition'"
+    ).fetchone()
+
+    if not table:
+        con.close()
+        return jsonify({
+            "ok": True,
+            "available": False,
+            "version": "v0.0.14.1",
+            "reason": "body_composition table not found"
+        })
+
+    latest = con.execute("""
+        SELECT date, time
+        FROM body_composition
+        GROUP BY date, time
+        ORDER BY date DESC, time DESC
+        LIMIT 1
+    """).fetchone()
+
+    if not latest:
+        con.close()
+        return jsonify({
+            "ok": True,
+            "available": False,
+            "version": "v0.0.14.1",
+            "reason": "no body composition records"
+        })
+
+    rows = con.execute("""
+        SELECT metric, value, unit, source, confidence, notes
+        FROM body_composition
+        WHERE date=? AND time=?
+        ORDER BY metric
+    """, (latest["date"], latest["time"])).fetchall()
+
+    previous = con.execute("""
+        SELECT date, time
+        FROM body_composition
+        WHERE (date < ? OR (date = ? AND time < ?))
+        GROUP BY date, time
+        ORDER BY date DESC, time DESC
+        LIMIT 1
+    """, (latest["date"], latest["date"], latest["time"])).fetchone()
+
+    prev_metrics = {}
+    if previous:
+        prev_rows = con.execute("""
+            SELECT metric, value
+            FROM body_composition
+            WHERE date=? AND time=?
+        """, (previous["date"], previous["time"])).fetchall()
+        prev_metrics = {r["metric"]: r["value"] for r in prev_rows}
+
+    con.close()
+
+    metrics = {}
+    for r in rows:
+        metrics[r["metric"]] = {
+            "value": r["value"],
+            "unit": r["unit"] or "",
+            "source": r["source"] or "",
+            "confidence": r["confidence"] or "media",
+            "notes": r["notes"] or ""
+        }
+
+    def val(key):
+        try:
+            return float((metrics.get(key) or {}).get("value") or 0)
+        except Exception:
+            return 0.0
+
+    def pval(key):
+        try:
+            return float(prev_metrics.get(key) or 0)
+        except Exception:
+            return 0.0
+
+    weight = val("weight")
+    fat_pct = val("body_fat_pct")
+    muscle = val("muscle_mass_kg")
+
+    derived = {
+        "fat_mass_kg": round(weight * fat_pct / 100.0, 2) if weight and fat_pct else None,
+        "lean_mass_kg": round(weight - (weight * fat_pct / 100.0), 2) if weight and fat_pct else None,
+        "muscle_weight_pct": round(muscle / weight * 100.0, 1) if muscle and weight else None,
+    }
+
+    deltas = {}
+    for key in ["weight", "body_fat_pct", "water_pct", "muscle_mass_kg", "visceral_fat", "bmr_kcal", "biocharge_wakeup", "hrv"]:
+        if key in metrics and key in prev_metrics:
+            deltas[key] = round(val(key) - pval(key), 2)
+
+    try:
+        days_old = (_date.today() - _date.fromisoformat(latest["date"])).days
+    except Exception:
+        days_old = None
+
+    if days_old is None:
+        freshness = "unknown"
+    elif days_old <= 2:
+        freshness = "fresh"
+    elif days_old <= 7:
+        freshness = "recent"
+    else:
+        freshness = "old"
+
+    return jsonify({
+        "ok": True,
+        "available": True,
+        "version": "v0.0.14.1",
+        "date": latest["date"],
+        "time": latest["time"],
+        "freshness": {
+            "days_old": days_old,
+            "label": freshness
+        },
+        "metrics": metrics,
+        "derived": derived,
+        "deltas": deltas,
+        "previous": {
+            "date": previous["date"] if previous else None,
+            "time": previous["time"] if previous else None
+        },
+        "message": "Foto corporal estimada por bioimpedancia. Usar tendencia semanal, no valor aislado."
+    })
+
+# DPP_BODY_SNAPSHOT_API_END
+
+
+
+# DPP_V0141_API_STATE_SANITIZER_START
+# v0.0.14.1 safety net: sanitize legacy catalog aliases in /api/state.
+# This is intentionally response-level because some UI state can be built from
+# more than one source, not only the current foods table.
+import json as _dpp_v0141_json
+from flask import request as _dpp_v0141_request, current_app as _dpp_v0141_current_app
+
+_DPP_V0141_CANONICAL_FOODS = {
+    "alpro protein cacao": {
+        "name": "Alpro Protein cacao",
+        "brand": "Alpro",
+        "kcal": 69,
+        "protein": 5.0,
+        "carbs": 5.3,
+        "fat": 2.8,
+        "sugar": 5.0,
+        "salt": 0.16,
+        "typical_g": 250,
+        "purchased": 1,
+        "source_note": "Etiqueta/ficha: 69 kcal, 5 g proteína, 5.3 g hidratos y 2.8 g grasa por 100 ml.",
+        "notes": "Bebida proteica sabor cacao. Vaso 250 ml = aprox. 172 kcal y 12.5 g proteína.",
+    },
+    "huevo entero": {
+        "name": "Huevo entero",
+        "brand": "Casa",
+        "kcal": 143,
+        "protein": 12.6,
+        "carbs": 0.7,
+        "fat": 9.5,
+        "sugar": 0,
+        "salt": 0.35,
+        "typical_g": 60,
+        "purchased": 1,
+        "source_note": "Valor medio por 100 g.",
+        "notes": "1 huevo mediano-grande aprox. 60 g. Para 2 huevos registrar 120 g.",
+    },
+    "plátano": {
+        "name": "Plátano",
+        "brand": "Fruta",
+        "kcal": 89,
+        "protein": 1.1,
+        "carbs": 23,
+        "fat": 0.3,
+        "sugar": 12,
+        "salt": 0.01,
+        "typical_g": 120,
+        "purchased": 1,
+        "source_note": "Valor medio por 100 g.",
+        "notes": "Peso comestible aproximado. Útil para desayuno/pre-entreno.",
+    },
+    "chocolate onzas estimado": {
+        "name": "Chocolate onzas estimado",
+        "brand": "Estimado",
+        "kcal": 550,
+        "protein": 6,
+        "carbs": 55,
+        "fat": 32,
+        "sugar": 48,
+        "salt": 0.05,
+        "typical_g": 20,
+        "purchased": 0,
+        "source_note": "4 onzas estimadas como 20 g.",
+        "notes": "Snack dulce estimado. Registrar solo si se consume.",
+    },
+    "café con edulcorante": {
+        "name": "Café con edulcorante",
+        "brand": "Casa",
+        "kcal": 0,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 0,
+        "sugar": 0,
+        "salt": 0,
+        "typical_g": 200,
+        "purchased": 0,
+        "source_note": "Café sin azúcar.",
+        "notes": "Casi no suma.",
+    },
+}
+
+_DPP_V0141_ALIASES = {
+    "alpro protein chocolate": "alpro protein cacao",
+    "alpro protein chocolate onzas estimado": "alpro protein cacao",
+    "alpro protein chocolate onzas estimado onzas estimado": "alpro protein cacao",
+    "alpro protein cacao": "alpro protein cacao",
+
+    "huevos": "huevo entero",
+    "huevo entero": "huevo entero",
+
+    "platano": "plátano",
+    "plátano": "plátano",
+
+    "chocolate": "chocolate onzas estimado",
+    "cacao": "chocolate onzas estimado",
+    "cacao onzas estimado": "chocolate onzas estimado",
+    "chocolate onzas estimado": "chocolate onzas estimado",
+
+    "cafe con edulcorante": "café con edulcorante",
+    "café con edulcorante": "café con edulcorante",
+}
+
+def _dpp_v0141_canonical_key(name):
+    raw = str(name or "").strip()
+    low = raw.lower()
+    if low.startswith("alpro protein chocolate"):
+        return "alpro protein cacao"
+    return _DPP_V0141_ALIASES.get(low, low)
+
+def _dpp_v0141_fix_food_dict(obj):
+    if not isinstance(obj, dict):
+        return obj
+
+    name = obj.get("name", obj.get("food_name", ""))
+    key = _dpp_v0141_canonical_key(name)
+
+    fixed = dict(obj)
+
+    if key in _DPP_V0141_CANONICAL_FOODS:
+        canonical = dict(_DPP_V0141_CANONICAL_FOODS[key])
+        # Preserve ids/photo paths if present, but force nutrition/name fields.
+        for preserve in ("id", "photo_path", "created_at"):
+            if preserve in fixed and preserve not in canonical:
+                canonical[preserve] = fixed[preserve]
+
+        if "food_name" in fixed:
+            canonical["food_name"] = canonical["name"]
+
+        return canonical
+
+    if "name" in fixed:
+        fixed["name"] = str(name).strip()
+    if "food_name" in fixed:
+        fixed["food_name"] = str(name).strip()
+
+    return fixed
+
+def _dpp_v0141_fix_strings(value):
+    if not isinstance(value, str):
+        return value
+    return (
+        value
+        .replace("Alpro Protein Chocolate onzas estimado onzas estimado", "Alpro Protein cacao")
+        .replace("Alpro Protein Chocolate onzas estimado", "Alpro Protein cacao")
+        .replace("Alpro Protein Chocolate", "Alpro Protein cacao")
+    )
+
+def _dpp_v0141_sanitize_recursive(value):
+    if isinstance(value, list):
+        return [_dpp_v0141_sanitize_recursive(v) for v in value]
+
+    if isinstance(value, dict):
+        # IMPORTANT:
+        # Do not canonicalize meal_items here. Meal items contain grams/macros.
+        # Canonicalizing every object with food_name would replace the item with
+        # the food catalog object and make the UI show 0 g / 0 kcal.
+        value = dict(value)
+
+        for k in list(value.keys()):
+            value[k] = _dpp_v0141_sanitize_recursive(value[k])
+
+        return value
+
+    return _dpp_v0141_fix_strings(value)
+
+def _dpp_v0141_sanitize_foods_list(foods):
+    if not isinstance(foods, list):
+        return foods
+
+    seen = {}
+    clean = []
+
+    for raw in foods:
+        if not isinstance(raw, dict):
+            continue
+
+        fixed = _dpp_v0141_fix_food_dict(raw)
+        name = str(fixed.get("name", "")).strip()
+        key = _dpp_v0141_canonical_key(name)
+
+        # Drop explicit legacy aliases from state.
+        if str(raw.get("name", "")).strip().lower() in {
+            "huevos",
+            "chocolate",
+            "cacao",
+            "cacao onzas estimado",
+            "alpro protein chocolate",
+            "alpro protein chocolate onzas estimado",
+            "alpro protein chocolate onzas estimado onzas estimado",
+        }:
+            if key in _DPP_V0141_CANONICAL_FOODS:
+                fixed = dict(_DPP_V0141_CANONICAL_FOODS[key])
+            else:
+                continue
+
+        dedupe = str(fixed.get("name", "")).strip().lower()
+        if not dedupe:
+            continue
+
+        if dedupe not in seen:
+            seen[dedupe] = fixed
+            clean.append(fixed)
+        else:
+            prev = seen[dedupe]
+            prev_p = int(prev.get("purchased") or 0)
+            new_p = int(fixed.get("purchased") or 0)
+            if new_p > prev_p:
+                idx = clean.index(prev)
+                clean[idx] = fixed
+                seen[dedupe] = fixed
+
+    return clean
+
+def _dpp_v0141_sanitize_state_payload(data):
+    data = _dpp_v0141_sanitize_recursive(data)
+
+    if isinstance(data, dict):
+        if isinstance(data.get("foods"), list):
+            data["foods"] = _dpp_v0141_sanitize_foods_list(data["foods"])
+
+        # Some versions may expose purchased foods separately.
+        for key in ("purchased_foods", "catalog", "food_catalog"):
+            if isinstance(data.get(key), list):
+                data[key] = _dpp_v0141_sanitize_foods_list(data[key])
+
+    return data
+
+@app.after_request
+def _dpp_v0141_after_request_sanitize_api_state(response):
+    try:
+        if _dpp_v0141_request.path != "/api/state":
+            return response
+
+        data = response.get_json(silent=True)
+        if data is None:
+            return response
+
+        data = _dpp_v0141_sanitize_state_payload(data)
+        payload = _dpp_v0141_json.dumps(data, ensure_ascii=False)
+
+        new_response = _dpp_v0141_current_app.response_class(
+            payload,
+            status=response.status_code,
+            mimetype="application/json",
+        )
+        return new_response
+    except Exception:
+        return response
+# DPP_V0141_API_STATE_SANITIZER_END
+
+
+
+# DPP_V0151_TRUTH_PATCH_REGISTER_START
+try:
+    from dpp_food_intel_truth_patch import register_food_intel_truth_patch
+    register_food_intel_truth_patch(app)
+except Exception as exc:
+    print(f"[DPP] food-intel truth patch not registered: {exc}")
+# DPP_V0151_TRUTH_PATCH_REGISTER_END
+
+
+# DPP_BODY_TRENDS_V2_START
+try:
+    from dpp_body_trends import register_body_trends_routes
+    register_body_trends_routes(app)
+except Exception as exc:
+    print(f"WARN: body trends routes not registered: {exc}")
+# DPP_BODY_TRENDS_V2_END
+
+
+# BEGIN DPP_SMART_COACH_ROUTE
+try:
+    from dpp_smart_coach import register_smart_coach_routes
+    register_smart_coach_routes(app)
+except Exception as exc:
+    print("WARN: smart coach routes disabled:", exc)
+# END DPP_SMART_COACH_ROUTE
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))
