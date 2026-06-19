@@ -75,7 +75,7 @@
       hero.dataset.dppCoachV17 = "1";
 
       const kicker = hero.querySelector(".fi13-kicker") || findTextElement("Inteligencia del día");
-      if (kicker) kicker.textContent = "Coach del día · v0.0.20";
+      if (kicker) kicker.textContent = "Coach del día · v0.0.21-dev";
 
       const h2 = hero.querySelector("h2");
       if (h2) h2.textContent = c.status === "base_insuficiente" ? "Aún no hay score, pero sí hay decisión" : (c.headline || "Coach del día");
@@ -176,7 +176,7 @@
 
     const eyebrow = document.querySelector(".eyebrow");
     if (eyebrow && eyebrow.textContent.includes("v0.0.16")) {
-      eyebrow.textContent = eyebrow.textContent.replace("v0.0.16", "v0.0.20");
+      eyebrow.textContent = eyebrow.textContent.replace("v0.0.16", "v0.0.21-dev");
     }
 
     return true;
