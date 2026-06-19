@@ -1,5 +1,10 @@
 # Diet Pro Planner
 
+[![CI](https://github.com/odegaard12/Diet-Pro-Planner/actions/workflows/ci.yml/badge.svg)](https://github.com/odegaard12/Diet-Pro-Planner/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
+
 **Current version:** v0.0.19  
 **Latest release:** v0.0.19 — Editable pantry and practical Coach actions  
 **License:** MIT  
@@ -80,6 +85,17 @@ Private/local files are excluded from Git, including:
 - tokens and API secrets
 - backups and ZIP files
 - local label photos and OCR cache files
+
+Public CI includes a tracked-file privacy guard so these runtime files cannot be added accidentally.
+
+## Development and security
+
+Pull requests run Python and JavaScript checks, public route tests, the frontend anti-monolith guard, the privacy guard and a real Docker `/health` smoke test.
+
+- Contribution workflow: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Vulnerability reporting: [`SECURITY.md`](SECURITY.md)
+- CI workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+- Dependency policy: [`.github/dependabot.yml`](.github/dependabot.yml)
 
 ## Docker
 
