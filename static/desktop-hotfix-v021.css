@@ -1,24 +1,32 @@
-/* Diet Pro Planner v0.0.21 · desktop-only hotfix */
+/* Diet Pro Planner v0.0.21 · desktop-only correction */
 @media (min-width:981px){
+  html[data-ui="ui5"] body.dpp-modern-shell{
+    background:#f4f6fa!important;
+  }
+
   html[data-ui="ui5"] body.dpp-modern-shell .app-shell{
-    grid-template-columns:176px minmax(0,1fr)!important;
+    grid-template-columns:220px minmax(0,1fr)!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .sidebar{
     width:auto!important;
     min-width:0!important;
     max-width:none!important;
-    padding:18px 12px!important;
+    padding:18px 14px!important;
     overflow-y:auto!important;
     overflow-x:hidden!important;
+    background:#111b2e!important;
+    color:#fff!important;
+    border-right:0!important;
+    box-shadow:12px 0 34px rgba(15,23,42,.12)!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .brand{
     display:flex!important;
     align-items:center!important;
     justify-content:flex-start!important;
-    gap:10px!important;
-    padding:2px 6px 18px!important;
+    gap:11px!important;
+    padding:2px 6px 20px!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .brand-logo{
@@ -26,6 +34,7 @@
     height:44px!important;
     flex:0 0 44px!important;
     border-radius:14px!important;
+    box-shadow:0 10px 24px rgba(0,0,0,.25)!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .brand>div{
@@ -36,32 +45,55 @@
   html[data-ui="ui5"] body.dpp-modern-shell .brand h1{
     display:block!important;
     margin:0!important;
-    font-size:13px!important;
-    line-height:1.05!important;
+    color:#fff!important;
+    font-size:14px!important;
+    line-height:1.1!important;
     white-space:nowrap!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .brand p{
-    display:none!important;
+    display:block!important;
+    margin:4px 0 0!important;
+    color:#94a3b8!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .nav{
-    gap:5px!important;
+    gap:4px!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .nav button,
   html[data-ui="ui5"] body.dpp-modern-shell .nav a{
-    min-height:50px!important;
+    min-height:46px!important;
     display:grid!important;
-    grid-template-columns:32px minmax(0,1fr)!important;
+    grid-template-columns:30px minmax(0,1fr)!important;
     grid-template-rows:1fr!important;
     align-items:center!important;
     justify-items:start!important;
-    gap:8px!important;
-    padding:8px 10px!important;
-    border-radius:14px!important;
-    font-size:18px!important;
+    gap:9px!important;
+    padding:7px 10px!important;
+    border-radius:12px!important;
+    background:transparent!important;
+    color:#c7d0df!important;
+    font-size:17px!important;
     text-align:left!important;
+    box-shadow:none!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .nav button:hover,
+  html[data-ui="ui5"] body.dpp-modern-shell .nav a:hover{
+    transform:none!important;
+    background:rgba(255,255,255,.07)!important;
+    color:#fff!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .nav .active,
+  html[data-ui="ui5"] body.dpp-modern-shell .nav button.active,
+  html[data-ui="ui5"] body.dpp-modern-shell .nav a.active{
+    background:linear-gradient(135deg,#3157d5,#6d5dfc)!important;
+    color:#fff!important;
+    box-shadow:0 8px 20px rgba(49,87,213,.28)!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .nav button span,
@@ -74,66 +106,122 @@
     overflow:hidden!important;
     text-overflow:ellipsis!important;
     white-space:nowrap!important;
+    color:inherit!important;
     font-size:12px!important;
     line-height:1.1!important;
-    font-weight:800!important;
+    font-weight:750!important;
     text-align:left!important;
   }
 
-  html[data-ui="ui5"] body.dpp-modern-shell .nav small{
+  html[data-ui="ui5"] body.dpp-modern-shell .nav small,
+  html[data-ui="ui5"] body.dpp-modern-shell .side-rule{
     display:none!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .main{
-    padding-left:26px!important;
-    padding-right:26px!important;
-    padding-bottom:104px!important;
+    padding:20px 28px 56px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .topbar,
+  html[data-ui="ui5"] body.dpp-modern-shell #view{
+    width:min(1180px,100%)!important;
+    max-width:1180px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .topbar{
+    position:static!important;
+    min-height:64px!important;
+    margin:0 auto 16px!important;
+    padding:12px 16px!important;
+    border:1px solid #e7ebf2!important;
+    border-radius:18px!important;
+    background:#fff!important;
+    box-shadow:0 8px 24px rgba(25,39,68,.06)!important;
+    backdrop-filter:none!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .topbar h2{
+    font-size:1.65rem!important;
+    letter-spacing:-.035em!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .eyebrow{
+    font-size:9px!important;
   }
 
   html[data-ui="ui5"] body.dpp-modern-shell .global-cta{
-    position:fixed!important;
-    inset:auto!important;
-    top:auto!important;
-    right:auto!important;
-    bottom:18px!important;
-    left:calc(50% + 88px)!important;
-    transform:translateX(-50%)!important;
-    width:min(700px,calc(100vw - 230px))!important;
-    min-width:0!important;
-    max-width:700px!important;
-    height:66px!important;
-    min-height:66px!important;
-    max-height:66px!important;
+    display:none!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-home{
+    gap:12px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-hero{
+    min-height:152px!important;
+    padding:20px 22px!important;
+    gap:18px!important;
+    border-radius:24px!important;
+    box-shadow:0 16px 38px rgba(49,87,213,.20)!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-hero h2{
+    margin:6px 0!important;
+    font-size:clamp(2rem,3vw,2.65rem)!important;
+    line-height:1.02!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-hero p{
     margin:0!important;
-    padding:7px!important;
-    display:flex!important;
-    flex-direction:row!important;
-    align-items:center!important;
-    justify-content:center!important;
-    grid-template-columns:none!important;
-    grid-auto-flow:initial!important;
-    gap:6px!important;
-    overflow:hidden!important;
+    font-size:.92rem!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-score{
+    min-width:104px!important;
+    min-height:104px!important;
+    width:104px!important;
+    height:104px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-score b{
+    font-size:2.25rem!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-weight{
+    margin-top:12px!important;
+    padding:16px!important;
+    border-radius:18px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-cards{
+    gap:10px!important;
+    margin-top:10px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-card{
+    min-height:108px!important;
+    padding:15px!important;
+    border-radius:18px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-card b{
+    font-size:1.5rem!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-grid{
+    gap:12px!important;
+    margin-top:12px!important;
+  }
+
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-panel,
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp12-details,
+  html[data-ui="ui5"] body.dpp-modern-shell .dpp-coach-panel-v17{
     border-radius:20px!important;
+    box-shadow:0 8px 24px rgba(25,39,68,.06)!important;
   }
 
-  html[data-ui="ui5"] body.dpp-modern-shell .global-cta button{
-    flex:1 1 0!important;
-    align-self:center!important;
-    width:auto!important;
-    min-width:0!important;
-    max-width:none!important;
-    height:52px!important;
-    min-height:52px!important;
-    max-height:52px!important;
-    margin:0!important;
-    padding:8px 10px!important;
-    overflow:hidden!important;
-  }
-
-  html[data-ui="ui5"] body.dpp-modern-shell .global-cta button b{
-    overflow:hidden!important;
-    text-overflow:ellipsis!important;
-    white-space:nowrap!important;
+  html[data-ui="ui5"] body.dpp-modern-shell .floating-help{
+    right:24px!important;
+    bottom:22px!important;
   }
 }
