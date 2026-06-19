@@ -5,14 +5,27 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
 
-**Current version:** v0.0.19  
-**Latest release:** v0.0.19 — Editable pantry and practical Coach actions  
+**Current version:** v0.0.20  
+**Latest release:** v0.0.20 — Planned versus real activity  
 **License:** MIT  
 **Stack:** Python · Flask · Vanilla JS · Docker · Local-first
 
 Diet Pro Planner is a self-hosted cockpit for nutrition, body composition, sport and daily diet decisions.
 
 It is built for private daily use on a Raspberry Pi with Docker. Public application code stays in GitHub; food logs, SQLite databases, Strava tokens, uploads, pantry contents and body-composition records stay local.
+
+## v0.0.20 — Planned versus real activity
+
+- Adds a dedicated **Plan deporte** weekly view.
+- Plans activities by date, time, type, duration, distance, target kcal, intensity and notes.
+- Matches planned sessions automatically with Strava or manual workouts.
+- Shows completed, changed, pending, upcoming, missed, skipped and cancelled states.
+- Shows unplanned workouts as **Extra real**.
+- Adds weekly adherence, planned minutes, real minutes and real kcal summaries.
+- Supports editing, skipping, reactivating and deleting activity plans.
+- Stores activity plans privately in the local SQLite database.
+- Prevents known duplicate Strava sessions from being imported again.
+- Includes CI, Docker smoke tests, privacy guardrails and security documentation.
 
 ## v0.0.19 — Editable pantry and practical Coach actions
 
@@ -141,6 +154,13 @@ http://192.168.68.103:8099
 - `GET /api/pantry/v2`
 - `POST /api/pantry/v2`
 
+### Activity planning
+
+- `GET /api/activity-plan`
+- `POST /api/activity-plan`
+- `PUT /api/activity-plan/<id>`
+- `DELETE /api/activity-plan/<id>`
+
 ### Body composition
 
 - `GET /api/body-snapshot/latest`
@@ -161,6 +181,14 @@ http://192.168.68.103:8099
 - `POST /api/integrations/strava/disconnect`
 
 ## Releases
+
+### v0.0.20 — Planned versus real activity
+
+- Weekly planned-versus-real activity view.
+- Automatic matching with Strava and manual workouts.
+- Activity status, adherence and weekly volume summaries.
+- Duplicate Strava-session suppression.
+- CI, Docker smoke tests and privacy guardrails.
 
 ### v0.0.19 — Editable pantry and practical Coach actions
 
@@ -201,7 +229,6 @@ v0.0.15, v0.0.14.2, v0.0.14.1, v0.0.14, v0.0.13, v0.0.12, v0.0.11, v0.0.10, v0.0
 
 ## Roadmap
 
-- Planned activity input and planned-versus-real activity view.
 - Automatic day closing when nutrition goals are reached.
 - OpenAI/Gemini BYOK settings.
 - AI response cache and daily limits.
