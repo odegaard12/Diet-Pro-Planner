@@ -59,7 +59,7 @@ pantry.write_text(text, encoding="utf-8")
 
 activity = Path("static/activity-plan-v020.js")
 text = activity.read_text(encoding="utf-8")
-needle = "  const VERSION = 'v0.0.20-dev';\n"
+needle = "  const VERSION = 'v0.0.20';\n"
 if "window.DPP_RUNTIME_VERSION = VERSION;" not in text:
     if needle not in text:
         raise SystemExit("No se encontró VERSION en activity plan")
@@ -76,8 +76,8 @@ activity.write_text(text, encoding="utf-8")
 
 index = Path("static/index.html")
 text = index.read_text(encoding="utf-8")
-text = text.replace("Diet Pro Planner · v0.0.19", "Diet Pro Planner · v0.0.20-dev")
-text = text.replace("Dieta controlada · v0.0.19", "Dieta controlada · v0.0.20-dev")
+text = text.replace("Diet Pro Planner · v0.0.19", "Diet Pro Planner · v0.0.20")
+text = text.replace("Dieta controlada · v0.0.19", "Dieta controlada · v0.0.20")
 text = text.replace("pantry-v019-polish.js?v=019c", "pantry-v019-polish.js?v=020-lockfix")
 text = text.replace("activity-plan-v020.js?v=020a", "activity-plan-v020.js?v=020-lockfix")
 index.write_text(text, encoding="utf-8")
@@ -124,7 +124,7 @@ curl -fsS "http://127.0.0.1:8099/api/activity-plan?from=2026-06-15&to=2026-06-21
 python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True; print("version=",d.get("version"),"plans=",len(d.get("plans",[])),"extras=",len(d.get("extra_workouts",[])))'
 
 echo "== HTML CACHE =="
-curl -fsS http://127.0.0.1:8099/ | grep -E '020-lockfix|v0.0.20-dev' | head -n 6
+curl -fsS http://127.0.0.1:8099/ | grep -E '020-lockfix|v0.0.20' | head -n 6
 
 FAILED=0
 trap - EXIT

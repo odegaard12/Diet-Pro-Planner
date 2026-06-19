@@ -5,7 +5,7 @@
   if (window.__DPP_ACTIVITY_PLAN_V020__) return;
   window.__DPP_ACTIVITY_PLAN_V020__ = true;
 
-  const VERSION = 'v0.0.20-dev';
+  const VERSION = 'v0.0.20';
   let weekStart = mondayOf(new Date());
   let activityData = null;
   let editingId = null;

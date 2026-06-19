@@ -10,7 +10,7 @@ from typing import Any
 from flask import jsonify, request
 
 
-VERSION = "v0.0.20-dev"
+VERSION = "v0.0.20"
 VALID_INTENSITIES = {"easy", "moderate", "hard", "recovery"}
 VALID_MANUAL_STATUSES = {"planned", "skipped", "cancelled"}
 

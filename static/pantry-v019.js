@@ -1,4 +1,4 @@
-/* Diet Pro Planner v0.0.20-dev · editable pantry + coach actions */
+/* Diet Pro Planner v0.0.20 · editable pantry + coach actions */
 (function () {
   'use strict';
 
@@ -160,7 +160,7 @@
     setTitle('Despensa');
     document.querySelector('#view').innerHTML = `
       <section class="pantry-hero">
-        <div><span class="pantry-kicker">COACH LOCAL · v0.0.20-dev</span><h2>Tu despensa real</h2><p>Marca lo que tienes ahora. El Coach solo propondrá comidas con alimentos disponibles.</p></div>
+        <div><span class="pantry-kicker">COACH LOCAL · v0.0.20</span><h2>Tu despensa real</h2><p>Marca lo que tienes ahora. El Coach solo propondrá comidas con alimentos disponibles.</p></div>
         <div id="pantryStats" class="pantry-stats"></div>
       </section>
 
@@ -366,7 +366,7 @@
     window.render = wrappedRender;
     render = wrappedRender;
   } catch (error) {
-    console.warn('Pantry v0.0.20-dev render wrapper', error);
+    console.warn('Pantry v0.0.20 render wrapper', error);
   }
 
   try { renderNav(); } catch (error) {}
@@ -375,9 +375,9 @@
   observer.observe(document.documentElement, {childList: true, subtree: true});
   [200, 600, 1200, 2500].forEach((delay) => setTimeout(injectCoachActions, delay));
 
-  document.title = 'Diet Pro Planner · v0.0.20-dev';
+  document.title = 'Diet Pro Planner · v0.0.20';
   setTimeout(() => {
     const eyebrow = document.querySelector('.eyebrow');
-    if (eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.20-dev';
+    if (eyebrow) eyebrow.textContent = 'Dieta controlada · v0.0.20';
   }, 100);
 })();

@@ -62,7 +62,7 @@ from pathlib import Path
 
 data = json.loads(Path('/tmp/dpp-v020-health.json').read_text())
 assert data.get('ok') is True, data
-assert data.get('version') == 'v0.0.20-dev', data
+assert data.get('version') == 'v0.0.20', data
 print('HEALTH OK:', data)
 PY
 
@@ -76,11 +76,11 @@ grep -q '__DPP_ACTIVITY_PLAN_V020__' /tmp/dpp-v020-activity.js
 
 echo "== VALIDAR API =="
 curl -fsS "http://127.0.0.1:8099/api/activity-plan?from=2026-06-15&to=2026-06-21" |
-python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="v0.0.20-dev"; print("API OK: plans=",len(d.get("plans",[])),"extras=",len(d.get("extra_workouts",[])),"summary=",d.get("summary"))'
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="v0.0.20"; print("API OK: plans=",len(d.get("plans",[])),"extras=",len(d.get("extra_workouts",[])),"summary=",d.get("summary"))'
 
 echo "== DOCKER =="
 docker compose ps
 
 FAILED=0
 trap - EXIT
-echo "OK: v0.0.20-dev desplegada sin bucles. Cierra la pestaña vieja y abre de nuevo la web."
+echo "OK: v0.0.20 desplegada sin bucles. Cierra la pestaña vieja y abre de nuevo la web."

@@ -95,24 +95,24 @@ from pathlib import Path
 
 health = json.loads(Path('/tmp/dpp-v020-final-health.json').read_text())
 assert health.get('ok') is True, health
-assert health.get('version') == 'v0.0.20-dev', health
+assert health.get('version') == 'v0.0.20', health
 
 index = Path('/tmp/dpp-v020-final-index.html').read_text(encoding='utf-8')
 app = Path('/tmp/dpp-v020-final-app.js').read_text(encoding='utf-8')
 plan = Path('/tmp/dpp-v020-final-plan.js').read_text(encoding='utf-8')
 
-assert 'v0.0.20-dev' in index
+assert 'v0.0.20' in index
 assert 'v0.0.19' not in index
 assert 'v0.0.19' not in app
 assert 'Plan deporte' in plan
 assert '__DPP_ACTIVITY_PLAN_V020__' in plan
 
 print('HEALTH OK:', health)
-print('HTML/JS OK: versión única v0.0.20-dev y Plan deporte servido')
+print('HTML/JS OK: versión única v0.0.20 y Plan deporte servido')
 PY
 
 echo "== ESTADO PR =="
 gh pr view 23 --repo odegaard12/Diet-Pro-Planner \
   --json number,title,state,isDraft,headRefName,url
 
-echo "OK FINAL: Strava estable, Hevy no reapareció, versión v0.0.20-dev unificada y Plan deporte listo para probar."
+echo "OK FINAL: Strava estable, Hevy no reapareció, versión v0.0.20 unificada y Plan deporte listo para probar."

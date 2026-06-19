@@ -1,4 +1,4 @@
-/* Diet Pro Planner v0.0.20-dev · Coach meal rotation */
+/* Diet Pro Planner v0.0.20 · Coach meal rotation */
 (function () {
   'use strict';
 

@@ -78,7 +78,7 @@ Añadir actividad planificada frente a actividad real sin modificar el flujo est
 - Cumplimiento semanal y minutos planificados frente a reales.
 - Edición, omisión, reactivación y eliminación.
 - Implementación modular sin crecer `app.py` ni `static/app.js`.
-- `/health` en `v0.0.20-dev` durante la prueba.
+- `/health` en `v0.0.20` durante la prueba.
 MD
 
 if ! gh pr view "$BRANCH" --repo odegaard12/Diet-Pro-Planner >/dev/null 2>&1; then
@@ -108,4 +108,4 @@ python3 -c 'import json,sys; d=json.load(sys.stdin); print("ok=",d.get("ok"),"ve
 
 echo "== DOCKER =="
 docker compose ps
-echo "OK: v0.0.20-dev desplegada. Abre Plan deporte y prueba la semana."
+echo "OK: v0.0.20 desplegada. Abre Plan deporte y prueba la semana."

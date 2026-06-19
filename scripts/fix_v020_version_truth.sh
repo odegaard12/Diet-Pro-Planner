@@ -37,7 +37,7 @@ files = [
 changed = []
 for path in files:
     text = path.read_text(encoding='utf-8')
-    new = text.replace('v0.0.19', 'v0.0.20-dev')
+    new = text.replace('v0.0.19', 'v0.0.20')
     if new != text:
         path.write_text(new, encoding='utf-8')
         changed.append(str(path))
@@ -68,9 +68,9 @@ if grep -RIn --include='*.js' --include='*.html' 'v0\.0\.19' static; then
   echo "ERROR: quedan etiquetas v0.0.19 en static/"
   exit 1
 fi
-grep -q 'v0.0.20-dev' static/app.js
-grep -q 'Coach del día · v0.0.20-dev' static/dashboard-coach-v17.js
-grep -q 'Foto corporal · v0.0.20-dev' static/app.js
+grep -q 'v0.0.20' static/app.js
+grep -q 'Coach del día · v0.0.20' static/dashboard-coach-v17.js
+grep -q 'Foto corporal · v0.0.20' static/app.js
 grep -q 'activity-plan-v020.js?v=020-version-truth' static/index.html
 
 echo "== GUARDAR EN RAMA =="
@@ -101,7 +101,7 @@ from pathlib import Path
 
 data = json.loads(Path('/tmp/dpp-v020-version-health.json').read_text())
 assert data.get('ok') is True, data
-assert data.get('version') == 'v0.0.20-dev', data
+assert data.get('version') == 'v0.0.20', data
 print('HEALTH OK:', data)
 PY
 
@@ -109,9 +109,9 @@ echo "== VALIDAR ARCHIVOS SERVIDOS =="
 curl -fsS http://127.0.0.1:8099/ >/tmp/dpp-v020-index-served.html
 curl -fsS 'http://127.0.0.1:8099/static/app.js?v=v020-version-truth' >/tmp/dpp-v020-app-served.js
 curl -fsS 'http://127.0.0.1:8099/static/dashboard-coach-v17.js?v=020-version-truth' >/tmp/dpp-v020-coach-served.js
-grep -q 'v0.0.20-dev' /tmp/dpp-v020-index-served.html
-grep -q 'v0.0.20-dev' /tmp/dpp-v020-app-served.js
-grep -q 'Coach del día · v0.0.20-dev' /tmp/dpp-v020-coach-served.js
+grep -q 'v0.0.20' /tmp/dpp-v020-index-served.html
+grep -q 'v0.0.20' /tmp/dpp-v020-app-served.js
+grep -q 'Coach del día · v0.0.20' /tmp/dpp-v020-coach-served.js
 ! grep -q 'v0.0.19' /tmp/dpp-v020-index-served.html
 ! grep -q 'v0.0.19' /tmp/dpp-v020-app-served.js
 ! grep -q 'v0.0.19' /tmp/dpp-v020-coach-served.js
@@ -122,4 +122,4 @@ python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True;
 
 FAILED=0
 trap - EXIT
-echo "OK: versión visible unificada en v0.0.20-dev. Cierra la pestaña y abre la web de nuevo."
+echo "OK: versión visible unificada en v0.0.20. Cierra la pestaña y abre la web de nuevo."
