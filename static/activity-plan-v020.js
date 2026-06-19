@@ -2,6 +2,9 @@
 (function () {
   'use strict';
 
+  if (window.__DPP_ACTIVITY_PLAN_V020__) return;
+  window.__DPP_ACTIVITY_PLAN_V020__ = true;
+
   const VERSION = 'v0.0.20-dev';
   let weekStart = mondayOf(new Date());
   let activityData = null;
@@ -212,8 +215,8 @@
           </div>
         </aside>
       </section>`;
-    loadActivityPlan();
     syncVersion();
+    loadActivityPlan();
   }
 
   async function loadActivityPlan() {
@@ -348,17 +351,19 @@
     const wrappedRender = function () {
       document.body.classList.toggle('dpp-activity-plan-page', page === 'activity-plan');
       if (page === 'activity-plan') return renderActivityPlanPage();
-      return oldRender.apply(this, arguments);
+      const output = oldRender.apply(this, arguments);
+      setTimeout(syncVersion, 0);
+      return output;
     };
+    wrappedRender.__dppActivityPlanV020 = true;
     window.render = wrappedRender;
     render = wrappedRender;
   } catch (error) {
     console.warn('Activity plan v0.0.20 render wrapper', error);
   }
 
-  try { renderNav(); } catch (error) {}
-  const observer = new MutationObserver(syncVersion);
-  observer.observe(document.documentElement, {childList:true, characterData:true, subtree:true});
+  try { renderNav(); } catch (error) {
+    console.warn('Activity plan v0.0.20 navigation', error);
+  }
   syncVersion();
-  setInterval(syncVersion, 700);
 })();
