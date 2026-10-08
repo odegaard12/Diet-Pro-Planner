@@ -19,3 +19,9 @@ __pycache__/
 data/pantry.json
 data/secrets*.json
 *.local.env
+
+# Personal dumps and leftovers (never public)
+reports/food_intel_audit.*
+scripts/private_*
+*.bak
+*.bak-*

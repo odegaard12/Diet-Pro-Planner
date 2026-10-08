@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
 
-**Current version:** v0.1.0  
-**Latest release:** v0.1.0 — Pro core: real progress analytics, goals, safe database, AI (BYOK) and food database  
+**Current version:** v0.1.1  
+**Latest release:** v0.1.1 — Privacy and repository hygiene  
 **License:** MIT  
 **Stack:** Python · Flask · Waitress · SQLite · Vanilla JS · Docker · Local-first
 
@@ -284,6 +284,13 @@ All settings live in `.env` (see [`.env.example`](.env.example)):
 
 ## Releases
 
+### v0.1.1 — Privacy and repository hygiene
+
+- Clean public history: one commit, tag and release per version, without personal data.
+- `scripts/check_repo_privacy.py` (CI) now also blocks private IP addresses, home-directory paths and Strava activity ids in tracked files.
+- The Food Intelligence audit writes to `data/reports/` (git-ignored) instead of `reports/`.
+- Removed one-off deployment and inspection scripts.
+
 ### v0.1.0 — Pro core
 
 - Progreso page with trend weight, real rate, adaptive TDEE, adherence and patterns.
@@ -293,7 +300,7 @@ All settings live in `.env` (see [`.env.example`](.env.example)):
 - Food search restored, pantry-aware Smart Coach, repeat meals, lighter and safer frontend.
 - Login, OAuth, upload and header hardening; isolated tests.
 
-### v0.0.21 — Security hardening for private self-hosting
+### Security hardening for private self-hosting (shipped in v0.1.0)
 
 - Auth-required access for `/api/*` and `/uploads/*`.
 - Local login screen for the browser UI plus bearer-token support for API clients.

@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 APP_NAME = "Diet Pro Planner"
-VERSION = "v0.1.0"
+VERSION = "v0.1.1"
 
 BASE_DIR = Path(__file__).resolve().parent
 

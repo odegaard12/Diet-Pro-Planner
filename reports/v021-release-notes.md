@@ -1,4 +1,6 @@
-# Diet Pro Planner v0.0.21 — Security hardening for private self-hosting
+# Diet Pro Planner — Security hardening for private self-hosting
+
+_Shipped as part of v0.1.0._
 
 v0.0.21 focuses on tightening the local deployment surface without changing the local-first product model.
 
