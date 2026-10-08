@@ -401,12 +401,24 @@ def read_strava_tokens() -> dict[str, Any] | None:
         return None
 
 
-def write_strava_tokens(tokens: dict[str, Any]) -> None:
-    STRAVA_TOKEN_FILE.write_text(json.dumps(tokens, ensure_ascii=False, indent=2), encoding="utf-8")
+def write_private_text(path: Path, text: str) -> None:
+    """Atomic write of a secret file created with mode 600 (never world-readable, not even briefly)."""
+    tmp = path.with_name(f".{path.name}.{secrets.token_hex(4)}.tmp")
+    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
-        STRAVA_TOKEN_FILE.chmod(0o600)
-    except Exception:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
+    try:
+        path.chmod(0o600)
+    except OSError:
         pass
+
+
+def write_strava_tokens(tokens: dict[str, Any]) -> None:
+    write_private_text(STRAVA_TOKEN_FILE, json.dumps(tokens, ensure_ascii=False, indent=2))
 
 
 def estimate_strava_kcal(activity_type: str, minutes: float) -> float:
@@ -458,11 +470,7 @@ def issue_strava_oauth_state() -> str:
     except OSError:
         pass
     state = secrets.token_urlsafe(24)
-    STRAVA_STATE_FILE.write_text(state, encoding="utf-8")
-    try:
-        STRAVA_STATE_FILE.chmod(0o600)
-    except OSError:
-        pass
+    write_private_text(STRAVA_STATE_FILE, state)
     return state
 
 
@@ -537,7 +545,7 @@ def api_strava_sync():
     if not tokens:
         return jsonify({"error": "Strava no conectado"}), 400
     tokens = refresh_strava_if_needed(tokens)
-    days = int((request.json or {}).get("days") or 14)
+    days = int(v.number(v.json_body().get("days"), "days", default=14, minimum=1, maximum=365))
     after = int(time.time()) - days * 86400
     r = requests.get(
         "https://www.strava.com/api/v3/athlete/activities",
@@ -590,7 +598,11 @@ def save_uploaded_photo() -> tuple[Path, str]:
     file.save(path)
     try:
         with Image.open(path) as img:
+            detected = img.format
             img.verify()
+        # The content must really be one of the allowed formats (not just the extension).
+        if detected not in {"JPEG", "PNG", "WEBP", "MPO"}:
+            raise ValueError("unsupported image format")
     except Image.DecompressionBombError:
         path.unlink(missing_ok=True)
         raise ApiError("Imagen demasiado grande; reduce la resolución de la foto", 413) from None
@@ -984,9 +996,9 @@ def _strava_card(a: dict[str, Any]) -> dict[str, Any]:
 
 @app.post("/api/strava/preview")
 def api_strava_preview():
-    d = request.json or {}
-    after_date = d.get("after_date") or today_iso()
-    before_date = d.get("before_date") or today_iso()
+    d = v.json_body()
+    after_date = v.iso_date(d.get("after_date"), today_iso(), "after_date")
+    before_date = v.iso_date(d.get("before_date"), today_iso(), "before_date")
     try:
         raw = _strava_fetch_range(after_date, before_date)
         acts = [_strava_card(a) for a in raw if a.get("id")]
@@ -1001,18 +1013,21 @@ def api_strava_preview():
 
         return jsonify({"ok": True, "activities": acts, "received": len(acts)})
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": v.public_error(e)}), 400
 
 
 @app.post("/api/strava/import")
 def api_strava_import():
-    d = request.json or {}
-    ids = {str(x) for x in d.get("ids") or []}
+    d = v.json_body()
+    raw_ids = d.get("ids") or []
+    if not isinstance(raw_ids, list) or len(raw_ids) > 500:
+        raise ApiError("ids debe ser una lista")
+    ids = {str(x) for x in raw_ids}
     if not ids:
         return jsonify({"error": "No seleccionaste actividades"}), 400
 
-    after_date = d.get("after_date") or today_iso()
-    before_date = d.get("before_date") or today_iso()
+    after_date = v.iso_date(d.get("after_date"), today_iso(), "after_date")
+    before_date = v.iso_date(d.get("before_date"), today_iso(), "before_date")
 
     try:
         raw = _strava_fetch_range(after_date, before_date)
@@ -1051,7 +1066,7 @@ def api_strava_import():
 
         return jsonify({"ok": True, "imported": imported, "skipped": skipped})
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": v.public_error(e)}), 400
 
 
 
@@ -1201,10 +1216,10 @@ def run_strava_auto_sync(force: bool = False) -> dict[str, Any]:
         except Exception as exc:
             label = _auto_now_label()
             cfg["last_sync_at"] = label
-            cfg["last_message"] = f"Error sincronizando a {label}: {exc}"
+            cfg["last_message"] = f"Error sincronizando a {label}: {v.public_error(exc)}"
             cfg["_last_run_ts"] = int(time.time())
             write_strava_auto_config(cfg)
-            return {"ok": False, "error": str(exc), "message": cfg["last_message"]}
+            return {"ok": False, "error": v.public_error(exc), "message": cfg["last_message"]}
 
 
 @app.get("/api/strava/auto-status")
@@ -1216,10 +1231,10 @@ def api_strava_auto_status():
 
 @app.post("/api/strava/auto-config")
 def api_strava_auto_config():
-    d = request.json or {}
+    d = v.json_body()
     cfg = read_strava_auto_config()
     cfg["enabled"] = bool(d.get("enabled"))
-    cfg["after_date"] = str(d.get("after_date") or cfg.get("after_date") or _latest_strava_import_date() or today_iso())
+    cfg["after_date"] = v.iso_date(d.get("after_date") or cfg.get("after_date") or _latest_strava_import_date(), today_iso(), "after_date")
     try:
         cfg["interval_minutes"] = max(5, min(1440, int(d.get("interval_minutes") or cfg.get("interval_minutes") or 30)))
     except Exception:
@@ -1250,7 +1265,7 @@ def _strava_auto_loop() -> None:
             try:
                 cfg = read_strava_auto_config()
                 cfg["last_sync_at"] = _auto_now_label()
-                cfg["last_message"] = f"Error en auto-sync: {exc}"
+                cfg["last_message"] = f"Error en auto-sync: {v.public_error(exc)}"
                 write_strava_auto_config(cfg)
             except Exception:
                 pass
@@ -1655,8 +1670,8 @@ def api_food_photo_ocr():
             "serving": {},
             "extra": {},
             "confidence": "error",
-            "warnings": [str(exc)],
-            "ocr_error": str(exc),
+            "warnings": [v.public_error(exc, "No se pudo leer la etiqueta")],
+            "ocr_error": v.public_error(exc, "No se pudo leer la etiqueta"),
             "ocr_engine": "tesseract-spa-eng-ocr3",
         })
 
@@ -1665,9 +1680,9 @@ def api_food_photo_ocr():
 def api_ocr_status():
     try:
         version = str(pytesseract.get_tesseract_version())
-        return jsonify({"ok": True, "engine": "tesseract", "version": version, "languages": "spa+eng", "parser": "ocr3", "cache": str(_ocr3_cache_file())})
+        return jsonify({"ok": True, "engine": "tesseract", "version": version, "languages": "spa+eng", "parser": "ocr3"})
     except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 500
+        return jsonify({"ok": False, "error": v.public_error(exc, "Tesseract no disponible")}), 500
 
 # DPP_OCR3_END
 
@@ -2080,7 +2095,7 @@ def api_v012_insights_today():
     try:
         return jsonify(_v012_build_insights(d))
     except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": v.public_error(exc)}), 500
 
 @app.get("/health")
 def api_v012_health():
@@ -2136,7 +2151,15 @@ def _fi_has_table(db, table):
 def _fi_clean_text(v):
     return str(v or "").replace("prote?na", "proteína").replace("d?a", "día").replace("caf?", "café").replace("pl?tano", "plátano").replace("jam?n", "jamón").replace("at?n", "atún").replace("Estimaci?n", "Estimación").replace("peque?as", "pequeñas")
 
+# Identifiers are interpolated into SQL, so only these hard-coded tables/orderings are allowed;
+# every value goes through bound parameters.
+_FI_TABLES = frozenset({"foods", "meals", "meal_items", "workouts"})
+_FI_ORDERS = frozenset({"", "time ASC, id ASC", "id ASC", "name ASC"})
+
+
 def _fi_get_rows(db, table, where="", params=(), order=""):
+    if table not in _FI_TABLES or order not in _FI_ORDERS:
+        raise ValueError("table/order not allowed")
     if not _fi_has_table(db, table):
         return []
     sql = f"SELECT * FROM {_fi_qident(table)}"
@@ -2625,16 +2648,18 @@ def api_food_intel_day():
         except Exception:
             payload = {}
 
-    d = request.args.get("date") or payload.get("date") or _fi_date.today().isoformat()
+    d = v.iso_date(request.args.get("date") or payload.get("date"), _fi_date.today().isoformat())
     planned_workout = payload.get("planned_workout")
+    if planned_workout is not None and not isinstance(planned_workout, dict):
+        planned_workout = None
 
     # Soporte GET:
     # /api/food-intel/day?date=2026-06-02&planned_workout=1&planned_minutes=105&planned_sport=Funcional
     if not planned_workout and request.args.get("planned_workout"):
         planned_workout = {
-            "sport": request.args.get("planned_sport") or "Entreno planificado",
-            "duration_min": _fi_float(request.args.get("planned_minutes"), 0.0),
-            "intensity": request.args.get("planned_intensity") or "moderate",
+            "sport": v.text(request.args.get("planned_sport"), 80) or "Entreno planificado",
+            "duration_min": v.number(request.args.get("planned_minutes"), "planned_minutes", default=0, maximum=1440),
+            "intensity": v.text(request.args.get("planned_intensity"), 20) or "moderate",
         }
 
     return jsonify(_fi_build_day(d, planned_workout=planned_workout))
@@ -2896,9 +2921,13 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
 @app.route("/api/food-intel/meal-plan", methods=["POST"])
 def api_food_intel_meal_plan():
     payload = v.json_body()
-    d = payload.get("date") or _fi_date.today().isoformat()
-    meal = payload.get("meal") or payload.get("slot") or "next"
+    d = v.iso_date(payload.get("date"), _fi_date.today().isoformat())
+    meal = v.text(payload.get("meal") or payload.get("slot"), 40) or "next"
     available_foods = payload.get("available_foods") or payload.get("inventory") or []
+    if not isinstance(available_foods, list) or len(available_foods) > 1000:
+        raise ApiError("available_foods debe ser una lista")
+    if payload.get("planned_workout") is not None and not isinstance(payload.get("planned_workout"), dict):
+        raise ApiError("planned_workout no válido")
     training_today = bool(payload.get("training_today") or payload.get("planned_workout"))
 
     current_day = _fi_build_day(d, planned_workout=payload.get("planned_workout") if training_today else None)
@@ -3349,4 +3378,4 @@ except Exception as exc:
 
 if __name__ == "__main__":
     start_strava_auto_thread()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")), debug=False)

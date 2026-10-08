@@ -326,7 +326,7 @@ def _load_pantry(path: str = DEFAULT_PANTRY) -> Dict[str, Any]:
         return {
             "available": False,
             "items": [],
-            "candidates": candidates,
+            "candidates": len(candidates),
             "message": "No hay despensa configurada o no se encuentra pantry.json."
         }
 
@@ -343,17 +343,17 @@ def _load_pantry(path: str = DEFAULT_PANTRY) -> Dict[str, Any]:
 
         return {
             "available": True,
-            "path": chosen,
+            "path": os.path.basename(chosen) if chosen else None,
             "version": data.get("version"),
             "updated_at": data.get("updated_at"),
             "items": items,
         }
-    except Exception as exc:
+    except Exception:
         return {
             "available": False,
-            "path": chosen,
+            "path": os.path.basename(chosen) if chosen else None,
             "items": [],
-            "error": str(exc),
+            "error": "No pude leer despensa.",
             "message": "No pude leer despensa."
         }
 
@@ -678,7 +678,9 @@ def build_smart_coach_day(db_path: str, day: str) -> Dict[str, Any]:
 def register_smart_coach_routes(app):
     @app.get("/api/smart-coach/day")
     def smart_coach_day():
-        day = request.args.get("date") or date.today().isoformat()
+        from dpp_validate import iso_date
+
+        day = iso_date(request.args.get("date"), date.today().isoformat())
         db_path = os.environ.get("DPP_DB", DEFAULT_DB)
         return jsonify(build_smart_coach_day(db_path, day))
 
@@ -692,25 +694,23 @@ def register_smart_coach_routes(app):
 
     @app.post("/api/pantry")
     def pantry_post():
-        import json as _json
-        payload = request.get_json(silent=True) or {}
+        # Legacy endpoint kept for old clients: same rules as POST /api/pantry/v2
+        # (local network only, items normalized and bounded) instead of dumping raw JSON.
+        import dpp_pantry_v019 as pantry_v2
+        from dpp_security import is_private_request
+
+        if not is_private_request():
+            return jsonify({"ok": False, "error": "La despensa solo se puede editar desde la red local"}), 403
+        payload = request.get_json(silent=True)
         if not isinstance(payload, dict):
             return jsonify({"ok": False, "error": "payload must be object"}), 400
 
         items = payload.get("items")
-        if not isinstance(items, list):
+        if not isinstance(items, list) or len(items) > pantry_v2.MAX_PANTRY_ITEMS:
             return jsonify({"ok": False, "error": "items must be list"}), 400
 
-        safe = {
-            "version": 1,
-            "updated_at": str(date.today()),
-            "items": items,
-        }
-
+        pantry_v2._write_pantry(items)
         path = os.environ.get("DPP_PANTRY", DEFAULT_PANTRY)
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        with open(path, "w", encoding="utf-8") as fh:
-            _json.dump(safe, fh, ensure_ascii=False, indent=2)
 
         return jsonify({
             "ok": True,

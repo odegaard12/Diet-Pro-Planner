@@ -12,6 +12,7 @@ from flask import jsonify, request
 
 import dpp_smart_coach as smart
 from dpp_security import is_private_request
+from dpp_validate import iso_date, number
 
 
 VERSION = "v0.0.19"
@@ -30,6 +31,14 @@ def _plain(value: Any) -> str:
 def _slug(value: Any) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", _plain(value)).strip("-")
     return slug[:60] or "item"
+
+
+MAX_PANTRY_ITEMS = 1000
+
+
+def _json_object() -> dict[str, Any]:
+    payload = request.get_json(silent=True)
+    return payload if isinstance(payload, dict) else {}
 
 
 def _private_request() -> bool:
@@ -251,27 +260,27 @@ def register_pantry_v019(app, legacy) -> None:
     def pantry_v2_save():
         if not _private_request():
             return jsonify({"ok": False, "error": "La despensa solo se puede editar desde la red local"}), 403
-        payload = request.get_json(silent=True) or {}
+        payload = _json_object()
         items = payload.get("items")
-        if not isinstance(items, list):
-            return jsonify({"ok": False, "error": "items debe ser una lista"}), 400
+        if not isinstance(items, list) or len(items) > MAX_PANTRY_ITEMS:
+            return jsonify({"ok": False, "error": f"items debe ser una lista (máx. {MAX_PANTRY_ITEMS})"}), 400
         pantry = _write_pantry(items)
         return jsonify({"ok": True, "version": VERSION, "message": "Despensa guardada", "pantry": pantry, "stats": _stats(pantry)})
 
     @app.post("/api/smart-coach/alternative")
     def smart_coach_alternative():
-        payload = request.get_json(silent=True) or {}
-        day = str(payload.get("date") or date.today().isoformat())
+        payload = _json_object()
+        day = iso_date(payload.get("date"), date.today().isoformat())
         excluded = payload.get("exclude") if isinstance(payload.get("exclude"), list) else []
-        offset = int(payload.get("offset") or 0)
-        result = _alternative(day, [str(value) for value in excluded], offset)
+        offset = int(number(payload.get("offset"), "offset", default=0, maximum=10000))
+        result = _alternative(day, [str(value)[:100] for value in excluded[:200]], offset)
         return jsonify(result), (200 if result.get("ok") else 409)
 
     @app.post("/api/smart-coach/unavailable")
     def smart_coach_unavailable():
         if not _private_request():
             return jsonify({"ok": False, "error": "Acción disponible solo desde la red local"}), 403
-        payload = request.get_json(silent=True) or {}
+        payload = _json_object()
         names = payload.get("names") if isinstance(payload.get("names"), list) else []
         normalized = {_plain(value) for value in names if value}
         if not normalized:
@@ -286,8 +295,8 @@ def register_pantry_v019(app, legacy) -> None:
                 changed.append(str(item.get("name")))
         pantry = _write_pantry(pantry.get("items") or [])
 
-        day = str(payload.get("date") or date.today().isoformat())
-        result = _alternative(day, changed, int(payload.get("offset") or 0))
+        day = iso_date(payload.get("date"), date.today().isoformat())
+        result = _alternative(day, changed, int(number(payload.get("offset"), "offset", default=0, maximum=10000)))
         result.update({"changed": changed, "message": f"Marcado como no disponible: {', '.join(changed)}", "stats": _stats(pantry)})
         return jsonify(result), (200 if result.get("ok") else 409)
 

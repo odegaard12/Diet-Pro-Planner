@@ -304,7 +304,7 @@ def register_analytics_routes(app) -> None:
     @app.get("/api/analytics/overview")
     def analytics_overview():
         try:
-            days = int(request.args.get("days", 60))
+            days = max(7, min(730, int(request.args.get("days", 60))))
         except ValueError:
             days = 60
         return jsonify(overview(days))

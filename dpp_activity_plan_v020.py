@@ -9,6 +9,7 @@ from typing import Any
 from flask import jsonify, request
 
 from dpp_security import is_private_request
+from dpp_validate import ApiError
 
 
 VERSION = "v0.0.21"
@@ -236,8 +237,11 @@ def register_activity_plan_v020(app, legacy) -> None:
         _ensure_schema(db)
 
     def list_payload() -> dict[str, Any]:
-        start = _iso_day(request.args.get("from"), (date.today() - timedelta(days=7)).isoformat())
-        end = _iso_day(request.args.get("to"), (date.today() + timedelta(days=14)).isoformat())
+        try:
+            start = _iso_day(request.args.get("from"), (date.today() - timedelta(days=7)).isoformat())
+            end = _iso_day(request.args.get("to"), (date.today() + timedelta(days=14)).isoformat())
+        except ValueError as exc:
+            raise ApiError(str(exc)) from None
         if end < start:
             start, end = end, start
         with legacy.con() as db:
