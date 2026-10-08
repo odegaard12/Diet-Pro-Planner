@@ -88,8 +88,9 @@ function mealCard(m) {
   return `<article class="list-card"><header><div><h4>${esc(m.date)} · ${esc(m.time)} · ${esc(m.name)}</h4><p class="muted">${esc(m.notes || '')}</p></div><div class="card-actions"><button class="btn small secondary" title="Repetir hoy" onclick="repeatMeal(${Number(m.id)}, this)">↻</button><button class="btn small danger" onclick="deleteMeal(${Number(m.id)})">×</button></div></header><div class="chips">${(m.items || []).map((i) => `<span class="chip">${esc(i.food_name)} ${fmt(i.grams)}g</span>`).join('')}</div><b>${fmt(m.totals?.kcal)} kcal · ${fmt(m.totals?.protein)} g prot.</b></article>`;
 }
 function workoutCard(w) {
-  return `<article class="list-card"><header><div><h4>${esc(w.date)} · ${esc(w.time)} · ${esc(w.name)}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km ? `· ${fmt(w.distance_km)} km` : ''} · ${esc(w.notes || '')}</p></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></header><b>${fmt(w.kcal)} kcal</b></article>`;
+  return `<article class="list-card"><header><div><h4>${esc(w.date)} · ${esc(w.time)} · ${esc(w.name)}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km ? `· ${fmt(w.distance_km)} km` : ''} · ${esc(cleanWorkoutNote(w.notes))}</p></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></header><b>${fmt(w.kcal)} kcal</b></article>`;
 }
+function cleanWorkoutNote(n) { return window.DPPDashboardWorkoutCard.cleanNote(n); }
 function mealCardCompact(m) { return window.DPPDashboardMealCard.mealCardCompact(m); }
 function workoutCardCompact(w) { return window.DPPDashboardWorkoutCard.workoutCardCompact(w); }
 async function deleteMeal(id) { if (!confirm('¿Borrar comida?')) return; await api('/api/meals/' + id, {method: 'DELETE'}); toast('Comida borrada'); await load(); }
@@ -296,7 +297,7 @@ async function saveFood(btn) {
 
 /* ---------- Deporte ---------- */
 function ui5SportCard(w) {
-  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(w.date || '')} · ${esc(w.time || '')}</small></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span><span><b>${fmt(w.distance_km)}</b><small>km</small></span><span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div><p>${esc(w.notes || '')}</p></article>`;
+  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(w.date || '')} · ${esc(w.time || '')}</small></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span><span><b>${fmt(w.distance_km)}</b><small>km</small></span><span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div><p>${esc(cleanWorkoutNote(w.notes))}</p></article>`;
 }
 function renderSport() {
   const all = [...state.workouts].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
@@ -374,9 +375,7 @@ function ui5ApplyShell() {
   if (r && r.dataset.ui5 !== '1') { r.dataset.ui5 = '1'; r.innerHTML = '<article class="ui5-rule protein"><span>Proteína</span><b id="ruleProtein">130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b id="ruleOil">5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>'; }
   const sr = document.querySelector('.sidebar .side-rule');
   if (sr && sr.dataset.ui5 !== '1') { sr.dataset.ui5 = '1'; sr.innerHTML = '<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'; }
-  if (!document.getElementById('ui5Badge')) { const b = document.createElement('div'); b.id = 'ui5Badge'; b.className = 'ui5-badge'; document.querySelector('.topbar')?.appendChild(b); }
-  const badge = document.getElementById('ui5Badge'); if (badge) badge.textContent = version || 'local';
-  if (!document.getElementById('floatingHelp')) { const h = document.createElement('button'); h.id = 'floatingHelp'; h.className = 'floating-help'; h.textContent = '?'; h.onclick = openHelpModal; h.title = 'Ayuda'; h.setAttribute('aria-label', 'Ayuda'); document.body.appendChild(h); }
+  if (!document.getElementById('btnHelp')) { const h = document.createElement('button'); h.id = 'btnHelp'; h.className = 'ghost'; h.type = 'button'; h.textContent = 'Ayuda'; h.onclick = openHelpModal; document.querySelector('.top-actions')?.prepend(h); }
 }
 function openHelpModal() {
   closeHelpModal(); const o = document.createElement('div'); o.id = 'helpOverlay'; o.className = 'help-overlay';

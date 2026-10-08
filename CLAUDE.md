@@ -46,9 +46,11 @@ Ejecuta todo lo anterior antes de hacer push (es lo mismo que la CI en `.github/
 - Escapa siempre datos de usuario con `esc()` en plantillas `innerHTML`; en tooltips usa `textContent`.
 - Nada de `setInterval`/`MutationObserver` para "parchear" el DOM: usa hooks explícitos o eventos
   (`dpp:profile`, `dpp:coach-rendered`).
-- No uses `<aside>` dentro de las vistas: las reglas móviles antiguas tratan cualquier `aside` como el menú lateral
-  y lo colapsan (así se ocultaba el buscador de alimentos en móvil). Usa `<section>`.
-- Estilos nuevos en `static/css/v010.css` con prefijo `html[data-ui="ui5"]` (las capas antiguas usan `!important`).
+- Estilos (v0.2.0): solo `static/css/base.css` (tokens de color/espaciado, modo oscuro, shell y componentes:
+  `.card`, `.btn`, `.field`, `.row/.span-N`, `.chip/.pill`, `.empty`...) y `static/css/pages.css` (maquetación por
+  página). Usa siempre las variables (`var(--surface)`, `var(--text-2)`, `var(--primary)`...), nunca colores fijos,
+  para que el modo oscuro funcione. Sin `!important`. Tonos de estado con las clases `good` / `warn` / `bad` / `info`.
+- Estados vacíos: di qué hacer ("Registra la primera comida…"), nunca muestres `--` o `0` como si fuera un dato.
 - Gráficos: `static/js/features/charts.js` (SVG propio, paleta validada azul/naranja/aqua, un solo eje Y, tooltip).
 - Verifica la UI en navegador (escritorio y 390 px de ancho) antes de dar un cambio visual por bueno.
 
