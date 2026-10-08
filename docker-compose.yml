@@ -7,5 +7,8 @@ services:
       - "8099:8099"
     env_file:
       - .env
+    environment:
+      # Local time for "today" (otherwise UTC: meals after midnight land on the previous day).
+      - TZ=Europe/Madrid
     volumes:
       - ./data:/app/data

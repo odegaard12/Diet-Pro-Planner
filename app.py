@@ -4,6 +4,7 @@ import json
 import os
 import re
 import hashlib
+import hmac
 import secrets
 import sqlite3
 import time
@@ -14,19 +15,25 @@ from pathlib import Path
 from typing import Any
 
 import requests
-from flask import Flask, jsonify, redirect, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.utils import secure_filename
 from PIL import Image, ImageOps, ImageFilter
 import pytesseract
 
-BASE = Path(__file__).resolve().parent
-DATA = BASE / "data"
-DATA.mkdir(exist_ok=True)
-UPLOADS = DATA / "uploads"
-UPLOADS.mkdir(exist_ok=True)
-DB = DATA / "dieta.db"
+import dpp_config as config
+import dpp_db
+import dpp_profile
+import dpp_validate as v
+from dpp_validate import ApiError
 
-app = Flask(__name__, static_folder="static", static_url_path="/static")
+config.ensure_dirs()
+BASE = config.BASE_DIR
+DATA = config.DATA_DIR
+UPLOADS = config.UPLOADS_DIR
+DB = config.DB_PATH
+
+app = Flask(__name__, static_folder=str(BASE / "static"), static_url_path="/static")
+app.config["MAX_CONTENT_LENGTH"] = config.MAX_UPLOAD_MB * 1024 * 1024
 
 
 def today_iso() -> str:
@@ -38,10 +45,7 @@ def now_hm() -> str:
 
 
 def con() -> sqlite3.Connection:
-    db = sqlite3.connect(DB)
-    db.row_factory = sqlite3.Row
-    db.execute("PRAGMA foreign_keys = ON")
-    return db
+    return dpp_db.connect(DB)
 
 
 def rows(cur) -> list[dict[str, Any]]:
@@ -82,8 +86,7 @@ def ensure_schema(db: sqlite3.Connection) -> None:
           date TEXT NOT NULL,
           time TEXT NOT NULL,
           name TEXT NOT NULL,
-          notes TEXT DEFAULT '',
-          UNIQUE(date,time,name,notes)
+          notes TEXT DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS meal_items(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -140,17 +143,26 @@ def ensure_schema(db: sqlite3.Connection) -> None:
 
 def upsert_food(db: sqlite3.Connection, f: dict[str, Any]) -> None:
     f.setdefault("photo_path", "")
+    f.setdefault("barcode", "")
     db.execute(
         """
-        INSERT INTO foods(name,brand,kcal,protein,carbs,fat,sugar,salt,typical_g,purchased,source_note,notes,photo_path)
-        VALUES(:name,:brand,:kcal,:protein,:carbs,:fat,:sugar,:salt,:typical_g,:purchased,:source_note,:notes,:photo_path)
+        INSERT INTO foods(name,brand,kcal,protein,carbs,fat,sugar,salt,typical_g,purchased,source_note,notes,photo_path,barcode)
+        VALUES(:name,:brand,:kcal,:protein,:carbs,:fat,:sugar,:salt,:typical_g,:purchased,:source_note,:notes,:photo_path,:barcode)
         ON CONFLICT(name) DO UPDATE SET
           brand=excluded.brand,kcal=excluded.kcal,protein=excluded.protein,carbs=excluded.carbs,
           fat=excluded.fat,sugar=excluded.sugar,salt=excluded.salt,typical_g=excluded.typical_g,
-          purchased=excluded.purchased,source_note=excluded.source_note,notes=excluded.notes,photo_path=excluded.photo_path
+          purchased=excluded.purchased,source_note=excluded.source_note,notes=excluded.notes,
+          photo_path=COALESCE(NULLIF(excluded.photo_path,''), foods.photo_path),
+          barcode=COALESCE(NULLIF(excluded.barcode,''), foods.barcode)
         """,
         f,
     )
+
+
+def seed_food_if_missing(db: sqlite3.Connection, f: dict[str, Any]) -> None:
+    """Seed data never overwrites foods the user may have edited."""
+    if not db.execute("SELECT 1 FROM foods WHERE name=?", (f["name"],)).fetchone():
+        upsert_food(db, dict(f))
 
 
 def get_food(db: sqlite3.Connection, name: str) -> dict[str, Any]:
@@ -186,24 +198,42 @@ def totals(items: list[dict[str, Any]]) -> dict[str, float]:
     }
 
 
+def _insert_meal_items(db: sqlite3.Connection, meal_id: int, items: list[dict[str, Any]]) -> None:
+    for it in items:
+        db.execute(
+            """INSERT INTO meal_items(meal_id,food_id,food_name,grams,kcal,protein,carbs,fat,sugar,salt)
+               VALUES(?,?,?,?,?,?,?,?,?,?)""",
+            (meal_id, it.get("food_id"), it["food_name"], it["grams"], it["kcal"], it["protein"], it["carbs"], it["fat"], it["sugar"], it["salt"]),
+        )
+
+
+def create_meal(db: sqlite3.Connection, meal: dict[str, Any], items: list[dict[str, Any]]) -> int:
+    """Always creates a new meal (two identical meals at the same minute are both kept)."""
+    try:
+        cur = db.execute(
+            "INSERT INTO meals(date,time,name,notes) VALUES(?,?,?,?)",
+            (meal["date"], meal["time"], meal["name"], meal.get("notes", "")),
+        )
+    except sqlite3.IntegrityError:
+        # Only possible if migration 1 could not drop the legacy UNIQUE constraint.
+        raise ApiError("Ya existe una comida idéntica a esa hora; cambia la hora o las notas", 409) from None
+    meal_id = int(cur.lastrowid)
+    _insert_meal_items(db, meal_id, items)
+    return meal_id
+
+
 def insert_meal(db: sqlite3.Connection, meal: dict[str, Any], items: list[dict[str, Any]]) -> int:
-    db.execute(
-        "INSERT OR IGNORE INTO meals(date,time,name,notes) VALUES(?,?,?,?)",
-        (meal["date"], meal["time"], meal["name"], meal.get("notes", "")),
-    )
+    """Idempotent insert used by seed/local scripts: reuses an identical existing meal."""
     row = db.execute(
-        "SELECT id FROM meals WHERE date=? AND time=? AND name=? AND notes=?",
+        "SELECT id FROM meals WHERE date=? AND time=? AND name=? AND notes=? ORDER BY id LIMIT 1",
         (meal["date"], meal["time"], meal["name"], meal.get("notes", "")),
     ).fetchone()
+    if not row:
+        return create_meal(db, meal, items)
     meal_id = int(row["id"])
     existing = db.execute("SELECT COUNT(*) c FROM meal_items WHERE meal_id=?", (meal_id,)).fetchone()["c"]
     if existing == 0:
-        for it in items:
-            db.execute(
-                """INSERT INTO meal_items(meal_id,food_id,food_name,grams,kcal,protein,carbs,fat,sugar,salt)
-                   VALUES(?,?,?,?,?,?,?,?,?,?)""",
-                (meal_id, it.get("food_id"), it["food_name"], it["grams"], it["kcal"], it["protein"], it["carbs"], it["fat"], it["sugar"], it["salt"]),
-            )
+        _insert_meal_items(db, meal_id, items)
     return meal_id
 
 
@@ -240,14 +270,21 @@ def seed(db: sqlite3.Connection) -> None:
         dict(name="Patata + guisantes guisados", brand="Preparación casera", kcal=80, protein=3.0, carbs=15.0, fat=0.5, sugar=1.5, salt=0.2, typical_g=300, purchased=1, source_note="Estimado; registrar aceite aparte si lo lleva.", notes="Restos. Si lleva aceite, añade aceite separado."),
         dict(name="Lentejas guisadas", brand="Casa", kcal=125, protein=7.1, carbs=18.0, fat=2.5, sugar=2.0, salt=0.4, typical_g=300, purchased=1, source_note="Estimación; si tienen chorizo, registrar chorizo aparte.", notes="300–350 g, sin pan ni repetir."),
         dict(name="Chorizo", brand="Casa", kcal=450, protein=22.0, carbs=2.0, fat=38.0, sugar=1.0, salt=3.0, typical_g=20, purchased=1, source_note="Cachos gordos: limitar 20–30 g.", notes="Solo parte del guiso."),
-        dict(name="Huevos", brand="Casa", kcal=155, protein=13.0, carbs=1.1, fat=11.0, sugar=1.1, salt=0.31, typical_g=120, purchased=1, source_note="2 huevos aprox. 120 g comestible.", notes="Cena: 2–3 huevos."),
+        dict(name="Huevo entero", brand="Casa", kcal=143, protein=12.6, carbs=0.7, fat=9.5, sugar=0, salt=0.35, typical_g=60, purchased=1, source_note="Valor medio por 100 g.", notes="1 huevo mediano-grande aprox. 60 g. Para 2 huevos registrar 120 g."),
         dict(name="Atún al natural", brand="Despensa", kcal=105, protein=24.0, carbs=0, fat=1.0, sugar=0, salt=0.8, typical_g=112, purchased=1, source_note="2 latas pequeñas con pasta.", notes="Proteína rápida."),
         dict(name="Merluza cocida", brand="Casa", kcal=86, protein=18.0, carbs=0, fat=1.5, sugar=0, salt=0.25, typical_g=200, purchased=0, source_note="Pescado blanco magro.", notes="Buena cena ligera cuando compres."),
         dict(name="Café con edulcorante", brand="Casa", kcal=1, protein=0, carbs=0, fat=0, sugar=0, salt=0, typical_g=200, purchased=1, source_note="Edulcorante comprado.", notes="Casi no suma."),
-        dict(name="Chocolate", brand="Casa", kcal=540, protein=6.0, carbs=55.0, fat=33.0, sugar=50.0, salt=0.05, typical_g=20, purchased=0, source_note="Registrar si se consume. Evitar en fase inicial.", notes="3–5 onzas suben rápido."),
+        dict(name="Chocolate onzas estimado", brand="Estimado", kcal=550, protein=6.0, carbs=55.0, fat=32.0, sugar=48.0, salt=0.05, typical_g=20, purchased=0, source_note="4 onzas estimadas como 20 g.", notes="Snack dulce estimado. Registrar solo si se consume."),
     ]
-    for f in foods:
-        upsert_food(db, f)
+    # Catalog, exercises and templates are seeded once, on a fresh database only:
+    # later restarts must not resurrect what the user edited or deleted.
+    seeded = db.execute("SELECT 1 FROM app_settings WHERE key='seed_done'").fetchone()
+    first_run = not seeded and db.execute("SELECT COUNT(*) FROM foods").fetchone()[0] == 0
+    if not seeded:
+        db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('seed_done','true')")
+    if first_run:
+        for f in foods:
+            seed_food_if_missing(db, f)
 
     exercises = [
         ("HIIT", 8.0, 0, "Clase intensa; si el reloj da kcal, usa reloj."),
@@ -260,8 +297,8 @@ def seed(db: sqlite3.Connection) -> None:
         ("Pierna gimnasio", 5.0, 0, "Fuerza pierna."),
         ("Brazo gimnasio", 4.5, 0, "Fuerza tren superior."),
     ]
-    for name, met, kcal_per_min, notes in exercises:
-        db.execute("INSERT INTO exercises(name,met,kcal_per_min,notes) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET met=excluded.met,kcal_per_min=excluded.kcal_per_min,notes=excluded.notes", (name, met, kcal_per_min, notes))
+    for name, met, kcal_per_min, notes in exercises if first_run else []:
+        db.execute("INSERT INTO exercises(name,met,kcal_per_min,notes) VALUES(?,?,?,?) ON CONFLICT(name) DO NOTHING", (name, met, kcal_per_min, notes))
 
     # La app pública no siembra pesos, comidas ni entrenos personales.
     # Los datos privados se mantienen solo en data/dieta.db o se aplican con scripts locales ignorados por git.
@@ -271,13 +308,13 @@ def seed(db: sqlite3.Connection) -> None:
         ("Desayuno sin plátano", "Cuando no tienes fruta", [("Pan centeno/integral rebanada", 42), ("Crema de cacahuete", 15), ("Yogur Eroski +Proteína 120 g", 120), ("Café con edulcorante", 200)]),
         ("Pasta + pollo + champis", "Pasta pesada en seco; pollo en crudo", [("Pasta seca", 80), ("Pollo pechuga cruda Pazo de Pías", 200), ("Champiñones laminados", 200), ("Aceite de oliva", 5)]),
         ("Tupper arroz + pollo", "Base oficina", [("Arroz seco", 80), ("Pollo pechuga cruda Pazo de Pías", 200), ("Champiñones laminados", 150), ("Guisantes", 80), ("Aceite de oliva", 5)]),
-        ("Cena huevos + champis + jamón", "Cena rápida post-entreno", [("Huevos", 120), ("Champiñones laminados", 200), ("Jamón cocido extra ElPozo 85%", 80), ("Aceite de oliva", 5)]),
+        ("Cena huevos + champis + jamón", "Cena rápida post-entreno", [("Huevo entero", 120), ("Champiñones laminados", 200), ("Jamón cocido extra ElPozo 85%", 80), ("Aceite de oliva", 5)]),
         ("Merienda yogur + fruta", "Merienda limpia", [("Yogur Eroski +Proteína 120 g", 120), ("Manzana", 180)]),
         ("Lentejas controladas", "Sin pan y sin repetir", [("Lentejas guisadas", 300), ("Chorizo", 20)]),
     ]
-    for name, notes, items in templates:
+    for name, notes, items in templates if first_run else []:
         payload = json.dumps({"items": [{"food": n, "grams": g} for n, g in items]}, ensure_ascii=False)
-        db.execute("INSERT INTO templates(name,notes,kind,payload) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET notes=excluded.notes,payload=excluded.payload", (name, notes, "meal", payload))
+        db.execute("INSERT INTO templates(name,notes,kind,payload) VALUES(?,?,?,?) ON CONFLICT(name) DO NOTHING", (name, notes, "meal", payload))
 
     plan = {
         "name": "Semana base sencilla",
@@ -303,8 +340,14 @@ def fix_existing_data(db: sqlite3.Connection) -> None:
 
 
 def init_db() -> None:
+    dpp_db.ensure_rollback_journal(DB)
     with con() as db:
         ensure_schema(db)
+    # Versioned migrations (backs up an existing database first).
+    applied = dpp_db.migrate(DB)
+    if applied:
+        print(f"[DPP] database migrated: {applied}")
+    with con() as db:
         seed(db)
         fix_existing_data(db)
 
@@ -367,8 +410,7 @@ def write_strava_tokens(tokens: dict[str, Any]) -> None:
 
 
 def estimate_strava_kcal(activity_type: str, minutes: float) -> float:
-    # Estimación simple si Strava no devuelve calorías en la lista.
-    # 90.0 kg es tu referencia inicial actual; se podrá parametrizar después.
+    # Estimación simple si Strava no devuelve calorías: MET x peso corporal actual.
     mets = {
         "Walk": 3.5,
         "Hike": 5.3,
@@ -380,7 +422,7 @@ def estimate_strava_kcal(activity_type: str, minutes: float) -> float:
         "HIIT": 8.0,
     }
     met = mets.get(activity_type, 5.5)
-    return round(met * 3.5 * 90.0 / 200 * minutes)
+    return dpp_profile.estimate_met_kcal(met, minutes)
 
 
 def refresh_strava_if_needed(tokens: dict[str, Any]) -> dict[str, Any]:
@@ -403,6 +445,42 @@ def refresh_strava_if_needed(tokens: dict[str, Any]) -> dict[str, Any]:
     return new_tokens
 
 
+STRAVA_STATE_TTL_SECONDS = 30 * 60
+
+
+def issue_strava_oauth_state() -> str:
+    """Reuse a recent state so several open tabs share one valid connect link."""
+    try:
+        if STRAVA_STATE_FILE.exists() and time.time() - STRAVA_STATE_FILE.stat().st_mtime < STRAVA_STATE_TTL_SECONDS / 2:
+            current = STRAVA_STATE_FILE.read_text(encoding="utf-8").strip()
+            if len(current) >= 24:
+                return current
+    except OSError:
+        pass
+    state = secrets.token_urlsafe(24)
+    STRAVA_STATE_FILE.write_text(state, encoding="utf-8")
+    try:
+        STRAVA_STATE_FILE.chmod(0o600)
+    except OSError:
+        pass
+    return state
+
+
+def consume_strava_oauth_state(received: str) -> bool:
+    """One-time, constant-time, expiring check (rejects callbacks without a pending state)."""
+    try:
+        if not STRAVA_STATE_FILE.exists():
+            return False
+        expected = STRAVA_STATE_FILE.read_text(encoding="utf-8").strip()
+        fresh = time.time() - STRAVA_STATE_FILE.stat().st_mtime < STRAVA_STATE_TTL_SECONDS
+    except OSError:
+        return False
+    ok = bool(expected) and fresh and hmac.compare_digest(str(received or ""), expected)
+    if ok:
+        STRAVA_STATE_FILE.unlink(missing_ok=True)
+    return ok
+
+
 @app.get("/api/strava/status")
 def api_strava_status():
     cfg = strava_config()
@@ -410,8 +488,7 @@ def api_strava_status():
     configured = strava_configured()
     connect_url = ""
     if configured:
-        state = secrets.token_urlsafe(24)
-        STRAVA_STATE_FILE.write_text(state, encoding="utf-8")
+        state = issue_strava_oauth_state()
         params = {
             "client_id": cfg["client_id"],
             "redirect_uri": cfg["redirect_uri"],
@@ -433,10 +510,8 @@ def api_strava_status():
 def api_strava_callback():
     if not strava_configured():
         return "Strava no configurado en .env", 400
-    expected = STRAVA_STATE_FILE.read_text(encoding="utf-8").strip() if STRAVA_STATE_FILE.exists() else ""
-    got = request.args.get("state", "")
-    if expected and got != expected:
-        return "Estado OAuth no válido", 400
+    if not consume_strava_oauth_state(request.args.get("state", "")):
+        return "Estado OAuth no válido o caducado; vuelve a pulsar Conectar Strava", 400
     code = request.args.get("code")
     if not code:
         return "Falta code de Strava", 400
@@ -497,24 +572,44 @@ def api_strava_sync():
     return jsonify({"ok": True, "imported": imported, "received": len(activities)})
 
 
-@app.post("/api/food-photo")
-def api_food_photo():
+Image.MAX_IMAGE_PIXELS = 64_000_000  # above 2x this Pillow refuses to open (decompression bombs)
+
+
+def save_uploaded_photo() -> tuple[Path, str]:
+    """Validate and store the multipart ``photo`` field; returns (path, public_url)."""
     if "photo" not in request.files:
-        return jsonify({"error": "Falta archivo photo"}), 400
+        raise ApiError("Falta archivo photo")
     file = request.files["photo"]
     if not file.filename:
-        return jsonify({"error": "Archivo vacío"}), 400
+        raise ApiError("Archivo vacío")
     ext = Path(secure_filename(file.filename)).suffix.lower()
     if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
-        return jsonify({"error": "Formato no soportado"}), 400
+        raise ApiError("Formato no soportado (usa JPG, PNG o WEBP)")
     name = f"food-{int(time.time())}-{secrets.token_hex(4)}{ext}"
     path = UPLOADS / name
     file.save(path)
-    return jsonify({"ok": True, "photo_path": f"/uploads/{name}"})
+    try:
+        with Image.open(path) as img:
+            img.verify()
+    except Image.DecompressionBombError:
+        path.unlink(missing_ok=True)
+        raise ApiError("Imagen demasiado grande; reduce la resolución de la foto", 413) from None
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise ApiError("El archivo no es una imagen válida") from None
+    return path, f"/uploads/{name}"
 
 
-@app.get("/uploads/<path:name>")
+@app.post("/api/food-photo")
+def api_food_photo():
+    _path, url = save_uploaded_photo()
+    return jsonify({"ok": True, "photo_path": url})
+
+
+@app.get("/uploads/<name>")
 def uploaded_file(name: str):
+    if not name or Path(name).name != name or secure_filename(name) != name:
+        return "", 404
     return send_from_directory(UPLOADS, name)
 
 
@@ -523,41 +618,83 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.get("/favicon.ico")
+def favicon():
+    return send_from_directory(app.static_folder, "icon-192.png", mimetype="image/png", max_age=86400)
+
+
 @app.get("/api/state")
 def api_state():
     return jsonify(build_state())
 
 
+def _food_payload(d: dict[str, Any]) -> dict[str, Any]:
+    name = v.text(d.get("name"), 160)
+    if not name:
+        raise ApiError("Falta nombre")
+    per100 = {"kcal": 900, "protein": 100, "carbs": 100, "fat": 100, "sugar": 100, "salt": 100}
+    food = {"name": name, "brand": v.text(d.get("brand"), 120)}
+    for key, hi in per100.items():
+        food[key] = round(v.number(d.get(key), key, default=0, maximum=hi), 2)
+    food.update({
+        "typical_g": round(v.number(d.get("typical_g"), "ración", default=100, minimum=0.1, maximum=5000), 1),
+        "purchased": 1 if d.get("purchased") in (True, 1, "1", "true", "on") else 0,
+        "source_note": v.text(d.get("source_note"), 2000),
+        "notes": v.text(d.get("notes"), 1000),
+        "photo_path": v.text(d.get("photo_path"), 200),
+        "barcode": v.text(d.get("barcode"), 14),
+    })
+    if food["barcode"] and not re.fullmatch(r"\d{8,14}", food["barcode"]):
+        raise ApiError("Código de barras no válido")
+    if food["photo_path"] and not re.fullmatch(r"/uploads/[A-Za-z0-9._-]+", food["photo_path"]):
+        raise ApiError("photo_path no válido")
+    if food["protein"] + food["carbs"] + food["fat"] > 101:
+        raise ApiError("Proteína + hidratos + grasa no pueden superar 100 g por 100 g")
+    return food
+
+
 @app.post("/api/foods")
 def api_foods():
-    d = request.json or {}
-    if not d.get("name"):
-        return jsonify({"error": "Falta nombre"}), 400
-    food = {
-        "name": str(d.get("name", "")).strip(),
-        "brand": str(d.get("brand", "")).strip(),
-        "kcal": float(d.get("kcal") or 0),
-        "protein": float(d.get("protein") or 0),
-        "carbs": float(d.get("carbs") or 0),
-        "fat": float(d.get("fat") or 0),
-        "sugar": float(d.get("sugar") or 0),
-        "salt": float(d.get("salt") or 0),
-        "typical_g": float(d.get("typical_g") or 100),
-        "purchased": 1 if d.get("purchased") else 0,
-        "source_note": str(d.get("source_note", "")),
-        "notes": str(d.get("notes", "")),
-        "photo_path": str(d.get("photo_path", "")),
-    }
+    food = _food_payload(v.json_body())
     with con() as db:
         upsert_food(db, food)
+        row = db.execute("SELECT id FROM foods WHERE name=?", (food["name"],)).fetchone()
+    return jsonify({"ok": True, "id": row["id"] if row else None})
+
+
+@app.delete("/api/foods/<int:item_id>")
+def delete_food(item_id: int):
+    with con() as db:
+        # meal_items keep their own name/grams/macros (food_id becomes NULL).
+        cur = db.execute("DELETE FROM foods WHERE id=?", (item_id,))
+    if not cur.rowcount:
+        raise ApiError("Alimento no encontrado", 404)
     return jsonify({"ok": True})
+
+
+def _weight_payload(d: dict[str, Any]) -> tuple:
+    return (
+        v.iso_date(d.get("date"), today_iso()),
+        v.hhmm(d.get("time"), now_hm()),
+        round(v.number(d.get("kg"), "kg", minimum=20, maximum=400), 2),
+        1 if d.get("official") in (True, 1, "1", "true", "on") else 0,
+        v.text(d.get("context"), 200),
+    )
 
 
 @app.post("/api/weights")
 def api_weights():
-    d = request.json or {}
     with con() as db:
-        db.execute("INSERT INTO weights(date,time,kg,official,context) VALUES(?,?,?,?,?)", (d.get("date") or today_iso(), d.get("time") or now_hm(), float(d.get("kg")), 1 if d.get("official") else 0, d.get("context", "")))
+        cur = db.execute("INSERT OR IGNORE INTO weights(date,time,kg,official,context) VALUES(?,?,?,?,?)", _weight_payload(v.json_body()))
+    return jsonify({"ok": True, "id": cur.lastrowid if cur.rowcount else None, "duplicate": not cur.rowcount})
+
+
+@app.put("/api/weights/<int:item_id>")
+def update_weight(item_id: int):
+    with con() as db:
+        cur = db.execute("UPDATE weights SET date=?,time=?,kg=?,official=?,context=? WHERE id=?", (*_weight_payload(v.json_body()), item_id))
+    if not cur.rowcount:
+        raise ApiError("Peso no encontrado", 404)
     return jsonify({"ok": True})
 
 
@@ -568,26 +705,80 @@ def delete_weight(item_id: int):
     return jsonify({"ok": True})
 
 
+def _meal_items_from_payload(db: sqlite3.Connection, items_in: Any) -> list[dict[str, Any]]:
+    if not isinstance(items_in, list) or not items_in:
+        raise ApiError("Añade alimentos")
+    if len(items_in) > 60:
+        raise ApiError("Demasiados alimentos en una comida")
+    items = []
+    for it in items_in:
+        if not isinstance(it, dict):
+            raise ApiError("Alimento no válido")
+        food = None
+        food_id = v.integer_id(it.get("food_id"), "food_id")
+        if food_id is not None:
+            r = db.execute("SELECT * FROM foods WHERE id=?", (food_id,)).fetchone()
+            food = dict(r) if r else None
+        if not food and it.get("food_name"):
+            r = db.execute("SELECT * FROM foods WHERE name=?", (v.text(it.get("food_name"), 160),)).fetchone()
+            food = dict(r) if r else None
+        if not food:
+            raise ApiError(f"Alimento no encontrado: {v.text(it.get('food_name') or it.get('food_id'), 80)}")
+        # Empty or 0 grams falls back to the typical portion (as before v0.1.0).
+        grams = v.number(it.get("grams"), "gramos", default=food["typical_g"], minimum=0, maximum=5000) or float(food["typical_g"] or 100)
+        items.append(calc_item(food, grams))
+    return items
+
+
+def _meal_header(d: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "date": v.iso_date(d.get("date"), today_iso()),
+        "time": v.hhmm(d.get("time"), now_hm()),
+        "name": v.text(d.get("name"), 60) or "Comida",
+        "notes": v.text(d.get("notes"), 500),
+    }
+
+
 @app.post("/api/meals")
 def api_meals():
-    d = request.json or {}
-    items_in = d.get("items") or []
-    if not items_in:
-        return jsonify({"error": "Añade alimentos"}), 400
-    items = []
+    d = v.json_body()
     with con() as db:
-        for it in items_in:
-            food = None
-            if it.get("food_id"):
-                r = db.execute("SELECT * FROM foods WHERE id=?", (it.get("food_id"),)).fetchone()
-                food = dict(r) if r else None
-            if not food and it.get("food_name"):
-                r = db.execute("SELECT * FROM foods WHERE name=?", (it.get("food_name"),)).fetchone()
-                food = dict(r) if r else None
-            if not food:
-                return jsonify({"error": f"Alimento no encontrado: {it}"}), 400
-            items.append(calc_item(food, float(it.get("grams") or food["typical_g"])))
-        mid = insert_meal(db, {"date": d.get("date") or today_iso(), "time": d.get("time") or now_hm(), "name": d.get("name") or "Comida", "notes": d.get("notes", "")}, items)
+        items = _meal_items_from_payload(db, d.get("items"))
+        mid = create_meal(db, _meal_header(d), items)
+    return jsonify({"ok": True, "id": mid})
+
+
+@app.put("/api/meals/<int:item_id>")
+def update_meal(item_id: int):
+    d = v.json_body()
+    with con() as db:
+        if not db.execute("SELECT 1 FROM meals WHERE id=?", (item_id,)).fetchone():
+            raise ApiError("Comida no encontrada", 404)
+        header = _meal_header(d)
+        db.execute("UPDATE meals SET date=?,time=?,name=?,notes=? WHERE id=?", (header["date"], header["time"], header["name"], header["notes"], item_id))
+        if "items" in d:
+            items = _meal_items_from_payload(db, d.get("items"))
+            db.execute("DELETE FROM meal_items WHERE meal_id=?", (item_id,))
+            _insert_meal_items(db, item_id, items)
+    return jsonify({"ok": True, "id": item_id})
+
+
+@app.post("/api/meals/<int:item_id>/duplicate")
+def duplicate_meal(item_id: int):
+    """Repeat a logged meal (same items and grams) on another day/time."""
+    d = v.json_body()
+    with con() as db:
+        meal = db.execute("SELECT * FROM meals WHERE id=?", (item_id,)).fetchone()
+        if not meal:
+            raise ApiError("Comida no encontrada", 404)
+        items = rows(db.execute("SELECT * FROM meal_items WHERE meal_id=? ORDER BY id", (item_id,)))
+        header = {
+            "date": v.iso_date(d.get("date"), today_iso()),
+            "time": v.hhmm(d.get("time"), meal["time"]),
+            "name": meal["name"],
+            "notes": meal["notes"] or "",
+        }
+        mid = create_meal(db, header, items)
     return jsonify({"ok": True, "id": mid})
 
 
@@ -600,18 +791,21 @@ def delete_meal(item_id: int):
 
 @app.post("/api/workouts")
 def api_workouts():
-    d = request.json or {}
-    name = d.get("name") or "Entreno"
-    minutes = float(d.get("minutes") or 0)
-    distance = float(d.get("distance_km") or 0)
-    kcal = float(d.get("kcal") or 0)
+    d = v.json_body()
+    name = v.text(d.get("name"), 80) or "Entreno"
+    minutes = v.number(d.get("minutes"), "minutos", default=0, maximum=1440)
+    distance = v.number(d.get("distance_km"), "distancia", default=0, maximum=1000)
+    kcal = v.number(d.get("kcal"), "kcal", default=0, maximum=15000)
     with con() as db:
         ex = db.execute("SELECT * FROM exercises WHERE name=?", (name,)).fetchone()
         ex_id = ex["id"] if ex else None
         if kcal <= 0 and ex and minutes:
-            kcal = round(float(ex["met"]) * 3.5 * 90.0 / 200 * minutes)
-        db.execute("INSERT INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes) VALUES(?,?,?,?,?,?,?,?)", (d.get("date") or today_iso(), d.get("time") or now_hm(), ex_id, name, minutes, distance, kcal, d.get("notes", "")))
-    return jsonify({"ok": True})
+            kcal = dpp_profile.estimate_met_kcal(float(ex["met"]), minutes)
+        cur = db.execute(
+            "INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes) VALUES(?,?,?,?,?,?,?,?)",
+            (v.iso_date(d.get("date"), today_iso()), v.hhmm(d.get("time"), now_hm()), ex_id, name, minutes, distance, kcal, v.text(d.get("notes"), 500)),
+        )
+    return jsonify({"ok": True, "id": cur.lastrowid if cur.rowcount else None, "kcal": kcal})
 
 
 @app.delete("/api/workouts/<int:item_id>")
@@ -623,30 +817,45 @@ def delete_workout(item_id: int):
 
 @app.post("/api/exercises")
 def api_exercises():
-    d = request.json or {}
+    d = v.json_body()
+    name = v.text(d.get("name"), 80)
+    if not name:
+        raise ApiError("Falta nombre")
+    met = v.number(d.get("met"), "MET", default=5, minimum=1, maximum=25)
     with con() as db:
-        db.execute("INSERT INTO exercises(name,met,kcal_per_min,notes) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET met=excluded.met,notes=excluded.notes", (d.get("name"), float(d.get("met") or 5), 0, d.get("notes", "")))
+        db.execute("INSERT INTO exercises(name,met,kcal_per_min,notes) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET met=excluded.met,notes=excluded.notes", (name, met, 0, v.text(d.get("notes"), 300)))
     return jsonify({"ok": True})
 
 
 @app.post("/api/templates")
 def api_templates():
-    d = request.json or {}
-    payload = d.get("payload") if isinstance(d.get("payload"), str) else json.dumps(d.get("payload") or {}, ensure_ascii=False)
+    d = v.json_body()
+    name = v.text(d.get("name"), 120)
+    if not name:
+        raise ApiError("Falta nombre de plantilla")
+    raw = d.get("payload")
+    try:
+        payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
+    except json.JSONDecodeError:
+        raise ApiError("Plantilla con JSON no válido") from None
+    if not isinstance(payload, dict):
+        raise ApiError("Plantilla no válida")
     with con() as db:
-        db.execute("INSERT INTO templates(name,notes,kind,payload) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET notes=excluded.notes,kind=excluded.kind,payload=excluded.payload", (d.get("name"), d.get("notes", ""), d.get("kind", "meal"), payload))
+        db.execute("INSERT INTO templates(name,notes,kind,payload) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET notes=excluded.notes,kind=excluded.kind,payload=excluded.payload", (name, v.text(d.get("notes"), 500), v.text(d.get("kind"), 20) or "meal", json.dumps(payload, ensure_ascii=False)))
     return jsonify({"ok": True})
 
 
 @app.post("/api/plans")
 def api_plans():
-    d = request.json or {}
+    d = v.json_body()
     raw = d.get("raw") or d.get("payload")
-    if isinstance(raw, str):
-        payload = json.loads(raw)
-    else:
-        payload = raw or {}
-    name = payload.get("name", "Plan semanal")
+    try:
+        payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
+    except json.JSONDecodeError as exc:
+        raise ApiError(f"JSON no válido: {exc.msg} (línea {exc.lineno})") from None
+    if not isinstance(payload, dict) or not isinstance(payload.get("days", []), list):
+        raise ApiError("El plan debe ser un objeto con una lista 'days'")
+    name = v.text(payload.get("name"), 120) or "Plan semanal"
     with con() as db:
         db.execute("INSERT INTO plans(name,payload) VALUES(?,?)", (name, json.dumps(payload, ensure_ascii=False)))
     return jsonify({"ok": True})
@@ -1073,9 +1282,8 @@ def start_strava_auto_thread() -> None:
 # - Hard validation to avoid garbage values like protein=848 or salt=20.
 
 def _ocr3_cache_file():
-    base = globals().get("DATA_DIR", Path("data"))
-    base.mkdir(parents=True, exist_ok=True)
-    return base / "ocr_cache.json"
+    DATA.mkdir(parents=True, exist_ok=True)
+    return DATA / "ocr_cache.json"
 
 
 def _ocr3_load_cache():
@@ -1402,18 +1610,8 @@ def _ocr3_text_fast(path):
 
 @app.post("/api/food-photo-ocr")
 def api_food_photo_ocr():
-    if "photo" not in request.files:
-        return jsonify({"error": "Falta archivo photo"}), 400
-    file = request.files["photo"]
-    if not file.filename:
-        return jsonify({"error": "Archivo vacío"}), 400
-    ext = Path(secure_filename(file.filename)).suffix.lower()
-    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
-        return jsonify({"error": "Formato no soportado"}), 400
-
-    name = f"food-{int(time.time())}-{secrets.token_hex(4)}{ext}"
-    path = UPLOADS / name
-    file.save(path)
+    path, photo_url = save_uploaded_photo()
+    name = path.name
     file_hash = _ocr3_file_hash(path)
     cache = _ocr3_load_cache()
 
@@ -1481,20 +1679,7 @@ def api_ocr_status():
 
 from datetime import timedelta as _dpp_v012_timedelta
 
-DPP_V012_TARGETS = {
-    "height_cm": 175,
-    "goal_weight_kg": 80.0,
-    "fallback_start_weight_kg": 90.0,
-    "protein_min_g": 120.0,
-    "protein_target_g": 135.0,
-    "protein_high_g": 150.0,
-    "oil_normal_g": 5.0,
-    "oil_max_g": 10.0,
-    "oil_bad_g": 15.0,
-    "kcal_base_target": 1900.0,
-    "max_sport_bonus_kcal": 900.0,
-    "sport_bonus_factor": 0.35,
-}
+# Targets now come from the editable profile: see dpp_profile.legacy_targets().
 
 def _v012_safe_float(v, default=0.0):
     try:
@@ -1574,16 +1759,17 @@ def _v012_latest_weight(db):
 def _v012_official_weights(db):
     return rows(db.execute("SELECT * FROM weights WHERE official=1 ORDER BY date,time,id"))
 
-def _v012_weight_summary(db):
+def _v012_weight_summary(db, targets=None):
+    targets = targets or dpp_profile.legacy_targets()
     ws = _v012_official_weights(db)
     latest = _v012_latest_weight(db)
     current = _v012_safe_float(latest.get("kg")) if latest else None
-    goal = DPP_V012_TARGETS["goal_weight_kg"]
+    goal = targets["goal_weight_kg"]
 
     if ws:
-        start = _v012_safe_float(ws[0].get("kg"), DPP_V012_TARGETS["fallback_start_weight_kg"])
+        start = _v012_safe_float(ws[0].get("kg"), targets["fallback_start_weight_kg"])
     else:
-        start = DPP_V012_TARGETS["fallback_start_weight_kg"]
+        start = targets["fallback_start_weight_kg"]
 
     trend = {
         "label": "Sin tendencia",
@@ -1682,16 +1868,16 @@ def _v012_card(label, value, pct, status, sub="", kind="generic"):
     }
 
 def _v012_build_insights(d: str):
+    targets = dpp_profile.legacy_targets()
     with con() as db:
         meals = _v012_day_meals(db, d)
         workouts = _v012_day_workouts(db, d)
         mt = _v012_meal_totals(meals)
         wt = _v012_workout_totals(workouts)
-        weight = _v012_weight_summary(db)
+        weight = _v012_weight_summary(db, targets)
         week = _v012_week_summary(db, d)
         days_since_workout = _v012_days_since_last_workout(db, d)
 
-    targets = DPP_V012_TARGETS
     protein_target = targets["protein_target_g"]
     protein_min = targets["protein_min_g"]
     sport_bonus = min(wt["kcal"], targets["max_sport_bonus_kcal"]) * targets["sport_bonus_factor"]
@@ -1726,7 +1912,7 @@ def _v012_build_insights(d: str):
         advice.append({
             "severity": "good",
             "title": "Proteína bien encaminada",
-            "text": "Mantún el cierre limpio y no recortes de m?s.",
+            "text": "Mantén el cierre limpio y no recortes de más.",
         })
 
     if mt["oil_g"] > targets["oil_bad_g"]:
@@ -1734,7 +1920,7 @@ def _v012_build_insights(d: str):
         advice.append({
             "severity": "bad",
             "title": "Aceite alto",
-            "text": "Resto del día con sartún antiadherente y 0?5 g de aceite.",
+            "text": "Resto del día con sartén antiadherente y 0–5 g de aceite.",
         })
     elif mt["oil_g"] > targets["oil_max_g"]:
         advice.append({
@@ -1754,7 +1940,7 @@ def _v012_build_insights(d: str):
         advice.append({
             "severity": "warn",
             "title": "Vas algo pasado",
-            "text": "Cierra con proteína y verdura. Evita compensar con m?s cardio si tienes hambre real.",
+            "text": "Cierra con proteína y verdura. Evita compensar con más cardio si tienes hambre real.",
         })
     elif mt["kcal"] < 900 and len(meals) <= 1:
         advice.append({
@@ -1787,7 +1973,7 @@ def _v012_build_insights(d: str):
         advice.append({
             "severity": "warn",
             "title": "Varios días sin entrenar",
-            "text": "Mete una sesi?n corta: paseo largo, p?del, fuerza o bici suave.",
+            "text": "Mete una sesión corta: paseo largo, pádel, fuerza o bici suave.",
         })
 
     trend = weight["trend"]
@@ -1844,7 +2030,7 @@ def _v012_build_insights(d: str):
     activity_status = "good" if wt["kcal"] >= 300 else "info"
 
     cards = [
-        _v012_card("Proteína", f"{mt['protein']:.0f} g", mt["protein"] / protein_target * 100, protein_status, "objetivo 130-150 g", "protein"),
+        _v012_card("Proteína", f"{mt['protein']:.0f} g", mt["protein"] / protein_target * 100, protein_status, f"objetivo {targets['protein_target_min_g']:.0f}-{targets['protein_high_g']:.0f} g", "protein"),
         _v012_card("Comida", f"{mt['kcal']:.0f} kcal", mt["kcal"] / max(1, kcal_target) * 100, kcal_status, f"objetivo flexible {kcal_target:.0f} kcal", "kcal"),
         _v012_card("Aceite", f"{mt['oil_g']:.0f} g", mt["oil_g"] / targets["oil_max_g"] * 100, oil_status, "5 g normal · 10 g máximo", "oil"),
         _v012_card("Actividad", f"{wt['kcal']:.0f} kcal", min(100, wt["kcal"] / 900 * 100), activity_status, f"{wt['minutes']:.0f} min · {wt['count']} sesiones", "activity"),
@@ -1858,7 +2044,7 @@ def _v012_build_insights(d: str):
             f"{weight['current_kg']:.1f} kg",
             100 if remaining == 0 else max(0, min(100, (lost or 0) / max(0.1, (weight['start_kg'] - weight['goal_kg'])) * 100)),
             weight["trend"]["status"],
-            f"{remaining:.1f} kg hasta {weight['goal_kg']:.0f} kg" if remaining is not None else "objetivo 80 kg",
+            f"{remaining:.1f} kg hasta {weight['goal_kg']:.0f} kg" if remaining is not None else f"objetivo {weight['goal_kg']:.0f} kg",
             "weight",
         ))
 
@@ -1890,7 +2076,7 @@ def _v012_build_insights(d: str):
 def api_v012_insights_today():
     d = request.args.get("date") or today_iso()
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", d):
-        return jsonify({"error": "Fecha inv?lida"}), 400
+        return jsonify({"error": "Fecha inválida"}), 400
     try:
         return jsonify(_v012_build_insights(d))
     except Exception as exc:
@@ -1898,11 +2084,10 @@ def api_v012_insights_today():
 
 @app.get("/health")
 def api_v012_health():
-    return jsonify({"ok": True, "app": "Diet Pro Planner", "version": "v0.0.14.1"})
+    return jsonify({"ok": True, "app": config.APP_NAME, "version": config.VERSION})
 # DPP_V012_INSIGHTS_END
 
 init_db()
-start_strava_auto_thread()
 
 
 
@@ -1910,21 +2095,9 @@ start_strava_auto_thread()
 # v0.0.14.1 - Food Intelligence Core
 # Backend only. No UI changes.
 
-from flask import request, jsonify
 from datetime import date as _fi_date
-import sqlite3 as _fi_sqlite3
 
-DPP_FOOD_INTEL_TARGETS = {
-    "protein_low_g": 120.0,
-    "protein_target_min_g": 130.0,
-    "protein_target_max_g": 150.0,
-    "kcal_base_target": 1900.0,
-    "sport_bonus_factor": 0.35,
-    "max_sport_bonus_kcal": 900.0,
-    "oil_normal_g": 5.0,
-    "oil_max_g": 10.0,
-    "oil_bad_g": 15.0,
-}
+# Targets now come from the editable profile: see dpp_profile.legacy_targets().
 
 def _fi_qident(name):
     return '"' + str(name).replace('"', '""') + '"'
@@ -2235,13 +2408,12 @@ def _fi_confidence_day(items):
     return {"score": round(score, 3), "label": label, "reasons": reasons}
 
 def _fi_score_day(totals, meals, workouts, planned_workout=None):
-    targets = DPP_FOOD_INTEL_TARGETS
+    targets = dpp_profile.legacy_targets()
     kcal = _fi_float(totals.get("kcal"), 0.0)
     protein = _fi_float(totals.get("protein"), 0.0)
     carbs = _fi_float(totals.get("carbs"), 0.0)
     oil = _fi_float(totals.get("oil_g"), 0.0)
     salt = _fi_float(totals.get("salt"), 0.0)
-    sugar = _fi_float(totals.get("sugar"), 0.0)
 
     workout_totals = _fi_workout_totals(workouts)
     training_today = workout_totals["count"] > 0 or bool(planned_workout)
@@ -2449,7 +2621,7 @@ def api_food_intel_day():
     payload = {}
     if request.method == "POST":
         try:
-            payload = request.get_json(silent=True) or {}
+            payload = v.json_body()
         except Exception:
             payload = {}
 
@@ -2593,7 +2765,9 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
     kcal_now = _fi_float(summary.get("kcal"), 0)
     protein_now = _fi_float(summary.get("protein"), 0)
 
-    protein_remaining = max(0, 130 - protein_now)
+    targets = dpp_profile.legacy_targets()
+    protein_goal = targets["protein_target_min_g"]
+    protein_remaining = max(0, protein_goal - protein_now)
     kcal_remaining = max(0, kcal_target - kcal_now)
 
     protein_food = _fimp_pick(foods_allowed, [
@@ -2691,7 +2865,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
         t = opt["totals"]
         protein_after = protein_now + _fi_float(t.get("protein"), 0)
         kcal_after = kcal_now + _fi_float(t.get("kcal"), 0)
-        protein_gap = abs(140 - protein_after)
+        protein_gap = abs(targets["protein_target_g"] + 5 - protein_after)
         kcal_gap = abs(kcal_target - kcal_after)
         opt["fit_score"] = max(0, round(100 - protein_gap * 1.2 - kcal_gap / 35, 0))
 
@@ -2707,6 +2881,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
             "kcal_target": _fi_round(kcal_target, 0),
             "kcal_remaining": _fi_round(kcal_remaining, 0),
             "protein_remaining_to_130": _fi_round(protein_remaining, 1),
+            "protein_goal_g": _fi_round(protein_goal, 0),
         },
         "available_foods_used": available,
         "options": options[:3],
@@ -2720,7 +2895,7 @@ def _fimp_make_options(date_value, meal, available_foods, training_today, curren
 
 @app.route("/api/food-intel/meal-plan", methods=["POST"])
 def api_food_intel_meal_plan():
-    payload = request.get_json(silent=True) or {}
+    payload = v.json_body()
     d = payload.get("date") or _fi_date.today().isoformat()
     meal = payload.get("meal") or payload.get("slot") or "next"
     available_foods = payload.get("available_foods") or payload.get("inventory") or []
@@ -2752,13 +2927,9 @@ def api_food_intel_meal_plan():
 
 @app.route("/api/body-snapshot/latest")
 def api_body_snapshot_latest():
-    import sqlite3
-    from pathlib import Path
     from datetime import date as _date
 
-    db_path = Path("data") / "dieta.db"
-    con = sqlite3.connect(db_path)
-    con.row_factory = sqlite3.Row
+    con = dpp_db.connect(DB)
 
     table = con.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='body_composition'"
@@ -2897,7 +3068,7 @@ def api_body_snapshot_latest():
 # This is intentionally response-level because some UI state can be built from
 # more than one source, not only the current foods table.
 import json as _dpp_v0141_json
-from flask import request as _dpp_v0141_request, current_app as _dpp_v0141_current_app
+from flask import request as _dpp_v0141_request
 
 _DPP_V0141_CANONICAL_FOODS = {
     "alpro protein cacao": {
@@ -3012,7 +3183,7 @@ def _dpp_v0141_fix_food_dict(obj):
     if key in _DPP_V0141_CANONICAL_FOODS:
         canonical = dict(_DPP_V0141_CANONICAL_FOODS[key])
         # Preserve ids/photo paths if present, but force nutrition/name fields.
-        for preserve in ("id", "photo_path", "created_at"):
+        for preserve in ("id", "photo_path", "created_at", "barcode"):
             if preserve in fixed and preserve not in canonical:
                 canonical[preserve] = fixed[preserve]
 
@@ -3056,51 +3227,62 @@ def _dpp_v0141_sanitize_recursive(value):
 
     return _dpp_v0141_fix_strings(value)
 
+_DPP_V0141_ALIAS_NAMES = {
+    "huevos",
+    "chocolate",
+    "cacao",
+    "cacao onzas estimado",
+    "alpro protein chocolate",
+    "alpro protein chocolate onzas estimado",
+    "alpro protein chocolate onzas estimado onzas estimado",
+}
+
+
 def _dpp_v0141_sanitize_foods_list(foods):
+    """Show legacy alias rows under their canonical name, one entry per name.
+
+    Every entry keeps a real database id (the UI adds/edits/deletes foods by
+    id). When both the alias row and the real canonical row exist, the real
+    row wins; otherwise purchased foods win.
+    """
     if not isinstance(foods, list):
         return foods
 
     seen = {}
     clean = []
 
+    def rank(entry, is_real):
+        return (entry.get("id") is not None, is_real, int(entry.get("purchased") or 0))
+
     for raw in foods:
         if not isinstance(raw, dict):
             continue
 
+        raw_name = str(raw.get("name", "")).strip()
         fixed = _dpp_v0141_fix_food_dict(raw)
-        name = str(fixed.get("name", "")).strip()
-        key = _dpp_v0141_canonical_key(name)
+        key = _dpp_v0141_canonical_key(fixed.get("name", ""))
 
-        # Drop explicit legacy aliases from state.
-        if str(raw.get("name", "")).strip().lower() in {
-            "huevos",
-            "chocolate",
-            "cacao",
-            "cacao onzas estimado",
-            "alpro protein chocolate",
-            "alpro protein chocolate onzas estimado",
-            "alpro protein chocolate onzas estimado onzas estimado",
-        }:
-            if key in _DPP_V0141_CANONICAL_FOODS:
-                fixed = dict(_DPP_V0141_CANONICAL_FOODS[key])
-            else:
+        if raw_name.lower() in _DPP_V0141_ALIAS_NAMES:
+            if key not in _DPP_V0141_CANONICAL_FOODS:
                 continue
+            fixed = dict(_DPP_V0141_CANONICAL_FOODS[key])
+            for preserve in ("id", "photo_path", "created_at", "barcode"):
+                if preserve in raw:
+                    fixed[preserve] = raw[preserve]
 
         dedupe = str(fixed.get("name", "")).strip().lower()
         if not dedupe:
             continue
+        is_real = raw_name.lower() == dedupe
 
         if dedupe not in seen:
-            seen[dedupe] = fixed
+            seen[dedupe] = (fixed, is_real)
             clean.append(fixed)
         else:
-            prev = seen[dedupe]
-            prev_p = int(prev.get("purchased") or 0)
-            new_p = int(fixed.get("purchased") or 0)
-            if new_p > prev_p:
-                idx = clean.index(prev)
-                clean[idx] = fixed
-                seen[dedupe] = fixed
+            prev, prev_real = seen[dedupe]
+            if rank(fixed, is_real) > rank(prev, prev_real):
+                clean[clean.index(prev)] = fixed
+                seen[dedupe] = (fixed, is_real)
 
     return clean
 
@@ -3121,7 +3303,7 @@ def _dpp_v0141_sanitize_state_payload(data):
 @app.after_request
 def _dpp_v0141_after_request_sanitize_api_state(response):
     try:
-        if _dpp_v0141_request.path != "/api/state":
+        if _dpp_v0141_request.path != "/api/state" or response.status_code != 200:
             return response
 
         data = response.get_json(silent=True)
@@ -3129,14 +3311,10 @@ def _dpp_v0141_after_request_sanitize_api_state(response):
             return response
 
         data = _dpp_v0141_sanitize_state_payload(data)
-        payload = _dpp_v0141_json.dumps(data, ensure_ascii=False)
-
-        new_response = _dpp_v0141_current_app.response_class(
-            payload,
-            status=response.status_code,
-            mimetype="application/json",
-        )
-        return new_response
+        # Modify in place so headers added by other hooks (security, caching) survive.
+        response.set_data(_dpp_v0141_json.dumps(data, ensure_ascii=False))
+        response.mimetype = "application/json"
+        return response
     except Exception:
         return response
 # DPP_V0141_API_STATE_SANITIZER_END
@@ -3170,4 +3348,5 @@ except Exception as exc:
 # END DPP_SMART_COACH_ROUTE
 
 if __name__ == "__main__":
+    start_strava_auto_thread()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8099")))

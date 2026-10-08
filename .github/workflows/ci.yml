@@ -121,7 +121,7 @@ jobs:
           data = json.loads(Path('/tmp/health.json').read_text())
           assert data.get('ok') is True, data
           assert data.get('app') == 'Diet Pro Planner', data
-          assert str(data.get('version') or '').startswith('v0.0.'), data
+          assert str(data.get('version') or '').startswith('v0.'), data
           print('Health OK:', data)
           PY
           curl --fail --silent --show-error http://127.0.0.1:8099/ | grep -q 'Diet Pro Planner'

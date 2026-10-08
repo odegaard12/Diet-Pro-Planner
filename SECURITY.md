@@ -43,6 +43,9 @@ Private files include, but are not limited to:
 - Strava tokens, activity caches and ignored-ID lists;
 - integration credentials and BYOK provider keys;
 - OCR uploads and label photos;
+- `data/backups/` snapshots, SQLite WAL files (`*.db-wal`, `*.db-shm`), AI and Open Food Facts caches;
 - backups, exports and `.env` files.
 
 The application should not be exposed directly to the public internet without a separately reviewed authentication and reverse-proxy configuration.
+
+Built-in protections: token authentication with login rate limiting, HttpOnly session cookie (`DPP_COOKIE_SECURE=1` behind HTTPS), same-origin checks for session writes, private-network checks for sensitive writes, Content-Security-Policy and related headers, `no-store` caching for private data, single-use expiring Strava OAuth state, and size/type validation of uploads.

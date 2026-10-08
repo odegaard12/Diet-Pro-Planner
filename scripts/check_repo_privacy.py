@@ -21,6 +21,9 @@ FORBIDDEN_SUFFIXES = {
     ".db",
     ".sqlite",
     ".sqlite3",
+    ".db-wal",
+    ".db-shm",
+    ".db-journal",
     ".zip",
 }
 
@@ -53,7 +56,8 @@ def is_forbidden(path_text: str) -> bool:
         return True
 
     path = PurePosixPath(path_text)
-    if path.suffix.lower() in FORBIDDEN_SUFFIXES:
+    lowered = path.name.lower()
+    if path.suffix.lower() in FORBIDDEN_SUFFIXES or any(lowered.endswith(suffix) for suffix in FORBIDDEN_SUFFIXES):
         return True
     if any(part in FORBIDDEN_PARTS for part in path.parts):
         return True

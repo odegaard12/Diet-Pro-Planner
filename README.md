@@ -5,14 +5,69 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
 
-**Current version:** v0.0.20  
-**Latest release:** v0.0.20 — Planned versus real activity  
+**Current version:** v0.1.0  
+**Latest release:** v0.1.0 — Pro core: real progress analytics, goals, safe database, AI (BYOK) and food database  
 **License:** MIT  
-**Stack:** Python · Flask · Vanilla JS · Docker · Local-first
+**Stack:** Python · Flask · Waitress · SQLite · Vanilla JS · Docker · Local-first
 
 Diet Pro Planner is a self-hosted cockpit for nutrition, body composition, sport and daily diet decisions.
 
 It is built for private daily use on a Raspberry Pi with Docker. Public application code stays in GitHub; food logs, SQLite databases, Strava tokens, uploads, pantry contents and body-composition records stay local.
+
+## Access protection
+
+- Set `DPP_AUTH_TOKEN` in your local `.env` before exposing the app beyond your machine.
+- The web UI uses a local login screen and the API also accepts the standard bearer-token authorization header with your `DPP_AUTH_TOKEN`.
+- Login attempts and wrong bearer tokens are rate limited per client address; sessions use an HttpOnly, SameSite=Lax cookie (`DPP_COOKIE_SECURE=1` behind HTTPS).
+- Behind a reverse proxy, set `DPP_TRUSTED_PROXIES` so the limiter sees real client addresses (otherwise every client shares the proxy's address).
+- `/health` stays public for Docker and uptime checks.
+- Strava `client_secret` is read from `STRAVA_CLIENT_SECRET` only and is never stored in `data/integrations.json`.
+
+## v0.1.0 — Pro core
+
+**Progress you can trust**
+- New **Progreso** page: trend weight (exponential moving average), real loss rate in kg/week, goal date, daily energy vs target, protein adherence, macro split, weekly table, top foods and a full daily data table.
+- **Adaptive energy expenditure (real TDEE)** measured from what you eat and how your trend weight moves (needs 14 logged days and 6 weigh-ins in 4 weeks).
+- Pattern insights: weekend vs weekday intake, logging streak, protein adherence.
+
+**Your goals, not hard-coded values**
+- New **Objetivos** page. Weight goal, start weight, protein and oil limits, sport bonus and calorie mode: manual, automatic (Mifflin-St Jeor) or adaptive (measured TDEE).
+- Coach, score, insights, Food Intelligence and Strava kcal estimates now use your profile and current weight (the old 90.0 kg / 80 kg / 1900 kcal constants are only defaults).
+
+**Database safety**
+- Versioned migrations with an automatic snapshot before upgrading (`data/backups/`).
+- Daily rotating backups, one-click SQLite download and CSV exports (meals, weights, workouts).
+- Indexed date lookups, connections that are always closed; dangling references from old scripts are repaired instead of blocking the upgrade.
+- Fixes silent data loss: two identical meals at the same minute were merged and the second meal's foods discarded.
+
+**Food database and AI (optional)**
+- Barcode / name search in **Open Food Facts** (camera scanning on supported browsers), with local cache; scanned products remember their barcode.
+- Optional **AI coach** and **AI label reading** with your own key: Claude (`ANTHROPIC_API_KEY`) or any OpenAI-compatible endpoint, including a local Ollama. Daily limit, response cache and a privacy-minimised context. The rule-based coach keeps working without AI.
+
+**Fixes and UX**
+- Food search in *Registrar comida* works again (the suggestion list was never rendered).
+- Smart Coach now proposes meals from your real pantry.
+- Repeat a meal with one tap (↻), edit and delete catalog foods, edit meals via API.
+- Mobile coach card no longer hides the main recommendation; destructive buttons look destructive.
+- `static/app.js` reduced from 2,205 to ~390 lines: no more DOM polling every 1–3 s, no `fetch()` monkeypatch, user data escaped everywhere.
+- Installable as a PWA (manifest + icons). Production server: Waitress.
+
+**Security**
+- Open-redirect and reflected-XSS fixes in the login flow, login brute-force protection.
+- Security headers + Content-Security-Policy, `no-store` on private data.
+- Strava OAuth `state` is mandatory, single-use and expires.
+- Uploads are size-limited and verified as real images.
+- Tests run against a temporary data directory (they used to overwrite `data/pantry.json`).
+
+See [`reports/v010-release-notes.md`](reports/v010-release-notes.md) for the full list and upgrade notes.
+
+## v0.0.21 — Security hardening for private self-hosting
+
+- Adds required authentication for private API and upload access.
+- Stops trusting spoofed `X-Forwarded-For` headers unless the proxy is explicitly trusted.
+- Keeps the Strava `client_secret` in environment configuration instead of `data/integrations.json`.
+- Hardens upload serving against traversal-style paths.
+- Keeps `/health` public for Docker and uptime checks while private data stays protected.
 
 ## v0.0.20 — Planned versus real activity
 
@@ -57,7 +112,13 @@ It is built for private daily use on a Raspberry Pi with Docker. Public applicat
 - Editable availability, stock, category, priority and notes.
 - **No tengo esto**, **Dame otra comida** and direct pantry access from the Coach.
 - Local fallback mode without external AI.
-- Future OpenAI/Gemini support follows a BYOK policy: each installation uses its own key.
+- Optional AI coach (Claude or an OpenAI-compatible endpoint such as a local Ollama) follows a BYOK policy: each installation uses its own key, with daily limits and caching.
+
+### Progress and goals
+
+- Trend weight, real loss rate and estimated goal date.
+- Adaptive energy expenditure measured from intake and weight trend.
+- Editable goals: weight, protein, oil, sport bonus and calorie mode (manual, formula or adaptive).
 
 ### Weight and body composition
 
@@ -77,8 +138,10 @@ It is built for private daily use on a Raspberry Pi with Docker. Public applicat
 - Local activity-detail cache.
 - API rate-limit diagnostics and controlled HTTP 429 handling.
 
-### OCR and food catalog
+### OCR, barcodes and food catalog
 
+- Barcode and name search in Open Food Facts, with camera scanning where supported.
+- Optional AI label reading (BYOK) when OCR confidence is low.
 - Local Tesseract OCR.
 - OCR3 label parser.
 - Known-label correction and plausibility validation.
@@ -103,7 +166,7 @@ Public CI includes a tracked-file privacy guard so these runtime files cannot be
 
 ## Development and security
 
-Pull requests run Python and JavaScript checks, public route tests, the frontend anti-monolith guard, the privacy guard and a real Docker `/health` smoke test.
+Pull requests run Python and JavaScript checks, unit tests (migrations, API, analytics, security, AI and food lookup with mocks), the frontend anti-monolith guard, the privacy guard and a real Docker `/health` smoke test.
 
 - Contribution workflow: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Vulnerability reporting: [`SECURITY.md`](SECURITY.md)
@@ -132,11 +195,35 @@ http://raspberrypi.local:8099
 
 ## API summary
 
+All `/api/*` routes require authentication except `/api/auth/login` and the Strava OAuth callback.
+
 ### Core
 
 - `GET /health`
 - `GET /api/state`
 - `GET /api/insights/today`
+- `POST /api/meals` · `PUT /api/meals/<id>` · `POST /api/meals/<id>/duplicate` · `DELETE /api/meals/<id>`
+- `POST /api/foods` · `DELETE /api/foods/<id>`
+- `POST /api/weights` · `PUT /api/weights/<id>` · `DELETE /api/weights/<id>`
+- `POST /api/workouts` · `DELETE /api/workouts/<id>`
+
+### Goals and progress
+
+- `GET /api/profile` · `PUT /api/profile`
+- `GET /api/analytics/overview?days=60`
+- `GET /api/analytics/tdee`
+
+### Data
+
+- `GET /api/backup` · `POST /api/backup` · `GET /api/backup/download`
+- `GET /api/export/meals.csv` · `weights.csv` · `workouts.csv`
+- `GET /api/export` *(JSON)*
+
+### Food database and AI
+
+- `GET /api/foods/barcode/<code>`
+- `GET /api/foods/search-online?q=...`
+- `GET /api/ai/status` · `POST /api/ai/coach` · `POST /api/ai/label`
 
 ### Food Intelligence and Smart Coach
 
@@ -180,7 +267,39 @@ http://raspberrypi.local:8099
 - `POST /api/integrations/strava/test`
 - `POST /api/integrations/strava/disconnect`
 
+## Configuration
+
+All settings live in `.env` (see [`.env.example`](.env.example)):
+
+| Variable | Purpose |
+| --- | --- |
+| `DPP_AUTH_TOKEN` | Required access token |
+| `DPP_COOKIE_SECURE` / `DPP_TRUSTED_PROXIES` | HTTPS cookie flag / trusted reverse proxies |
+| `STRAVA_*` | Optional Strava OAuth app |
+| `ANTHROPIC_API_KEY`, `DPP_AI_*` | Optional AI (BYOK); `DPP_AI_DAILY_LIMIT` caps calls per day |
+| `DPP_OFF_ENABLED`, `DPP_OFF_COUNTRY` | Open Food Facts lookups |
+| `DPP_BACKUP_KEEP` | Daily backups kept (0 disables) |
+| `DPP_DATA_DIR`, `DPP_DB`, `DPP_PANTRY` | Override data paths |
+| `TZ` | Local time zone (set in `docker-compose.yml`) |
+
 ## Releases
+
+### v0.1.0 — Pro core
+
+- Progreso page with trend weight, real rate, adaptive TDEE, adherence and patterns.
+- Objetivos page: editable goals replace hard-coded personal values.
+- Versioned migrations, automatic and daily backups, SQLite download and CSV exports.
+- Open Food Facts barcode/name search; optional AI coach and AI label reading (BYOK).
+- Food search restored, pantry-aware Smart Coach, repeat meals, lighter and safer frontend.
+- Login, OAuth, upload and header hardening; isolated tests.
+
+### v0.0.21 — Security hardening for private self-hosting
+
+- Auth-required access for `/api/*` and `/uploads/*`.
+- Local login screen for the browser UI plus bearer-token support for API clients.
+- Safer local-network checks that ignore forged forwarding headers by default.
+- Strava `client_secret` removed from disk-backed integration storage.
+- Upload path validation tightened without exposing local files.
 
 ### v0.0.20 — Planned versus real activity
 
@@ -229,15 +348,15 @@ v0.0.15, v0.0.14.2, v0.0.14.1, v0.0.14, v0.0.13, v0.0.12, v0.0.11, v0.0.10, v0.0
 
 ## Roadmap
 
-- Automatic day closing when nutrition goals are reached.
-- OpenAI/Gemini BYOK settings.
-- AI response cache and daily limits.
+- Planned-versus-real meal workflow (weekly meal plan linked to logged meals).
+- Meal editing UI (the API already supports it) and quick "copy yesterday".
+- Dark mode and a consolidated design system (replacing the layered legacy CSS).
+- Body-composition charts in Progreso (merge Peso 2.0).
 - Strava cleanup tools for duplicates, estimates and planned activities.
-- Richer weight and body-composition charts.
-- Planned-versus-real meal workflow.
-- OCR4 product detection and duplicate handling.
-- Premium dashboard polish.
-- Improved iPhone/PWA standalone installation.
+- Offline support (service worker) and push reminders.
+- Non-root Docker user and multi-arch image publishing.
+
+Ready-to-use prompts for continuing the work with Claude Code are in [`docs/CLAUDE_CODE_PROMPTS.md`](docs/CLAUDE_CODE_PROMPTS.md).
 
 ## Disclaimer
 

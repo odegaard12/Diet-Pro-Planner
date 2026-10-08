@@ -75,7 +75,7 @@
       hero.dataset.dppCoachV17 = "1";
 
       const kicker = hero.querySelector(".fi13-kicker") || findTextElement("Inteligencia del día");
-      if (kicker) kicker.textContent = "Coach del día · v0.0.20";
+      if (kicker) kicker.textContent = "Coach del día";
 
       const h2 = hero.querySelector("h2");
       if (h2) h2.textContent = c.status === "base_insuficiente" ? "Aún no hay score, pero sí hay decisión" : (c.headline || "Coach del día");
@@ -174,11 +174,6 @@
       if (box) box.innerHTML = "";
     }
 
-    const eyebrow = document.querySelector(".eyebrow");
-    if (eyebrow && eyebrow.textContent.includes("v0.0.16")) {
-      eyebrow.textContent = eyebrow.textContent.replace("v0.0.16", "v0.0.20");
-    }
-
     return true;
   }
 
@@ -198,49 +193,26 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const ok = render(data);
-      if (ok) lastAppliedKey = key;
+      if (ok) {
+        lastAppliedKey = key;
+        document.dispatchEvent(new CustomEvent("dpp:coach-rendered", { detail: data }));
+      }
     } catch (err) {
       const panel = findPanel();
-      if (panel) {
+      if (panel && !panel.querySelector(".dpp-coach-error")) {
         panel.dataset.dppCoachV17 = "1";
-        panel.innerHTML += `<div class="dpp-coach-avoid">No se pudo cargar Smart Coach: ${esc(err.message || err)}</div>`;
+        panel.insertAdjacentHTML("beforeend", `<div class="dpp-coach-avoid dpp-coach-error">No se pudo cargar Smart Coach: ${esc(err.message || err)}</div>`);
       }
     } finally {
       busy = false;
     }
   }
 
-  function schedule(force) {
-    clearTimeout(timer);
-    timer = setTimeout(() => loadCoach(force), 250);
-  }
-
   window.DPPCoachV17 = {
+    // Called by static/js/features/home.js right after the home view renders.
     load: () => {
       lastAppliedKey = "";
       return loadCoach(true);
     }
   };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => schedule(true));
-  } else {
-    schedule(true);
-  }
-
-  const observer = new MutationObserver(() => schedule(false));
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-
-  document.addEventListener("change", function (ev) {
-    if (ev.target && ev.target.matches("input[type='date'], #dashDate")) {
-      lastAppliedKey = "";
-      schedule(true);
-    }
-  });
-
-  document.addEventListener("click", function () {
-    schedule(false);
-  });
-
-  [300, 800, 1500, 3000].forEach((ms) => setTimeout(() => schedule(true), ms));
 })();

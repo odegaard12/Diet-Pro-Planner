@@ -8,6 +8,7 @@ Diet Pro Planner is a personal, local-first application. Contributions are welco
 - Keep pull requests small and focused.
 - Do not combine unrelated refactors with a feature or bug fix.
 - Prefer a new focused module over adding more code to `app.py`, `static/app.js` or `static/styles.css`.
+- Read [`CLAUDE.md`](CLAUDE.md) for the architecture rules (config paths, migrations, validation, frontend modules).
 
 ## Privacy rules
 
@@ -29,7 +30,7 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python dpp_entrypoint.py
+DPP_AUTH_TOKEN=dev python dpp_entrypoint.py
 ```
 
 The default local URL is `http://localhost:8099`.
@@ -50,6 +51,10 @@ python scripts/check_frontend_monoliths.py
 python scripts/check_repo_privacy.py
 python -m unittest discover -s tests -v
 ```
+
+Tests import `tests/_env.py`, which points the app at a temporary data directory: they never touch your real
+`data/dieta.db` or `data/pantry.json`. Schema changes need a migration in `dpp_db.MIGRATIONS` plus a test in
+`tests/test_db_migrations.py`.
 
 Check JavaScript syntax:
 

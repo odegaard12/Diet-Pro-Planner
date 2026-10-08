@@ -52,7 +52,7 @@
             <small>${itemSummary(meal.items)}</small>
           </div>
           <strong>${fmtNumber(totals.kcal)} kcal<br><span>${fmtNumber(totals.protein)} g prot.</span></strong>
-          <button class="mini-delete" title="Borrar" onclick="deleteMeal(${id})">×</button>
+          <span class="mini-actions"><button class="mini-repeat" title="Repetir hoy" aria-label="Repetir hoy" onclick="repeatMeal(${id}, this)">↻</button><button class="mini-delete" title="Borrar" aria-label="Borrar" onclick="deleteMeal(${id})">×</button></span>
         </div>
         ${note ? `<p class="compact-note">${escapeHtml(note)}</p>` : ''}
       </article>`;

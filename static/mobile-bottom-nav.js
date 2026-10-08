@@ -11,19 +11,24 @@
   const MOBILE_QUERY = '(max-width: 760px), (pointer: coarse)';
   const mq = window.matchMedia(MOBILE_QUERY);
 
+  // Navigates by page id through the app's go(); text matching is only a fallback.
   const MAIN = [
-    { id: 'summary', label: 'Resumen', icon: '🏠', match: ['resumen'] },
-    { id: 'meals', label: 'Comidas', icon: '🍽️', match: ['registrar', 'comidas'] },
-    { id: 'sport', label: 'Deporte', icon: '🏋️', match: ['deporte'] },
-    { id: 'weight', label: 'Peso', icon: '⚖️', match: ['peso'] },
+    { id: 'summary', page: 'home', label: 'Resumen', icon: '🏠', match: ['resumen'] },
+    { id: 'meals', page: 'register', label: 'Comidas', icon: '🍽️', match: ['registrar', 'comidas'] },
+    { id: 'weight', page: 'weights', label: 'Peso', icon: '⚖️', match: ['peso'] },
+    { id: 'progress', page: 'progress', label: 'Progreso', icon: '📈', match: ['progreso'] },
   ];
 
   const MORE = [
-    { id: 'templates', label: 'Plantillas', icon: '⚡', match: ['plantillas'] },
-    { id: 'foods', label: 'Alimentos', icon: '🥫', match: ['alimentos'] },
-    { id: 'plan', label: 'Plan', icon: '📅', match: ['plan'] },
-    { id: 'integrations', label: 'Integraciones', icon: '🔗', match: ['integraciones'] },
-    { id: 'history', label: 'Historial', icon: '📚', match: ['historial'] },
+    { id: 'sport', page: 'sport', label: 'Deporte', icon: '🏋️', match: ['deporte'] },
+    { id: 'activity-plan', page: 'activity-plan', label: 'Plan deporte', icon: '🗓️', match: ['plan deporte'] },
+    { id: 'templates', page: 'templates', label: 'Plantillas', icon: '⚡', match: ['plantillas'] },
+    { id: 'foods', page: 'foods', label: 'Alimentos', icon: '🥫', match: ['alimentos'] },
+    { id: 'pantry', page: 'pantry', label: 'Despensa', icon: '🧺', match: ['despensa'] },
+    { id: 'plan', page: 'plan', label: 'Plan comidas', icon: '📅', match: ['plan'] },
+    { id: 'goals', page: 'goals', label: 'Objetivos', icon: '🎯', match: ['objetivos'] },
+    { id: 'integrations', page: 'integrations', label: 'Integraciones', icon: '🔗', match: ['integraciones'] },
+    { id: 'history', page: 'history', label: 'Historial', icon: '📚', match: ['historial'] },
   ];
 
   let built = false;
@@ -115,10 +120,15 @@
   }
 
   function go(item) {
-    const target = findTarget(item);
     setActive(item.id);
     closeMore();
 
+    if (item.page && typeof window.go === 'function') {
+      window.go(item.page);
+      return;
+    }
+
+    const target = findTarget(item);
     if (!target) {
       console.warn('[DPP mobile nav] target not found:', item.label);
       return;
@@ -218,6 +228,12 @@
   } else {
     init();
   }
+
+  // Keep the active tab in sync when navigation happens elsewhere (sidebar, CTAs, links).
+  document.addEventListener('dpp:page', (event) => {
+    const item = MAIN.concat(MORE).find((entry) => entry.page === event.detail);
+    setActive(MAIN.includes(item) ? item.id : (item ? 'more' : ''));
+  });
 
   if (mq.addEventListener) mq.addEventListener('change', init);
   else mq.addListener(init);

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ipaddress
 import re
 import sqlite3
 import unicodedata
@@ -9,8 +8,10 @@ from typing import Any
 
 from flask import jsonify, request
 
+from dpp_security import is_private_request
 
-VERSION = "v0.0.20"
+
+VERSION = "v0.0.21"
 VALID_INTENSITIES = {"easy", "moderate", "hard", "recovery"}
 VALID_MANUAL_STATUSES = {"planned", "skipped", "cancelled"}
 
@@ -40,13 +41,7 @@ def _category(value: Any) -> str:
 
 
 def _private_request() -> bool:
-    raw = request.headers.get("X-Forwarded-For", request.remote_addr or "")
-    raw = raw.split(",", 1)[0].strip()
-    try:
-        address = ipaddress.ip_address(raw)
-        return bool(address.is_private or address.is_loopback or address.is_link_local)
-    except ValueError:
-        return raw in {"localhost", "raspberrypi"}
+    return is_private_request()
 
 
 def _iso_day(value: Any, fallback: str | None = None) -> str:
@@ -349,9 +344,3 @@ def register_activity_plan_v020(app, legacy) -> None:
             return jsonify({"ok": False, "error": "Actividad planificada no encontrada"}), 404
         return jsonify({"ok": True, "version": VERSION, "message": "Actividad planificada eliminada"})
 
-    for rule in list(app.url_map.iter_rules()):
-        if rule.rule == "/health":
-            app.view_functions[rule.endpoint] = lambda: jsonify(
-                {"app": "Diet Pro Planner", "ok": True, "version": VERSION}
-            )
-            break

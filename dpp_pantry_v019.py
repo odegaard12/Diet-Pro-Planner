@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ipaddress
 import json
 import os
 import re
@@ -12,6 +11,7 @@ from typing import Any
 from flask import jsonify, request
 
 import dpp_smart_coach as smart
+from dpp_security import is_private_request
 
 
 VERSION = "v0.0.19"
@@ -33,13 +33,7 @@ def _slug(value: Any) -> str:
 
 
 def _private_request() -> bool:
-    raw = request.headers.get("X-Forwarded-For", request.remote_addr or "")
-    raw = raw.split(",", 1)[0].strip()
-    try:
-        address = ipaddress.ip_address(raw)
-        return bool(address.is_private or address.is_loopback or address.is_link_local)
-    except ValueError:
-        return raw in {"localhost", "raspberrypi"}
+    return is_private_request()
 
 
 def _pantry_path() -> Path:
@@ -297,10 +291,3 @@ def register_pantry_v019(app, legacy) -> None:
         result.update({"changed": changed, "message": f"Marcado como no disponible: {', '.join(changed)}", "stats": _stats(pantry)})
         return jsonify(result), (200 if result.get("ok") else 409)
 
-    # During branch validation, expose the actual candidate version without editing legacy app.py.
-    for rule in list(app.url_map.iter_rules()):
-        if rule.rule == "/health":
-            app.view_functions[rule.endpoint] = lambda: jsonify({
-                "app": "Diet Pro Planner", "ok": True, "version": VERSION
-            })
-            break

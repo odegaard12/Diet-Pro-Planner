@@ -7,9 +7,11 @@ from typing import Any, Dict, List, Optional
 
 from flask import jsonify, request
 
+import dpp_config as config
 
-DEFAULT_DB = os.environ.get("DPP_DB", "data/dieta.db")
-DEFAULT_PANTRY = os.environ.get("DPP_PANTRY", "data/pantry.json")
+
+DEFAULT_DB = str(config.DB_PATH)
+DEFAULT_PANTRY = str(config.PANTRY_PATH)
 
 
 def _q(name: str) -> str:
@@ -45,81 +47,6 @@ def _num(value: Any, default: float = 0.0) -> float:
         return float(value)
     except Exception:
         return default
-
-
-def _food_per100(cur: sqlite3.Cursor, food_id: Any, names: List[str]) -> float:
-    if food_id in (None, "") or not _table_exists(cur, "foods"):
-        return 0.0
-
-    fc = _cols(cur, "foods")
-    col = _pick(fc, names)
-    if not col:
-        return 0.0
-
-    try:
-        row = cur.execute(f"SELECT {_q(col)} FROM foods WHERE id=? LIMIT 1", (food_id,)).fetchone()
-        if not row:
-            return 0.0
-        return _num(row[0])
-    except Exception:
-        return 0.0
-
-
-def _sum_meal_items(cur: sqlite3.Cursor, meal_id: Any) -> Dict[str, float]:
-    item_table = None
-    for table in ["meal_items", "meal_foods", "meal_entries"]:
-        if _table_exists(cur, table):
-            item_table = table
-            break
-
-    if not item_table:
-        return {"kcal": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}
-
-    ic = _cols(cur, item_table)
-    meal_id_col = _pick(ic, ["meal_id", "mealId", "parent_id"])
-    if not meal_id_col:
-        return {"kcal": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}
-
-    kcal_col = _pick(ic, ["kcal", "calories"])
-    protein_col = _pick(ic, ["protein", "protein_g"])
-    carbs_col = _pick(ic, ["carbs", "carbs_g"])
-    fat_col = _pick(ic, ["fat", "fat_g"])
-    grams_col = _pick(ic, ["grams", "g", "quantity", "amount"])
-    food_id_col = _pick(ic, ["food_id", "foodId"])
-
-    rows = cur.execute(
-        f"SELECT * FROM {_q(item_table)} WHERE {_q(meal_id_col)}=?",
-        (meal_id,),
-    ).fetchall()
-
-    totals = {"kcal": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}
-
-    for r in rows:
-        grams = _num(r[grams_col]) if grams_col else 0.0
-        food_id = r[food_id_col] if food_id_col else None
-
-        kcal = _num(r[kcal_col]) if kcal_col else 0.0
-        protein = _num(r[protein_col]) if protein_col else 0.0
-        carbs = _num(r[carbs_col]) if carbs_col else 0.0
-        fat = _num(r[fat_col]) if fat_col else 0.0
-
-        # Fallback: si el item no trae totales, calcular desde foods por 100 g.
-        if grams > 0 and food_id not in (None, ""):
-            if kcal == 0:
-                kcal = grams * _food_per100(cur, food_id, ["kcal_100", "kcal_per_100g", "calories_100g", "kcal"]) / 100
-            if protein == 0:
-                protein = grams * _food_per100(cur, food_id, ["protein_100", "protein_per_100g", "protein"]) / 100
-            if carbs == 0:
-                carbs = grams * _food_per100(cur, food_id, ["carbs_100", "carbs_per_100g", "carbs"]) / 100
-            if fat == 0:
-                fat = grams * _food_per100(cur, food_id, ["fat_100", "fat_per_100g", "fat"]) / 100
-
-        totals["kcal"] += kcal
-        totals["protein"] += protein
-        totals["carbs"] += carbs
-        totals["fat"] += fat
-
-    return {k: round(v, 1) for k, v in totals.items()}
 
 
 def _food_per100(cur: sqlite3.Cursor, food_id: Any, names: List[str]) -> float:
@@ -495,10 +422,15 @@ def _build_pantry_next_meal(pantry: Dict[str, Any], training_type: str, breakfas
     if not pantry.get("available"):
         return None
 
+    # Solid protein first; drinks/dairy only as a fallback (same policy as v0.0.19).
     protein = _pantry_find(
         pantry,
-        ["protein", "protein_drink", "protein_fat"],
-        ["pollo", "atun", "huevo", "jamon", "yogur", "alpro"],
+        ["protein", "protein_fat"],
+        ["pollo", "pavo", "atun", "huevo", "jamon", "merluza", "salmon", "ternera"],
+    ) or _pantry_find(
+        pantry,
+        ["protein_drink", "dairy"],
+        ["yogur", "alpro", "queso fresco"],
     )
     vegetable = _pantry_find(
         pantry,
@@ -591,6 +523,7 @@ def _build_recommendations(
     workout_kcal = round(sum(w["kcal"] for w in workouts), 1)
 
     training_type = _classify_training(workout_kcal, workouts)
+    pantry = _load_pantry()
     base_ready = len(meals) >= 2 or total_kcal >= 600
 
     today_text = " ".join((m["name"] + " " + m["notes"]) for m in meals)
@@ -603,7 +536,6 @@ def _build_recommendations(
 
     low_protein = total_protein < 70
     very_low_protein = total_protein < 35
-    low_energy = total_kcal < 700
     breakfast_only = len(meals) == 1 and _contains_any(today_text, ["desayuno", "tostada", "plátano", "platano"])
 
     headline = "Base insuficiente: registra comida real antes de valorar el score."
@@ -632,6 +564,11 @@ def _build_recommendations(
     if breakfast_only:
         next_meal["primary"] = "Ahora: pollo 220-250 g + judías 250-300 g + arroz seco 50-60 g."
         next_meal["why"] = "Solo llevas tostada, plátano y café: faltan proteínas; esta comida arregla el día."
+
+    # The pantry is the source of truth when configured: suggest only foods at home.
+    pantry_meal = _build_pantry_next_meal(pantry, training_type, breakfast_only)
+    if pantry_meal:
+        next_meal = pantry_meal
 
     if very_low_protein:
         protein_message = "Proteína muy baja todavía: intenta meter 55-70 g en comida."
@@ -691,10 +628,10 @@ def _build_recommendations(
         "flags": flags,
         "next_meal": next_meal,
         "pantry": {
-            "available": _load_pantry().get("available"),
+            "available": pantry.get("available"),
             "used": next_meal.get("pantry_used", []),
-            "available_names": _pantry_names(_load_pantry())[:20],
-            "avoid_names": _pantry_avoid_items(_load_pantry())[:20],
+            "available_names": _pantry_names(pantry)[:20],
+            "avoid_names": _pantry_avoid_items(pantry)[:20],
         },
         "quick_actions": quick_actions,
     }
@@ -708,24 +645,28 @@ def build_smart_coach_day(db_path: str, day: str) -> Dict[str, Any]:
             "date": day,
         }
 
+    try:
+        date.fromisoformat(day)
+    except ValueError:
+        return {"ok": False, "error": "Fecha no válida; usa YYYY-MM-DD", "date": day}
+
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-
-    meals = _fetch_meals(cur, day)
-    workouts = _fetch_workouts(cur, day)
-    weight = _fetch_weight(cur, day)
-    biocharge = _fetch_metric(
-        cur,
-        day,
-        ["biocharge_current", "biocharge_wakeup", "biocharge", "hybrid_charge", "hybird_charge"],
-    )
-    prev_meals = _fetch_meals(cur, _previous_day(day))
+    try:
+        cur = conn.cursor()
+        meals = _fetch_meals(cur, day)
+        workouts = _fetch_workouts(cur, day)
+        weight = _fetch_weight(cur, day)
+        biocharge = _fetch_metric(
+            cur,
+            day,
+            ["biocharge_current", "biocharge_wakeup", "biocharge", "hybrid_charge", "hybird_charge"],
+        )
+        prev_meals = _fetch_meals(cur, _previous_day(day))
+    finally:
+        conn.close()
 
     coach = _build_recommendations(day, meals, workouts, weight, biocharge, prev_meals)
-
-    conn.close()
-
 
     return {
         "ok": True,

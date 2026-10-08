@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ipaddress
 import json
 import re
 import threading
@@ -12,6 +11,8 @@ from urllib.parse import urlparse
 
 import requests
 from flask import jsonify, redirect, request
+
+from dpp_security import is_private_request
 
 
 VERSION = "v0.0.18"
@@ -59,17 +60,20 @@ def register_strava_v018(app, legacy) -> None:
             pass
 
     def local_only() -> bool:
-        raw = request.headers.get("X-Forwarded-For", request.remote_addr or "")
-        raw = raw.split(",", 1)[0].strip()
-        try:
-            address = ipaddress.ip_address(raw)
-            return bool(address.is_private or address.is_loopback or address.is_link_local)
-        except ValueError:
-            return raw in {"localhost", "raspberrypi"}
+        return is_private_request()
 
     def load_integrations() -> dict[str, Any]:
         value = read_json(config_file, {})
-        return value if isinstance(value, dict) else {}
+        if not isinstance(value, dict):
+            return {}
+        current = dict(value)
+        strava = current.get("strava")
+        if isinstance(strava, dict) and "client_secret" in strava:
+            clean = dict(strava)
+            clean.pop("client_secret", None)
+            current["strava"] = clean
+            write_private_json(config_file, current)
+        return current
 
     def effective_config() -> dict[str, str]:
         env_cfg = original_strava_config()
@@ -77,7 +81,7 @@ def register_strava_v018(app, legacy) -> None:
         local = root.get("strava") if isinstance(root.get("strava"), dict) else {}
         return {
             "client_id": str(local.get("client_id") or env_cfg.get("client_id") or "").strip(),
-            "client_secret": str(local.get("client_secret") or env_cfg.get("client_secret") or "").strip(),
+            "client_secret": str(env_cfg.get("client_secret") or "").strip(),
             "redirect_uri": str(local.get("redirect_uri") or env_cfg.get("redirect_uri") or "").strip(),
         }
 
@@ -202,9 +206,18 @@ def register_strava_v018(app, legacy) -> None:
                 break
         return output
 
+    def has_external_id(db) -> bool:
+        return "external_id" in {row[1] for row in db.execute("PRAGMA table_info(workouts)").fetchall()}
+
     def imported_ids(db) -> set[str]:
-        rows = db.execute("SELECT notes FROM workouts WHERE notes LIKE '%id=%'").fetchall()
         output: set[str] = set(read_ignored_ids())
+        if has_external_id(db):
+            output.update(
+                str(row[0]) for row in db.execute(
+                    "SELECT external_id FROM workouts WHERE source='strava' AND external_id<>''"
+                ).fetchall()
+            )
+        rows = db.execute("SELECT notes FROM workouts WHERE notes LIKE '%id=%'").fetchall()
         for row in rows:
             text = row["notes"] if hasattr(row, "keys") else row[0]
             output.update(re.findall(r"\bid=(\d+)", str(text or "")))
@@ -219,10 +232,18 @@ def register_strava_v018(app, legacy) -> None:
             return "skipped"
         source = "detalle Strava" if exact else "estimación local"
         notes = f"Strava · {card['title']} · id={activity_id} · kcal desde {source}"
-        existing = db.execute(
-            "SELECT id FROM workouts WHERE notes LIKE ? ORDER BY id DESC LIMIT 1",
-            (f"%id={activity_id}%",),
-        ).fetchone()
+        indexed = has_external_id(db)
+        existing = None
+        if indexed:
+            existing = db.execute(
+                "SELECT id FROM workouts WHERE source='strava' AND external_id=? ORDER BY id DESC LIMIT 1",
+                (activity_id,),
+            ).fetchone()
+        if not existing:
+            existing = db.execute(
+                "SELECT id FROM workouts WHERE notes LIKE ? ORDER BY id DESC LIMIT 1",
+                (f"%id={activity_id}%",),
+            ).fetchone()
         if existing:
             db.execute(
                 "UPDATE workouts SET date=?,time=?,name=?,minutes=?,distance_km=?,kcal=?,notes=? WHERE id=?",
@@ -231,15 +252,25 @@ def register_strava_v018(app, legacy) -> None:
                     card["distance_km"], card["kcal"], notes, existing["id"],
                 ),
             )
+            if indexed:
+                db.execute("UPDATE workouts SET source='strava', external_id=? WHERE id=?", (activity_id, existing["id"]))
             return "updated"
-        db.execute(
-            "INSERT INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes) VALUES(?,?,?,?,?,?,?,?)",
-            (
-                card["date"], card["time"], None, card["sport_type"], card["minutes"],
-                card["distance_km"], card["kcal"], notes,
-            ),
+        values = (
+            card["date"], card["time"], None, card["sport_type"], card["minutes"],
+            card["distance_km"], card["kcal"], notes,
         )
-        return "imported"
+        if indexed:
+            cur = db.execute(
+                "INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes,source,external_id) "
+                "VALUES(?,?,?,?,?,?,?,?,'strava',?)",
+                (*values, activity_id),
+            )
+        else:
+            cur = db.execute(
+                "INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes) VALUES(?,?,?,?,?,?,?,?)",
+                values,
+            )
+        return "imported" if cur.rowcount else "skipped"
 
     def get_tokens() -> dict[str, Any]:
         tokens = legacy.read_strava_tokens()
@@ -263,7 +294,7 @@ def register_strava_v018(app, legacy) -> None:
             "callback_domain": callback_host(callback),
             "connected": bool(tokens.get("access_token")),
             "scope": tokens.get("scope") or "",
-            "storage": "data/integrations.json" if config_file.exists() else "environment",
+            "storage": "data/integrations.json + environment" if config_file.exists() else "environment",
         })
 
     @app.post("/api/integrations/strava/config")
@@ -273,12 +304,13 @@ def register_strava_v018(app, legacy) -> None:
         body = request.get_json(silent=True) or {}
         current = effective_config()
         client_id = str(body.get("client_id") or current["client_id"]).strip()
-        client_secret = str(body.get("client_secret") or current["client_secret"]).strip()
         redirect_uri = str(body.get("redirect_uri") or suggested_callback()).strip()
+        if str(body.get("client_secret") or "").strip():
+            return jsonify({
+                "error": "El Client Secret ya no se guarda en disco; configúralo con STRAVA_CLIENT_SECRET en .env"
+            }), 400
         if not client_id.isdigit():
             return jsonify({"error": "Client ID debe contener solo números"}), 400
-        if len(client_secret) < 16:
-            return jsonify({"error": "Client Secret vacío o demasiado corto"}), 400
         parsed = urlparse(redirect_uri)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             return jsonify({"error": "Callback URL no válida"}), 400
@@ -289,7 +321,6 @@ def register_strava_v018(app, legacy) -> None:
         root = load_integrations()
         root["strava"] = {
             "client_id": client_id,
-            "client_secret": client_secret,
             "redirect_uri": redirect_uri,
             "updated_at": datetime.now().isoformat(timespec="seconds"),
         }
@@ -297,10 +328,14 @@ def register_strava_v018(app, legacy) -> None:
         return jsonify({
             "ok": True,
             "client_id": client_id,
-            "client_secret_set": True,
+            "client_secret_set": bool(current["client_secret"]),
             "redirect_uri": redirect_uri,
             "callback_domain": parsed.hostname,
-            "message": "Configuración Strava guardada localmente",
+            "message": (
+                "Configuración Strava guardada localmente"
+                if current["client_secret"]
+                else "Configuración Strava guardada; define STRAVA_CLIENT_SECRET en .env para completar la conexión"
+            ),
         })
 
     @app.post("/api/integrations/strava/disconnect")
@@ -367,10 +402,8 @@ def register_strava_v018(app, legacy) -> None:
     def callback_v018():
         if not legacy.strava_configured():
             return "Strava no configurado", 400
-        expected = state_file.read_text(encoding="utf-8").strip() if state_file.exists() else ""
-        received = request.args.get("state", "")
-        if expected and received != expected:
-            return "Estado OAuth no válido", 400
+        if not legacy.consume_strava_oauth_state(request.args.get("state", "")):
+            return "Estado OAuth no válido o caducado; vuelve a pulsar Conectar Strava", 400
         code = request.args.get("code")
         if not code:
             return "Falta code de Strava", 400
@@ -387,7 +420,6 @@ def register_strava_v018(app, legacy) -> None:
         )
         response.raise_for_status()
         legacy.write_strava_tokens(response.json())
-        state_file.unlink(missing_ok=True)
         return redirect("/?strava=connected")
 
     def preview_v018():
@@ -538,9 +570,3 @@ def register_strava_v018(app, legacy) -> None:
     if "api_strava_import" in app.view_functions:
         app.view_functions["api_strava_import"] = import_v018
 
-    for rule in list(app.url_map.iter_rules()):
-        if rule.rule == "/health":
-            app.view_functions[rule.endpoint] = lambda: jsonify({
-                "app": "Diet Pro Planner", "ok": True, "version": VERSION
-            })
-            break
