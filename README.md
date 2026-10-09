@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
 
-**Current version:** v0.3.2  
-**Latest release:** v0.3.2 — Works offline  
+**Current version:** v0.3.3  
+**Latest release:** v0.3.3 — Simpler app icon  
 **License:** MIT  
 **Stack:** Python · Flask · Waitress · SQLite · Vanilla JS · Docker · Local-first
 
@@ -314,6 +314,11 @@ All settings live in `.env` (see [`.env.example`](.env.example)):
 | `TZ` | Local time zone (set in `docker-compose.yml`) |
 
 ## Releases
+
+### v0.3.3 — Simpler app icon
+
+- New app icon: one symbol (a leaf inside an orange progress ring) in the dark theme colours, readable at home-screen size. The old one packed a letter, scale, bike, salad, chart and pulse line.
+- Removed the unused 1.4 MB `static/app-icon.png`.
 
 ### v0.3.2 — Works offline
 
