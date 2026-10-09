@@ -212,12 +212,20 @@ def _m5_repair_zero_macro_items(db: sqlite3.Connection) -> None:
         )
 
 
+def _m6_generic_catalog(db: sqlite3.Connection) -> None:
+    """Add the generic food catalog; existing names (user foods) are left untouched."""
+    if _table_exists(db, "foods"):
+        import dpp_catalog
+        dpp_catalog.add_missing(db)
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "meals without UNIQUE constraint", _m1_meals_without_unique),
     (2, "indexes + workouts.source/external_id", _m2_indexes_and_workout_source),
     (3, "app_settings + AI cache/usage tables", _m3_settings_and_ai_tables),
     (4, "foods.barcode", _m4_food_barcode),
     (5, "repair meal items stored without macros", _m5_repair_zero_macro_items),
+    (6, "generic food catalog (only missing names)", _m6_generic_catalog),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 

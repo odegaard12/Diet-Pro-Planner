@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.6 — Generic food catalog
+
+- 60 generic foods (meat, fish, dairy, cereals, legumes, vegetables, fruit, nuts) with approximate per-100 g values, added by migration 6 only where the name does not exist yet; your own foods are never touched.
+- Activity plan validation errors return a fixed message (CodeQL).
+
 ## v0.3.5 — Offline queue
 
 - Meals, weights and workouts saved without connection wait on the phone and are sent in order as soon as the Raspberry is reachable (on reconnect or next app start). The Resumen shows how many are pending.
