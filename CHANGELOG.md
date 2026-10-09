@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.5 — Offline queue
+
+- Meals, weights and workouts saved without connection wait on the phone and are sent in order as soon as the Raspberry is reachable (on reconnect or next app start). The Resumen shows how many are pending.
+
 ## v0.3.4 — README with screenshots
 
 - New README: logo, phone screenshots (demo data), features, quick start, configuration, privacy and security in short.

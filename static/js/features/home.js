@@ -46,6 +46,8 @@
     const long = new Date(d + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric', month: 'short'}).toUpperCase();
     let pill = '<span class="pill">Sin registros</span>';
     if (eaten && target) pill = eaten > target * 1.1 ? '<span class="pill bad">Te pasas</span>' : '<span class="pill good">En objetivo</span>';
+    const pending = readQueue().length;
+    if (pending) pill = `<span class="pill warn" title="Se enviarán al recuperar la conexión">${pending} sin enviar</span>` + pill;
     return `<div class="day-head"><label class="day-pick"><small>${esc(long)}</small><b>${d === today() ? 'Hoy' : 'Día elegido'}</b><input id="dashDate" type="date" value="${esc(d)}" aria-label="Elegir día" onchange="setSelectedDate(this.value);render()"></label>${pill}${d === today() ? '' : '<button class="btn small" type="button" onclick="setSelectedDate(today());render()">Hoy</button>'}</div>`;
   }
 
