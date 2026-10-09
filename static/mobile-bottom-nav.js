@@ -191,17 +191,23 @@
     sheet.setAttribute('aria-label', 'Más secciones');
     sheet.innerHTML = '<div class="dpp-mobile-more-sheet__handle"></div><h2>Más secciones</h2>';
 
-    const grid = document.createElement('div');
-    grid.className = 'dpp-mobile-more-sheet__grid';
-    MORE.forEach((item) => grid.appendChild(navButton(item, 'dpp-mobile-more-sheet__item')));
-    sheet.appendChild(grid);
+    // Same groups and names as the desktop sidebar (window.DPP_NAV from app.js).
+    const menu = window.DPP_NAV;
+    const groups = menu ? menu.groups.slice(1).map(([title, ids]) => [title, ids.map((id) => ({id, page: id, label: menu.labels[id][1], icon: menu.labels[id][0], match: []}))]) : [['', MORE]];
+    groups.forEach(([title, items]) => {
+      if (title) { const h = document.createElement('h3'); h.className = 'dpp-mobile-more-sheet__group'; h.textContent = title; sheet.appendChild(h); }
+      const grid = document.createElement('div');
+      grid.className = 'dpp-mobile-more-sheet__grid';
+      items.forEach((item) => grid.appendChild(navButton(item, 'dpp-mobile-more-sheet__item')));
+      sheet.appendChild(grid);
+    });
 
     // Top-bar actions are hidden on phones; they live here instead.
     const actions = document.createElement('div');
     actions.className = 'dpp-mobile-more-sheet__grid dpp-mobile-more-sheet__actions';
     [
       {icon: '❓', label: 'Ayuda', run: () => window.openHelpModal?.()},
-      {icon: '💾', label: 'Exportar DB', run: () => { window.location.href = '/api/backup/download'; }},
+      {icon: '💾', label: 'Exportar', run: () => { window.location.href = '/api/backup/download'; }},
       {icon: '🚪', label: 'Salir', run: () => document.getElementById('btnLogout')?.click()},
     ].forEach((action) => {
       const btn = document.createElement('button');
@@ -211,6 +217,10 @@
       btn.addEventListener('click', () => { closeMore(); action.run(); });
       actions.appendChild(btn);
     });
+    const appTitle = document.createElement('h3');
+    appTitle.className = 'dpp-mobile-more-sheet__group';
+    appTitle.textContent = 'App';
+    sheet.appendChild(appTitle);
     sheet.appendChild(actions);
 
     const close = document.createElement('button');

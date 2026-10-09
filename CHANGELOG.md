@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.7 — Clearer menus
+
+- One menu structure for the desktop sidebar and the phone 'Más' sheet, grouped into Comida, Deporte, Datos and App.
+- Clearer names: Hoy, Comidas, Entrenos, Plan de comidas, Strava, Objetivos y ajustes; page titles match the menu.
+- Removed menu subtitles and the static 'Regla de hoy' box; the day heading shows the date instead of repeating 'Hoy'.
+
 ## v0.3.6 — Generic food catalog
 
 - 60 generic foods (meat, fish, dairy, cereals, legumes, vegetables, fruit, nuts) with approximate per-100 g values, added by migration 6 only where the name does not exist yet; your own foods are never touched.

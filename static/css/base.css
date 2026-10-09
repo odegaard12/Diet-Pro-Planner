@@ -241,3 +241,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
   .span-4, .span-5, .span-6, .span-7, .span-8, .span-12 { grid-column: 1 / -1; }
   .section-title { margin-top: 22px; }
 }
+
+/* ---------- Menu groups (v0.3.7): sidebar and phone "Más" share the same sections ---------- */
+.nav-group { display: block; margin: 14px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+.nav-copy b { font-weight: 600; }
+.dpp-mobile-more-sheet { max-height: calc(100dvh - 120px); overflow-y: auto; }
+.dpp-mobile-more-sheet__group { margin: 12px 4px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+.dpp-mobile-more-sheet__actions { margin-top: 0; padding-top: 0; border-top: 0; }
