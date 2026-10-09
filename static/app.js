@@ -27,9 +27,47 @@ const day = () => selectedDate || today();
 function remember(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* private mode */ } }
 function setSelectedDate(value) { selectedDate = value; remember('selectedDate', value); }
 
-function toast(msg) { const t = $('#toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
+let toastLockUntil = 0; // keeps "guardado en el móvil" visible over the caller's own "guardado" toast
+function toast(msg, lock) { if (!lock && Date.now() < toastLockUntil) return; if (lock) toastLockUntil = Date.now() + 2500; const t = $('#toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
+/* Offline queue: new meals, weights and workouts saved without connection wait on this device
+   (localStorage) and are sent in order as soon as the Raspberry is reachable again. */
+const QUEUE_KEY = 'dppQueue', QUEUEABLE = ['/api/meals', '/api/weights', '/api/workouts'];
+function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { return []; } }
+function writeQueue(q) { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch (e) { /* private mode */ } }
+let flushing = false;
+async function flushQueue() {
+  const q = readQueue();
+  if (flushing || !q.length || !navigator.onLine) return;
+  flushing = true;
+  let sent = 0;
+  try {
+    while (q.length) {
+      const job = q[0];
+      let r;
+      try { r = await fetch(job.path, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: job.body}); } catch (e) { break; }
+      if (r.status === 401 || r.status >= 500) break; // keep it: sign in again / server busy
+      q.shift(); writeQueue(q); // 2xx sent; 4xx would never succeed, drop it
+      if (r.ok) sent += 1;
+    }
+  } finally { flushing = false; }
+  if (sent) { toast(`${sent} registro${sent > 1 ? 's' : ''} guardado${sent > 1 ? 's' : ''} sin conexión ya enviado${sent > 1 ? 's' : ''}`); load().catch(() => {}); }
+}
 async function api(path, opts = {}) {
-  const r = await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts});
+  if ((opts.method || 'GET') === 'POST' && QUEUEABLE.includes(path)) {
+    try {
+      const r = await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts});
+      if (r.status === 503 && !navigator.onLine) throw new TypeError('offline');
+      return handle(r);
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e; // a real API error, not a network failure
+      const q = readQueue(); q.push({path, body: opts.body, at: Date.now()}); writeQueue(q);
+      toast('Sin conexión: guardado en el móvil, se enviará al volver', true);
+      return {ok: true, queued: true};
+    }
+  }
+  return handle(await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts}));
+}
+async function handle(r) {
   if (r.status === 401) { location.reload(); throw new Error('Sesión caducada'); }
   if (!r.ok) { let e = `Error ${r.status}`; try { e = (await r.json()).error || e; } catch (x) { /* not JSON */ } throw new Error(e); }
   return r.json();
@@ -408,8 +446,8 @@ $('#btnRefresh').onclick = () => load().then(() => toast('Datos actualizados')).
 // Offline shell (static/sw.js): network first, last copy when the Raspberry is unreachable.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* http on some browsers */ });
 window.addEventListener('offline', () => toast('Sin conexión: ves los últimos datos guardados'));
-window.addEventListener('online', () => { toast('Conexión recuperada'); load().catch(() => {}); });
+window.addEventListener('online', () => { toast('Conexión recuperada'); flushQueue().then(() => load()).catch(() => {}); });
 // Home-screen shortcuts open a page directly: /?page=register|weights|progress
 function openStartPage() { const p = new URLSearchParams(location.search).get('page'); if (p && /^[a-z-]{2,30}$/.test(p)) { history.replaceState(null, '', '/'); go(p); } }
-function boot() { load().then(openStartPage).catch((e) => { const v = $('#view'); if (v) v.innerHTML = `<div class="card note-box"><h3>Error cargando la app</h3><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reintentar</button></div>`; }); }
+function boot() { load().then(openStartPage).then(flushQueue).catch((e) => { const v = $('#view'); if (v) v.innerHTML = `<div class="card note-box"><h3>Error cargando la app</h3><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reintentar</button></div>`; }); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else setTimeout(boot, 0);
