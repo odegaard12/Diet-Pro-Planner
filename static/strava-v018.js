@@ -363,7 +363,7 @@
           <div id="stravaList"><div class="strava-empty-state"><b>Listo para buscar</b><span>Selecciona un intervalo corto para revisar actividades.</span></div></div>
         </section>
 
-        <aside class="card strava-auto-card">
+        <section class="card strava-auto-card">
           <header class="strava-card-head compact"><div><span class="strava-section-kicker">AUTOMATIZACIÓN</span><h3>Auto-sync</h3><p id="stravaLastSync">Comprobando…</p></div></header>
           <div id="stravaAutoStatus" class="strava-auto-status"></div>
           <label class="strava-switch-row"><span><b>Sincronizar automáticamente</b><small>Solo actividades nuevas</small></span><input id="stravaAutoEnabled" type="checkbox"></label>
@@ -373,7 +373,7 @@
           </div>
           <div class="strava-auto-actions"><button class="btn" onclick="saveStravaAutoConfig()">Guardar</button><button class="btn secondary" onclick="runStravaAutoNow()">Sincronizar ahora</button></div>
           <div class="strava-api-meter"><span id="stravaRateSummary">Consumo disponible después de consultar</span></div>
-        </aside>
+        </section>
       </div>
 
       <details id="stravaSettingsPanel" class="card strava-settings-panel">

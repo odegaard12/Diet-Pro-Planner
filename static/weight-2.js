@@ -136,13 +136,15 @@
     document.getElementById('cards').innerHTML = cards.join('');
   }
 
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
   function renderInsights(data) {
     const insights = data.insights || [];
     document.getElementById('insights').innerHTML = insights.map((item) => `
-      <article class="w2-insight ${item.level || 'neutral'}">
-        <span>${typeLabel(item.type)}</span>
-        <h3>${item.title || 'Insight'}</h3>
-        <p>${item.message || ''}</p>
+      <article class="w2-insight ${esc(item.level || 'neutral')}">
+        <span>${esc(typeLabel(item.type))}</span>
+        <h3>${esc(item.title || 'Insight')}</h3>
+        <p>${esc(item.message || '')}</p>
       </article>
     `).join('');
   }
@@ -174,7 +176,7 @@
     const rows = bodyByDate(data).slice(0, 40);
     document.getElementById('snapshots').innerHTML = rows.map((row) => `
       <tr>
-        <td>${row.date}${row.time ? ` · ${row.time}` : ''}</td>
+        <td>${esc(row.date)}${row.time ? ` · ${esc(row.time)}` : ''}</td>
         <td>${row.weight ? `${fmt(row.weight.kg, 2)} kg${row.weight.official ? '' : ' ref.'}` : '—'}</td>
         <td>${metricCell(row, 'body_fat_pct', '%', 1)}</td>
         <td>${metricCell(row, 'water_pct', '%', 1)}</td>
@@ -196,7 +198,8 @@
     currentDays = days || currentDays;
     setActiveButton(currentDays);
 
-    const res = await fetch(`/api/body-trends?days=${encodeURIComponent(currentDays)}`);
+    const res = await fetch(`/api/body-trends?days=${encodeURIComponent(currentDays)}`, {credentials: 'same-origin'});
+    if (res.status === 401) { window.location.assign('/weight-2'); return; }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
@@ -217,7 +220,7 @@
       <article class="w2-insight bad">
         <span>Error</span>
         <h3>No se pudo cargar Peso 2.0</h3>
-        <p>${err.message}</p>
+        <p>${esc(err.message)}</p>
       </article>
     `;
     console.error(err);

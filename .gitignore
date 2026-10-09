@@ -3,6 +3,9 @@ data/
 *.db
 *.sqlite
 *.sqlite3
+*.db-wal
+*.db-shm
+*.db-journal
 *.log
 .env
 strava_tokens.json
@@ -16,5 +19,11 @@ __pycache__/
 data/pantry.json
 data/secrets*.json
 *.local.env
+
+# Personal dumps and leftovers (never public)
+reports/food_intel_audit.*
+scripts/private_*
+*.bak
+*.bak-*
 CLAUDE.md
 .claude/

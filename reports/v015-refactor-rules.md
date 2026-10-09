@@ -11,7 +11,6 @@ Move the dashboard away from the legacy `static/app.js` monolith without changin
 - Keep new JS/CSS modules below ~250 lines.
 - Keep card components small and focused.
 - Run known-day regression before every commit:
-  - `python3 scripts/check_known_days_v015.py`
 
 ## Current technical debt
 

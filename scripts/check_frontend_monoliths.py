@@ -20,15 +20,16 @@ import sys
 
 
 MAX_NEW_JS_LINES = 260
-MAX_NEW_CSS_LINES = 260
+# v0.2.0 design system: base.css (tokens + components) and pages.css (layouts).
+MAX_NEW_CSS_LINES = 450
 
 LEGACY_LINE_BUDGETS = {
     Path("static/app.js"): 2250,
-    Path("static/styles.css"): 1800,
 }
 
 ROOTS = [
     Path("static/js"),
+    Path("static/css"),
 ]
 
 

@@ -1,11 +1,10 @@
-/* Diet Pro Planner v0.0.20 · planned vs real activity */
+/* Diet Pro Planner v0.0.21 · planned vs real activity */
 (function () {
   'use strict';
 
   if (window.__DPP_ACTIVITY_PLAN_V020__) return;
   window.__DPP_ACTIVITY_PLAN_V020__ = true;
 
-  const VERSION = 'v0.0.20';
   let weekStart = mondayOf(new Date());
   let activityData = null;
   let editingId = null;
@@ -71,11 +70,7 @@
   }
 
   function syncVersion() {
-    document.title = `Diet Pro Planner · ${VERSION}`;
-    const eyebrow = document.querySelector('.eyebrow');
-    if (eyebrow) eyebrow.textContent = `Dieta controlada · ${VERSION}`;
-    const badge = document.querySelector('#ui5Badge');
-    if (badge) badge.textContent = VERSION;
+    if (typeof ui5ApplyShell === 'function') ui5ApplyShell();
   }
 
   function planCard(plan) {
@@ -169,7 +164,7 @@
     document.querySelector('#view').innerHTML = `
       <section class="activity-plan-hero">
         <div>
-          <span class="activity-kicker">PLANIFICADO VS. REAL · ${VERSION}</span>
+          <span class="activity-kicker">PLANIFICADO VS. REAL</span>
           <h2>Tu semana de actividad</h2>
           <p>Planifica lo importante y deja que Strava o el registro manual confirmen lo que realmente hiciste.</p>
         </div>
@@ -193,7 +188,7 @@
           <div id="activityWeek" class="activity-week-grid"><div class="activity-loading">Cargando planes y entrenos reales…</div></div>
         </div>
 
-        <aside class="card activity-plan-form-card">
+        <section class="card activity-plan-form-card">
           <header><span>PLANIFICAR</span><h3 id="activityFormTitle">Nueva actividad</h3><p>Después se emparejará automáticamente con Strava o con un entreno manual del mismo día.</p></header>
           <div class="activity-plan-form">
             <label><span>Fecha</span><input id="apDate" type="date" value="${new Date().toISOString().slice(0, 10)}"></label>
@@ -213,7 +208,7 @@
             <button class="btn" onclick="activityPlanSave()">Guardar plan</button>
             <button class="btn secondary" onclick="activityPlanResetForm()">Limpiar</button>
           </div>
-        </aside>
+        </section>
       </section>`;
     syncVersion();
     loadActivityPlan();
@@ -359,11 +354,11 @@
     window.render = wrappedRender;
     render = wrappedRender;
   } catch (error) {
-    console.warn('Activity plan v0.0.20 render wrapper', error);
+    console.warn('Activity plan v0.0.21 render wrapper', error);
   }
 
   try { renderNav(); } catch (error) {
-    console.warn('Activity plan v0.0.20 navigation', error);
+    console.warn('Activity plan v0.0.21 navigation', error);
   }
   syncVersion();
 })();

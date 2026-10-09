@@ -10,37 +10,24 @@ The module is schema-tolerant and reads local SQLite data only.
 
 from __future__ import annotations
 
-import os
 import sqlite3
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from flask import jsonify, request, send_from_directory
 
+import dpp_config as config
+import dpp_db
+from dpp_validate import public_error
+
 
 def _db_path() -> str:
-    candidates = [
-        os.environ.get("DPP_DB_PATH"),
-        os.environ.get("DATABASE_PATH"),
-        "data/dieta.db",
-        "data/diet.db",
-        "data/app.db",
-        "/app/data/dieta.db",
-        "/app/data/diet.db",
-        "/app/data/app.db",
-    ]
-    for item in candidates:
-        if item and Path(item).exists():
-            return item
-    return "data/dieta.db"
+    return str(config.DB_PATH)
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(_db_path())
-    conn.row_factory = sqlite3.Row
-    return conn
+    return dpp_db.connect(config.DB_PATH)
 
 
 def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
@@ -54,7 +41,7 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
 def _columns(conn: sqlite3.Connection, table: str) -> List[str]:
     if not _table_exists(conn, table):
         return []
-    return [str(r["name"]) for r in conn.execute(f'PRAGMA table_info("{table}")')]
+    return [str(r["name"]) for r in conn.execute(f"PRAGMA table_info({dpp_db.qident(table)})")]
 
 
 def _pick(cols: Iterable[str], names: Iterable[str]) -> Optional[str]:
@@ -197,10 +184,10 @@ def _read_weights(conn: sqlite3.Connection, start: str, end: str) -> Dict[str, A
             select_cols.append(c)
 
     sql = f'''
-        SELECT {", ".join(f'"{c}"' for c in select_cols)}
+        SELECT {", ".join(dpp_db.qident(c) for c in select_cols)}
         FROM "weights"
-        WHERE "{date_col}" >= ? AND "{date_col}" <= ?
-        ORDER BY "{date_col}" ASC {',' + '"' + time_col + '" ASC' if time_col else ''}
+        WHERE {dpp_db.qident(date_col)} >= ? AND {dpp_db.qident(date_col)} <= ?
+        ORDER BY {dpp_db.qident(date_col)} ASC {', ' + dpp_db.qident(time_col) + ' ASC' if time_col else ''}
     '''
     rows = conn.execute(sql, (start, end)).fetchall()
 
@@ -290,10 +277,10 @@ def _read_body_metrics(conn: sqlite3.Connection, start: str, end: str) -> Dict[s
             select_cols.append(c)
 
     sql = f'''
-        SELECT {", ".join(f'"{c}"' for c in select_cols)}
-        FROM "{table}"
-        WHERE "{date_col}" >= ? AND "{date_col}" <= ?
-        ORDER BY "{date_col}" ASC {',' + '"' + time_col + '" ASC' if time_col else ''}
+        SELECT {", ".join(dpp_db.qident(c) for c in select_cols)}
+        FROM {dpp_db.qident(table)}
+        WHERE {dpp_db.qident(date_col)} >= ? AND {dpp_db.qident(date_col)} <= ?
+        ORDER BY {dpp_db.qident(date_col)} ASC {', ' + dpp_db.qident(time_col) + ' ASC' if time_col else ''}
     '''
     rows = conn.execute(sql, (start, end)).fetchall()
 
@@ -451,10 +438,10 @@ def register_body_trends_routes(app) -> None:
         try:
             return jsonify(get_body_trends_payload())
         except Exception as exc:
-            return jsonify({"status": "error", "error": str(exc)}), 500
+            return jsonify({"status": "error", "error": public_error(exc)}), 500
 
     @app.get("/weight-2")
     def weight_2_page():
-        return send_from_directory("static", "weight-2.html")
+        return send_from_directory(str(config.BASE_DIR / "static"), "weight-2.html")
 
     app._dpp_body_trends_registered = True

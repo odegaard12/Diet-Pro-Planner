@@ -7,8 +7,9 @@ from datetime import date, timedelta
 
 ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT / "data" / "dieta.db"
-REPORT_DIR = ROOT / "reports"
-REPORT_DIR.mkdir(exist_ok=True)
+# The audit dumps real meals and weights: keep it under data/ (git-ignored), never in reports/.
+REPORT_DIR = ROOT / "data" / "reports"
+REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 def qident(name: str) -> str:
     return '"' + str(name).replace('"', '""') + '"'
