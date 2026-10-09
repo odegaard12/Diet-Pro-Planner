@@ -541,15 +541,12 @@ def _login_page(next_path: str = "/", setup_required: bool = False):
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>{title}</title>
-  <meta name="theme-color" content="#f3f5f9" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#0d1117" />
   <link rel="icon" type="image/png" href="/static/icon-192.png" />
   <style nonce="{nonce}">
     /* Same tokens as static/css/base.css (inline: this page's CSP only allows nonce styles). */
-    :root {{ color-scheme: light; --bg: #f3f5f9; --surface: #fff; --border: #cfd8e3; --text: #0f1b2d; --text-2: #4f5f75;
-      --primary: #2563eb; --primary-ink: #fff; --bad: #c42b2b; --ring: rgba(37, 99, 235, .2); }}
-    @media (prefers-color-scheme: dark) {{ :root {{ color-scheme: dark; --bg: #0b1220; --surface: #121b2c; --border: #31426a;
-      --text: #e7eef8; --text-2: #a6b4c8; --primary: #5b9cff; --primary-ink: #08111f; --bad: #f87171; --ring: rgba(91, 156, 255, .25); }} }}
+    :root {{ color-scheme: dark; --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --text-2: #8b949e;
+      --primary: #fb923c; --primary-ink: #1c1510; --bad: #f87171; --ring: rgba(251, 146, 60, .25); }}
     *, *::before, *::after {{ box-sizing: border-box; }}
     body {{ margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 20px 16px;
       background: var(--bg); color: var(--text); font: 16px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }}

@@ -1,0 +1,83 @@
+/* Diet Pro Planner v0.3.0 · Resumen: week strip, balance, tiles with mini charts, "Tu día" timeline. */
+.day-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.day-head .pill { margin-left: auto; }
+.day-pick { position: relative; display: grid; cursor: pointer; }
+.day-pick small { font-size: 12px; font-weight: 600; letter-spacing: .08em; color: var(--text-2); }
+.day-pick b { font-size: 26px; font-weight: 700; line-height: 1.1; }
+.day-pick input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; opacity: 0; cursor: pointer; }
+.wk-strip { display: grid; grid-template-columns: 26px repeat(7, minmax(0, 1fr)) 26px; gap: 6px; align-items: center; margin-bottom: 14px; }
+.wk-nav { min-height: 44px; border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 22px; cursor: pointer; padding: 0; }
+.wk-nav:disabled { opacity: .25; cursor: default; }
+.wk-day { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 52px; padding: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text-2); font: inherit; cursor: pointer; }
+.wk-day span { font-size: 11px; font-weight: 600; }
+.wk-day b { font-size: 15px; color: var(--text); }
+.wk-day.is-today:not(.is-selected) { border-color: var(--primary); }
+.wk-day.is-selected { border-color: transparent; background: var(--primary); color: var(--primary-ink); }
+.wk-day.is-selected b { color: inherit; }
+.wk-day.is-future { border-style: dashed; background: transparent; opacity: .45; cursor: default; }
+.wk-dot { width: 4px; height: 4px; border-radius: 50%; }
+.wk-dot.ok { background: var(--good); }
+.wk-dot.off { background: var(--warn); }
+.wk-day.is-selected .wk-dot.ok, .wk-day.is-selected .wk-dot.off { background: var(--primary-ink); }
+.balance { display: grid; gap: 12px; margin-bottom: 12px; padding: 18px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
+.balance-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.balance-big { display: flex; align-items: baseline; gap: 8px; }
+.balance-big b { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.04em; color: var(--primary); font-variant-numeric: tabular-nums; }
+.balance-big span { font-size: 16px; color: var(--text-2); }
+.balance-bar { display: flex; gap: 2px; height: 10px; border-radius: 10px; overflow: hidden; background: var(--surface-3); }
+.seg { display: block; height: 100%; }
+.seg.a { background: var(--intake); }
+.seg.b { background: var(--intake-2); }
+.seg.sport { background: var(--primary); }
+.balance-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--text-2); }
+.balance-legend .accent { color: var(--primary); }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile { display: grid; gap: 4px; align-content: start; min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
+.tile > span { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.tile > b { font-size: 28px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile > b small { font-size: 14px; font-weight: 500; color: var(--text-2); }
+.tile > small { font-size: 12px; color: var(--text-2); }
+.tile > small.good { color: var(--good); }
+.tile > small.warn { color: var(--warn); }
+.tile > small.bad { color: var(--bad); }
+.spark { display: block; width: 100%; height: 30px; margin: 2px 0; }
+.spark .p, .spark .s { fill: var(--primary); }
+.spark .empty { fill: var(--surface-3); }
+.spark .ref { stroke: var(--text-2); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.spark .line { fill: none; stroke: var(--intake); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.spark .dot { fill: var(--intake); }
+.spark .track { fill: var(--surface-3); }
+.spark .zone { fill: var(--good-soft); }
+.spark .knob.good { fill: var(--good); }
+.spark .knob.warn { fill: var(--warn); }
+.spark .knob.bad { fill: var(--bad); }
+.sec-title { margin: 20px 2px 8px; font-size: 16px; font-weight: 700; }
+.timeline { display: grid; margin-bottom: 12px; }
+.tl-row { display: grid; grid-template-columns: 44px 16px minmax(0, 1fr); column-gap: 8px; }
+.tl-row time { padding-top: 15px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.tl-row > i { position: relative; }
+.tl-row > i::before { content: ""; position: absolute; left: 3px; top: 18px; width: 10px; height: 10px; border-radius: 50%; background: var(--intake); }
+.tl-row > i::after { content: ""; position: absolute; left: 7px; top: 30px; bottom: -18px; width: 2px; background: var(--border); }
+.tl-row.sport > i::before { background: var(--primary); }
+.tl-row.next > i::before { background: transparent; border: 2px dashed var(--text-2); }
+.tl-row.next > i::after { display: none; }
+.tl-card { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; margin: 4px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); min-width: 0; }
+.tl-card b { display: block; font-size: 15px; }
+.tl-card small { display: block; overflow: hidden; font-size: 12.5px; color: var(--text-2); white-space: nowrap; text-overflow: ellipsis; }
+.tl-card strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.tl-card.sport { border-color: #4a2c12; background: #1c1510; }
+.tl-card.sport small { color: var(--warn); }
+.tl-card.sport strong { color: var(--primary); }
+.tl-card.empty-card { display: block; font-size: 14px; color: var(--text-2); }
+.tl-card.coach-card { display: block; margin-bottom: 0; border-style: dashed; border-color: #4a2c12; background: #15110d; }
+.coach-kicker { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--primary); }
+.coach-card .dpp-coach-visual { grid-template-columns: 1fr; gap: 10px; }
+.coach-card .dpp-coach-main { padding: 0; background: transparent; }
+.coach-card .dpp-coach-label { font-size: 11px; letter-spacing: .08em; color: var(--primary); }
+.coach-card .dpp-coach-decision { font-size: 16px; }
+.coach-card .dpp-coach-actions-v019 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.coach-card .coach-action { background: transparent; }
+@media (min-width: 900px) {
+  .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .wk-strip { max-width: 640px; }
+}
