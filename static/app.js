@@ -376,6 +376,13 @@ function linkFieldLabels() {
     if (!c.id) c.id = `f-${page}-${i}`;
     l.htmlFor = c.id;
   });
+  // Controls without a visible label still get an accessible name.
+  const named = {tplSelect: 'Plantilla', fPhoto: 'Foto de la etiqueta', pantryNewCategory: 'Categoría', planRaw: 'JSON del plan'};
+  document.querySelectorAll('#view input:not([type=hidden]), #view select, #view textarea').forEach((c) => {
+    if (c.labels?.length || c.getAttribute('aria-label')) return;
+    const name = c.dataset.food ? `Gramos de ${c.dataset.food}` : c.dataset.planField === 'day' ? 'Nombre del día' : c.dataset.planField === 'status' ? 'Estado del día' : (named[c.id] || c.placeholder || '');
+    if (name) c.setAttribute('aria-label', name);
+  });
 }
 function ui5ApplyShell() {
   linkFieldLabels();
@@ -398,6 +405,10 @@ document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeHel
 
 $('#btnRefresh').onclick = () => load().then(() => toast('Datos actualizados')).catch((e) => toast(e.message));
 // Start after every module script has registered its pages/renderers.
+// Offline shell (static/sw.js): network first, last copy when the Raspberry is unreachable.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* http on some browsers */ });
+window.addEventListener('offline', () => toast('Sin conexión: ves los últimos datos guardados'));
+window.addEventListener('online', () => { toast('Conexión recuperada'); load().catch(() => {}); });
 // Home-screen shortcuts open a page directly: /?page=register|weights|progress
 function openStartPage() { const p = new URLSearchParams(location.search).get('page'); if (p && /^[a-z-]{2,30}$/.test(p)) { history.replaceState(null, '', '/'); go(p); } }
 function boot() { load().then(openStartPage).catch((e) => { const v = $('#view'); if (v) v.innerHTML = `<div class="card note-box"><h3>Error cargando la app</h3><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reintentar</button></div>`; }); }
