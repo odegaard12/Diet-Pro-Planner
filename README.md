@@ -112,3 +112,7 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CLAUDE.md`](CLAUDE.md) (architec
 ## License
 
 [MIT](LICENSE) · Not a medical device and not medical advice.
+
+## Data credits
+
+Supermarket products in `dpp_catalog_es.json` come from [Open Food Facts](https://world.openfoodfacts.org), available under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).

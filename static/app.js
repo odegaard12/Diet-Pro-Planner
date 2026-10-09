@@ -267,8 +267,10 @@ async function saveTemplateMeal(id, btn) {
 /* ---------- Alimentos ---------- */
 function renderFoods() {
   selectedFoodPhoto = '';
-  $('#view').innerHTML = `<div class="grid cols-2">
-    <div class="card"><h3>🥫 Nuevo alimento</h3>
+  $('#view').innerHTML = `<div class="food-search"><input id="foodFilter" type="search" placeholder="Buscar: leche, Hacendado, 8480000…" oninput="renderFoodList()">
+    <button class="btn" type="button" onclick="openFoodForm()">+ Nuevo</button></div>
+  <div class="chips food-kinds">${[['all','Todos'],['mine','Míos'],['super','Supermercado'],['generic','Genéricos']].map(([k,l]) => `<button type="button" class="chip${foodKind === k ? ' active' : ''}" onclick="foodKind='${k}';render()">${l}</button>`).join('')}</div>
+  <details id="foodForm" class="card"><summary><h3>Nuevo o editar alimento</h3><small>Escanea el código, sube una foto de la etiqueta o escribe los valores por 100 g.</small></summary>
       <div id="foodLookup"></div>
       <div class="photo-box"><div><b>📷 Foto etiqueta</b><small>OCR real local: sube foto, revisa las sugerencias y guarda.</small></div><input id="fPhoto" type="file" accept="image/*" onchange="uploadFoodPhoto()"><div id="photoPreview"></div></div>
       <div class="row">
@@ -287,18 +289,15 @@ function renderFoods() {
         <div class="field span-12"><label>Uso</label><input id="fNotes" placeholder="Desayuno, merienda, tupper..."></div>
       </div>
       <button class="btn" onclick="saveFood(this)">Guardar alimento</button>
-    </div>
-    <div class="card note-box"><h3>📌 Tres formas de añadir</h3><p><b>Código de barras</b>: busca en Open Food Facts (base abierta) y rellena todo.</p><p><b>Foto de etiqueta</b>: OCR local con Tesseract; si configuras IA, también lectura con IA.</p><p class="muted">Revisa siempre los valores antes de guardar. Guardar con un nombre existente actualiza ese alimento.</p></div>
-  </div>
-  <div class="section-title"><div><h3>Alimentos guardados</h3><p>Se usan en Registrar para cambiar solo gramos.</p></div><input id="foodFilter" placeholder="filtrar..." style="max-width:300px" oninput="renderFoodList()"></div>
-  <div id="foodList" class="grid cols-3"></div>`;
+    </details>
+  <div id="foodList" class="food-rows"></div>`;
   renderFoodList();
   window.DPPFoodLookup?.mount('#foodLookup');
 }
 function renderFoodList() {
   const q = normText($('#foodFilter')?.value);
-  const foods = state.foods.filter((f) => normText(`${f.name} ${f.brand} ${f.source_note}`).includes(q));
-  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="card food-card">${/^\/uploads\/[\w.-]+$/.test(f.photo_path || '') ? `<img class="food-photo" src="${esc(f.photo_path)}" alt="foto etiqueta" loading="lazy">` : ''}<h3>${Number(f.purchased) ? '✅' : '🥫'} ${esc(f.name)}</h3><p class="muted">${esc(f.brand || '')}${f.barcode ? ' · ' + esc(f.barcode) : ''}</p><div class="chips"><span class="chip">${fmt(f.kcal)} kcal/100g</span><span class="chip">${fmt(f.protein)} g prot</span><span class="chip">típico ${fmt(f.typical_g)} g</span></div><p class="source">${esc(f.source_note || '')}</p><p>${esc(f.notes || '')}</p><div class="card-actions"><button class="btn small secondary" onclick="editFood(${Number(f.id)})">Editar</button><button class="btn small danger" onclick="deleteFood(${Number(f.id)})">Borrar</button></div></div>`).join('') || '<div class="empty">Sin alimentos con ese filtro.</div>') + moreButton('foods', foods.length);
+  const foods = state.foods.filter((f) => foodKindOf(f) && normText(`${f.name} ${f.brand} ${f.barcode || ''}`).includes(q));
+  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="food-row" role="button" tabindex="0" onclick="editFood(${Number(f.id)})"><div><b>${esc(f.name)}</b><small>${esc(f.brand || 'Mío')} · ración ${fmt(f.typical_g)} g</small></div><span class="food-kcal">${fmt(f.kcal)}<small>kcal/100 g</small></span><span class="food-prot">${fmt(f.protein)} g<small>prot</small></span><button class="icon-btn" type="button" aria-label="Borrar ${esc(f.name)}" onclick="event.stopPropagation();deleteFood(${Number(f.id)})">×</button></div>`).join('') || '<div class="empty">Nada con esa búsqueda. Prueba el código de barras en «+ Nuevo».</div>') + moreButton('foods', foods.length);
 }
 function fillFoodForm(food) {
   const set = (id, val) => { const el = $(id); if (el && val !== undefined && val !== null) el.value = String(val); };
@@ -308,7 +307,10 @@ function fillFoodForm(food) {
   if (food.purchased !== undefined) set('#fPurchased', Number(food.purchased) ? '1' : '0');
   if (food.photo_path) selectedFoodPhoto = food.photo_path;
 }
-function editFood(id) { const f = foodById(id); if (!f) return; selectedFoodPhoto = f.photo_path || ''; fillFoodForm(f); $('#fName')?.scrollIntoView({behavior: 'smooth', block: 'center'}); toast('Edita y guarda (mismo nombre = actualizar)'); }
+let foodKind = 'all';
+function foodKindOf(f) { const k = /Open Food Facts/.test(f.source_note || '') ? 'super' : f.brand === 'Genérico (aprox.)' ? 'generic' : 'mine'; return foodKind === 'all' || foodKind === k; }
+function openFoodForm() { const d = $('#foodForm'); if (d) { d.open = true; d.scrollIntoView({behavior: 'smooth', block: 'start'}); } }
+function editFood(id) { const f = foodById(id); if (!f) return; selectedFoodPhoto = f.photo_path || ''; fillFoodForm(f); openFoodForm(); toast('Edita y guarda (mismo nombre = actualizar)'); }
 async function deleteFood(id) { const f = foodById(id); if (!f || !confirm(`¿Borrar "${f.name}" del catálogo? Las comidas ya registradas no cambian.`)) return; try { await api('/api/foods/' + Number(id), {method: 'DELETE'}); toast('Alimento borrado'); await load(); } catch (e) { toast(e.message); } }
 function ocr3Set(id, val) { const el = document.querySelector(id); if (!el || val === undefined || val === null || val === '') return; el.value = String(val).replace(',', '.'); }
 function ocr3Badge(text, cls = 'info') { return `<span class="ocr3-badge ${cls}">${esc(text)}</span>`; }

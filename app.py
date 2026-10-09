@@ -280,7 +280,7 @@ def seed(db: sqlite3.Connection) -> None:
     # later restarts must not resurrect what the user edited or deleted.
     seeded = db.execute("SELECT 1 FROM app_settings WHERE key='seed_done'").fetchone()
     # Generic catalog rows (migration 6) do not count: on a fresh DB they arrive before this seed.
-    first_run = not seeded and db.execute("SELECT COUNT(*) FROM foods WHERE COALESCE(brand,'') <> 'Genérico (aprox.)'").fetchone()[0] == 0
+    first_run = not seeded and db.execute("SELECT COUNT(*) FROM foods WHERE COALESCE(brand,'') <> 'Genérico (aprox.)' AND COALESCE(source_note,'') NOT LIKE 'Etiqueta del producto según Open Food Facts%'").fetchone()[0] == 0
     if not seeded:
         db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('seed_done','true')")
     if first_run:

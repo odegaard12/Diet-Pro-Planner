@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.9 — Spanish supermarket products, simpler food list
+
+- 200 own-brand products from Mercadona (Hacendado), Eroski, Consum and Lidl (Milbona), with barcode and label values from Open Food Facts (ODbL). Added by migration 7 only when the barcode or name is new.
+- Alimentos is search-first like the big apps: search box and '+ Nuevo' on top, filters Todos / Míos / Supermercado / Genéricos, compact rows (kcal and protein); tap a row to edit.
+- The create/edit form is folded away until needed; removed the static 'Tres formas de añadir' box.
+
 ## v0.3.8 — Five sections with tabs
 
 - Navigation reduced to five sections, identical on desktop and phone: Hoy, Comidas, Deporte, Progreso, Ajustes.
