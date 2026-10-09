@@ -219,6 +219,13 @@ def _m6_generic_catalog(db: sqlite3.Connection) -> None:
         dpp_catalog.add_missing(db)
 
 
+def _m7_supermarket_catalog(db: sqlite3.Connection) -> None:
+    """Add Spanish supermarket own-brand products; existing barcodes/names are left untouched."""
+    if _table_exists(db, "foods"):
+        import dpp_catalog
+        dpp_catalog.add_supermarket(db)
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "meals without UNIQUE constraint", _m1_meals_without_unique),
     (2, "indexes + workouts.source/external_id", _m2_indexes_and_workout_source),
@@ -226,6 +233,7 @@ MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (4, "foods.barcode", _m4_food_barcode),
     (5, "repair meal items stored without macros", _m5_repair_zero_macro_items),
     (6, "generic food catalog (only missing names)", _m6_generic_catalog),
+    (7, "Spanish supermarket products (only missing barcodes)", _m7_supermarket_catalog),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 

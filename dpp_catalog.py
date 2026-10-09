@@ -7,7 +7,9 @@ labels vary); use the barcode / Open Food Facts lookup or a label photo for thos
 
 from __future__ import annotations
 
+import json
 import sqlite3
+from pathlib import Path
 
 NOTE = "Valor medio aproximado (tablas de composición). Ajusta con la etiqueta si la tienes."
 
@@ -97,6 +99,39 @@ def add_missing(db: sqlite3.Connection) -> int:
         if food["name"].lower() in have:
             continue
         # Column names come from the fixed dict above, filtered by the real table columns.
+        data = {k: v for k, v in food.items() if k in cols}
+        keys = ", ".join(data)
+        db.execute(f"INSERT INTO foods({keys}) VALUES({', '.join('?' for _ in data)})", tuple(data.values()))
+        added += 1
+    return added
+
+
+SUPERMARKET_NOTE = "Etiqueta del producto según Open Food Facts (ODbL). Revisa si cambia la receta."
+_ES_PATH = Path(__file__).with_name("dpp_catalog_es.json")
+
+
+def supermarket_foods() -> list[dict]:
+    """Spanish supermarket own-brand products: [name, brand, barcode, kcal, prot, carbs, fat, sugar, salt, portion]."""
+    rows = json.loads(_ES_PATH.read_text(encoding="utf-8"))
+    # foods.name is UNIQUE, so the short brand goes in the name too ("Tomate frito · Consum").
+    return [
+        {"name": f"{n} · {b.split(' (')[0]}", "brand": b, "barcode": code, "kcal": k, "protein": p, "carbs": c, "fat": f,
+         "sugar": s, "salt": sa, "typical_g": t, "purchased": 0, "source_note": SUPERMARKET_NOTE, "notes": ""}
+        for n, b, code, k, p, c, f, s, sa, t in rows
+    ]
+
+
+def add_supermarket(db: sqlite3.Connection) -> int:
+    """Insert supermarket products whose barcode (or name) is not in the table yet."""
+    cols = {row[1] for row in db.execute("PRAGMA table_info(foods)")}
+    has_code = "barcode" in cols
+    codes = {r[0] for r in db.execute("SELECT barcode FROM foods")} if has_code else set()
+    named = {r[0].strip().lower() for r in db.execute("SELECT name FROM foods")}
+    added = 0
+    for food in supermarket_foods():
+        if food["barcode"] in codes or food["name"].lower() in named:
+            continue
+        named.add(food["name"].lower())
         data = {k: v for k, v in food.items() if k in cols}
         keys = ", ".join(data)
         db.execute(f"INSERT INTO foods({keys}) VALUES({', '.join('?' for _ in data)})", tuple(data.values()))
