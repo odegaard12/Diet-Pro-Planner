@@ -248,3 +248,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .dpp-mobile-more-sheet { max-height: calc(100dvh - 120px); overflow-y: auto; }
 .dpp-mobile-more-sheet__group { margin: 12px 4px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
 .dpp-mobile-more-sheet__actions { margin-top: 0; padding-top: 0; border-top: 0; }
+/* ---------- Section tabs (v0.3.8): pages of one section are tabs; Ajustes holds Ayuda / Exportar / Salir ---------- */
+#btnLogout { display: none; }
+.tabs { display: flex; gap: 4px; margin: 0 0 16px; padding: 4px; overflow-x: auto; scrollbar-width: none; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button, .tabs a { flex: 0 0 auto; min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--text-2); font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; white-space: nowrap; }
+.tabs button.is-active { background: var(--primary); color: var(--primary-ink); }
+.tab-actions { display: flex; gap: 4px; margin-left: auto; }
+.tab-actions button, .tab-actions a { color: var(--text); }
+.nav-ico { display: inline-flex; align-items: center; justify-content: center; }
+.nav button.active .nav-ico { color: var(--primary); }

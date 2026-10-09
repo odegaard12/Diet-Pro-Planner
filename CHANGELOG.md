@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.8 — Five sections with tabs
+
+- Navigation reduced to five sections, identical on desktop and phone: Hoy, Comidas, Deporte, Progreso, Ajustes.
+- Pages inside a section are tabs at the top of the view (Comidas: Registrar, Plantillas, Alimentos, Despensa, Plan semanal; Deporte: Entrenos, Plan, Strava; Progreso: Tendencias, Peso, Historial).
+- Removed the phone 'Más' sheet and duplicate header buttons; Ayuda, Exportar datos and Salir now live in Ajustes.
+
 ## v0.3.7 — Clearer menus
 
 - One menu structure for the desktop sidebar and the phone 'Más' sheet, grouped into Comida, Deporte, Datos and App.

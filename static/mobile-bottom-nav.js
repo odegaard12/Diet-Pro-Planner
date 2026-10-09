@@ -1,269 +1,57 @@
 /*
- * Diet Pro Planner v0.0.15.3
- * Simple mobile bottom navigation.
- *
- * No route ownership, no MutationObserver, no repeated DOM mutation.
- * It only clicks existing app menu buttons/links by visible text.
+ * Diet Pro Planner · phone bottom bar (v0.3.8).
+ * The same five sections as the desktop sidebar (window.DPP_NAV from app.js); pages inside a
+ * section are tabs at the top of the view, so there is no "Más" sheet any more.
  */
 (function () {
   'use strict';
 
-  const MOBILE_QUERY = '(max-width: 760px), (pointer: coarse)';
-  const mq = window.matchMedia(MOBILE_QUERY);
-
-  // Navigates by page id through the app's go(); text matching is only a fallback.
-  // Line icons (stroke = currentColor) so the active tab takes the accent colour.
-  const svg = (d) => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
-  const MAIN = [
-    { id: 'summary', page: 'home', label: 'Hoy', icon: svg('<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>'), match: ['resumen'] },
-    { id: 'meals', page: 'register', label: 'Comidas', icon: svg('<path d="M4 11h16a8 8 0 0 1-16 0zM8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/>'), match: ['registrar', 'comidas'] },
-    { id: 'weight', page: 'weights', label: 'Peso', icon: svg('<path d="M6 20h12M8 20l1-12h6l1 12M12 8V4"/>'), match: ['peso'] },
-    { id: 'progress', page: 'progress', label: 'Progreso', icon: svg('<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>'), match: ['progreso'] },
-  ];
-
-  const MORE = [
-    { id: 'sport', page: 'sport', label: 'Deporte', icon: '🏋️', match: ['deporte'] },
-    { id: 'activity-plan', page: 'activity-plan', label: 'Plan deporte', icon: '🗓️', match: ['plan deporte'] },
-    { id: 'templates', page: 'templates', label: 'Plantillas', icon: '⚡', match: ['plantillas'] },
-    { id: 'foods', page: 'foods', label: 'Alimentos', icon: '🥫', match: ['alimentos'] },
-    { id: 'pantry', page: 'pantry', label: 'Despensa', icon: '🧺', match: ['despensa'] },
-    { id: 'plan', page: 'plan', label: 'Plan comidas', icon: '📅', match: ['plan'] },
-    { id: 'goals', page: 'goals', label: 'Objetivos', icon: '🎯', match: ['objetivos'] },
-    { id: 'integrations', page: 'integrations', label: 'Integraciones', icon: '🔗', match: ['integraciones'] },
-    { id: 'history', page: 'history', label: 'Historial', icon: '📚', match: ['historial'] },
-  ];
-
+  const mq = window.matchMedia('(max-width: 760px), (pointer: coarse)');
   let built = false;
 
-  function norm(value) {
-    return String(value || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  function candidates() {
-    return Array.from(document.querySelectorAll(
-      'aside a, aside button, nav a, nav button, .sidebar a, .sidebar button, .side-nav a, .side-nav button, .nav-item, .tab, [role="tab"]'
-    )).filter((el) => {
-      if (!(el instanceof HTMLElement)) return false;
-      if (el.closest('.dpp-mobile-nav, .dpp-mobile-more-sheet')) return false;
-
-      const text = norm(el.textContent);
-      if (!text) return false;
-
-      const bad = [
-        'actualizar',
-        'exportar',
-        'ir a hoy',
-        '+ comida',
-        '+ entreno',
-        'guardar',
-        'cancelar',
-        'cerrar',
-        'eliminar',
-      ];
-      if (bad.some((x) => text.includes(x))) return false;
-
-      return [
-        'resumen',
-        'registrar',
-        'comidas',
-        'deporte',
-        'plantillas',
-        'alimentos',
-        'plan',
-        'peso',
-        'integraciones',
-        'historial',
-      ].some((x) => text.includes(x));
-    });
-  }
-
-  function findTarget(item) {
-    const all = candidates();
-
-    const scored = all.map((el) => {
-      const text = norm(el.textContent);
-      let score = 0;
-
-      for (const key of item.match) {
-        const k = norm(key);
-        if (text === k) score += 100;
-        else if (text.startsWith(k)) score += 60;
-        else if (text.includes(k)) score += 30;
-      }
-
-      // Penaliza textos demasiado largos para evitar clicar tarjetas.
-      score -= Math.max(0, text.length - 30) * 0.25;
-
-      return { el, score, text };
-    }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
-
-    return scored[0] ? scored[0].el : null;
-  }
-
-  function setActive(id) {
-    document.querySelectorAll('[data-dpp-mobile-nav-id]').forEach((btn) => {
-      const active = btn.getAttribute('data-dpp-mobile-nav-id') === id;
+  function setActive() {
+    const nav = window.DPP_NAV;
+    if (!nav) return;
+    const cur = nav.sectionOf(typeof page === 'string' ? page : 'home');
+    document.querySelectorAll('[data-dpp-section]').forEach((btn) => {
+      const active = btn.dataset.dppSection === cur.id;
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-current', active ? 'page' : 'false');
     });
   }
 
-  function closeMore() {
-    document.body.classList.remove('dpp-mobile-more-open');
-  }
-
-  function toggleMore() {
-    document.body.classList.toggle('dpp-mobile-more-open');
-  }
-
-  function go(item) {
-    setActive(item.id);
-    closeMore();
-
-    if (item.page && typeof window.go === 'function') {
-      window.go(item.page);
-      return;
-    }
-
-    const target = findTarget(item);
-    if (!target) {
-      console.warn('[DPP mobile nav] target not found:', item.label);
-      return;
-    }
-
-    target.click();
-
-    try {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (_) {
-      window.scrollTo(0, 0);
-    }
-  }
-
-  function navButton(item, className) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = className;
-    btn.setAttribute('data-dpp-mobile-nav-id', item.id);
-    btn.innerHTML =
-      '<span class="dpp-mobile-nav__icon">' + item.icon + '</span>' +
-      '<span class="dpp-mobile-nav__label">' + item.label + '</span>';
-    btn.addEventListener('click', function () {
-      go(item);
-    });
-    return btn;
-  }
-
   function build() {
-    if (built || !mq.matches) return;
-
+    const nav = window.DPP_NAV;
+    if (built || !mq.matches || !nav) return;
     document.body.classList.add('dpp-mobile-bottom-nav-enabled');
-
-    const nav = document.createElement('nav');
-    nav.className = 'dpp-mobile-nav';
-    nav.setAttribute('aria-label', 'Navegación inferior móvil');
-
-    MAIN.forEach((item) => nav.appendChild(navButton(item, 'dpp-mobile-nav__item')));
-
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = 'dpp-mobile-nav__item';
-    more.setAttribute('data-dpp-mobile-nav-id', 'more');
-    more.innerHTML =
-      '<span class="dpp-mobile-nav__icon">' + svg('<path d="M4 6h16M4 12h16M4 18h16"/>') + '</span>' +
-      '<span class="dpp-mobile-nav__label">Más</span>';
-    more.addEventListener('click', toggleMore);
-    nav.appendChild(more);
-
-    const backdrop = document.createElement('button');
-    backdrop.type = 'button';
-    backdrop.className = 'dpp-mobile-more-backdrop';
-    backdrop.setAttribute('aria-label', 'Cerrar menú Más');
-    backdrop.addEventListener('click', closeMore);
-
-    const sheet = document.createElement('section');
-    sheet.className = 'dpp-mobile-more-sheet';
-    sheet.setAttribute('aria-label', 'Más secciones');
-    sheet.innerHTML = '<div class="dpp-mobile-more-sheet__handle"></div><h2>Más secciones</h2>';
-
-    // Same groups and names as the desktop sidebar (window.DPP_NAV from app.js).
-    const menu = window.DPP_NAV;
-    const groups = menu ? menu.groups.slice(1).map(([title, ids]) => [title, ids.map((id) => ({id, page: id, label: menu.labels[id][1], icon: menu.labels[id][0], match: []}))]) : [['', MORE]];
-    groups.forEach(([title, items]) => {
-      if (title) { const h = document.createElement('h3'); h.className = 'dpp-mobile-more-sheet__group'; h.textContent = title; sheet.appendChild(h); }
-      const grid = document.createElement('div');
-      grid.className = 'dpp-mobile-more-sheet__grid';
-      items.forEach((item) => grid.appendChild(navButton(item, 'dpp-mobile-more-sheet__item')));
-      sheet.appendChild(grid);
-    });
-
-    // Top-bar actions are hidden on phones; they live here instead.
-    const actions = document.createElement('div');
-    actions.className = 'dpp-mobile-more-sheet__grid dpp-mobile-more-sheet__actions';
-    [
-      {icon: '❓', label: 'Ayuda', run: () => window.openHelpModal?.()},
-      {icon: '💾', label: 'Exportar', run: () => { window.location.href = '/api/backup/download'; }},
-      {icon: '🚪', label: 'Salir', run: () => document.getElementById('btnLogout')?.click()},
-    ].forEach((action) => {
+    const bar = document.createElement('nav');
+    bar.className = 'dpp-mobile-nav';
+    bar.setAttribute('aria-label', 'Secciones');
+    nav.sections.forEach((s) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'dpp-mobile-more-sheet__item';
-      btn.innerHTML = '<span class="dpp-mobile-nav__icon">' + action.icon + '</span><span class="dpp-mobile-nav__label">' + action.label + '</span>';
-      btn.addEventListener('click', () => { closeMore(); action.run(); });
-      actions.appendChild(btn);
+      btn.className = 'dpp-mobile-nav__item';
+      btn.dataset.dppSection = s.id;
+      btn.innerHTML = '<span class="dpp-mobile-nav__icon">' + nav.navIcon(s.icon) + '</span><span class="dpp-mobile-nav__label">' + s.label + '</span>';
+      btn.addEventListener('click', () => window.go(s.tabs[0][0]));
+      bar.appendChild(btn);
     });
-    const appTitle = document.createElement('h3');
-    appTitle.className = 'dpp-mobile-more-sheet__group';
-    appTitle.textContent = 'App';
-    sheet.appendChild(appTitle);
-    sheet.appendChild(actions);
-
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'dpp-mobile-more-sheet__close';
-    close.textContent = 'Cerrar';
-    close.addEventListener('click', closeMore);
-    sheet.appendChild(close);
-
-    document.body.appendChild(backdrop);
-    document.body.appendChild(sheet);
-    document.body.appendChild(nav);
-
-    setActive('summary');
+    document.body.appendChild(bar);
     built = true;
+    setActive();
   }
 
   function teardown() {
     if (mq.matches) return;
     document.querySelector('.dpp-mobile-nav')?.remove();
-    document.querySelector('.dpp-mobile-more-backdrop')?.remove();
-    document.querySelector('.dpp-mobile-more-sheet')?.remove();
-    document.body.classList.remove('dpp-mobile-bottom-nav-enabled', 'dpp-mobile-more-open');
+    document.body.classList.remove('dpp-mobile-bottom-nav-enabled');
     built = false;
   }
 
-  function init() {
-    if (mq.matches) build();
-    else teardown();
-  }
+  function init() { if (mq.matches) build(); else teardown(); }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
-  } else {
-    init();
-  }
-
-  // Keep the active tab in sync when navigation happens elsewhere (sidebar, CTAs, links).
-  document.addEventListener('dpp:page', (event) => {
-    const item = MAIN.concat(MORE).find((entry) => entry.page === event.detail);
-    setActive(MAIN.includes(item) ? item.id : (item ? 'more' : ''));
-  });
-
-  if (mq.addEventListener) mq.addEventListener('change', init);
-  else mq.addListener(init);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once: true});
+  else init();
+  document.addEventListener('dpp:page', setActive);
+  if (mq.addEventListener) mq.addEventListener('change', init); else mq.addListener(init);
 })();
