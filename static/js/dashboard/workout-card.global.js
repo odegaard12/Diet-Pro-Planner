@@ -22,6 +22,11 @@
       .replaceAll("'", '&#039;');
   }
 
+  // Imported notes carry the provider's internal activity id ("… · id=123"): not useful on screen.
+  function cleanNote(note) {
+    return String(note || '').replace(/\s*·?\s*\bid=\d+\b/g, '').trim();
+  }
+
   function workoutSummary(workout) {
     const parts = [`${fmtNumber(workout.minutes)} min`];
 
@@ -29,8 +34,9 @@
       parts.push(`${fmtNumber(workout.distance_km)} km`);
     }
 
-    if (workout.notes) {
-      parts.push(escapeHtml(workout.notes));
+    const note = cleanNote(workout.notes);
+    if (note) {
+      parts.push(escapeHtml(note));
     }
 
     return parts.join(' · ');
@@ -53,6 +59,7 @@
   }
 
   window.DPPDashboardWorkoutCard = {
+    cleanNote,
     workoutSummary,
     workoutCardCompact,
   };

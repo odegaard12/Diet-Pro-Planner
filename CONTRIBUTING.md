@@ -7,7 +7,7 @@ Diet Pro Planner is a personal, local-first application. Contributions are welco
 - Open or reference an issue for changes that affect data models, integrations or user-visible behavior.
 - Keep pull requests small and focused.
 - Do not combine unrelated refactors with a feature or bug fix.
-- Prefer a new focused module over adding more code to `app.py`, `static/app.js` or `static/styles.css`.
+- Prefer a new focused module over adding more code to `app.py` or `static/app.js`. Styles go in `static/css/base.css` (tokens/components) or `static/css/pages.css` (layouts), using the CSS variables only.
 - Read [`CLAUDE.md`](CLAUDE.md) for the architecture rules (config paths, migrations, validation, frontend modules).
 
 ## Privacy rules

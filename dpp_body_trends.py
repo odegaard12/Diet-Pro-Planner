@@ -19,6 +19,7 @@ from flask import jsonify, request, send_from_directory
 
 import dpp_config as config
 import dpp_db
+from dpp_validate import public_error
 
 
 def _db_path() -> str:
@@ -40,7 +41,7 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
 def _columns(conn: sqlite3.Connection, table: str) -> List[str]:
     if not _table_exists(conn, table):
         return []
-    return [str(r["name"]) for r in conn.execute(f'PRAGMA table_info("{table}")')]
+    return [str(r["name"]) for r in conn.execute(f"PRAGMA table_info({dpp_db.qident(table)})")]
 
 
 def _pick(cols: Iterable[str], names: Iterable[str]) -> Optional[str]:
@@ -183,10 +184,10 @@ def _read_weights(conn: sqlite3.Connection, start: str, end: str) -> Dict[str, A
             select_cols.append(c)
 
     sql = f'''
-        SELECT {", ".join(f'"{c}"' for c in select_cols)}
+        SELECT {", ".join(dpp_db.qident(c) for c in select_cols)}
         FROM "weights"
-        WHERE "{date_col}" >= ? AND "{date_col}" <= ?
-        ORDER BY "{date_col}" ASC {',' + '"' + time_col + '" ASC' if time_col else ''}
+        WHERE {dpp_db.qident(date_col)} >= ? AND {dpp_db.qident(date_col)} <= ?
+        ORDER BY {dpp_db.qident(date_col)} ASC {', ' + dpp_db.qident(time_col) + ' ASC' if time_col else ''}
     '''
     rows = conn.execute(sql, (start, end)).fetchall()
 
@@ -276,10 +277,10 @@ def _read_body_metrics(conn: sqlite3.Connection, start: str, end: str) -> Dict[s
             select_cols.append(c)
 
     sql = f'''
-        SELECT {", ".join(f'"{c}"' for c in select_cols)}
-        FROM "{table}"
-        WHERE "{date_col}" >= ? AND "{date_col}" <= ?
-        ORDER BY "{date_col}" ASC {',' + '"' + time_col + '" ASC' if time_col else ''}
+        SELECT {", ".join(dpp_db.qident(c) for c in select_cols)}
+        FROM {dpp_db.qident(table)}
+        WHERE {dpp_db.qident(date_col)} >= ? AND {dpp_db.qident(date_col)} <= ?
+        ORDER BY {dpp_db.qident(date_col)} ASC {', ' + dpp_db.qident(time_col) + ' ASC' if time_col else ''}
     '''
     rows = conn.execute(sql, (start, end)).fetchall()
 
@@ -437,7 +438,7 @@ def register_body_trends_routes(app) -> None:
         try:
             return jsonify(get_body_trends_payload())
         except Exception as exc:
-            return jsonify({"status": "error", "error": str(exc)}), 500
+            return jsonify({"status": "error", "error": public_error(exc)}), 500
 
     @app.get("/weight-2")
     def weight_2_page():

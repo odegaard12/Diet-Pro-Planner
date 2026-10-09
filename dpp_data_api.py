@@ -32,6 +32,16 @@ _CSV_QUERIES = {
 }
 
 
+def _csv_cell(value):
+    """Excel-friendly value; text starting with = + - @ (or tab/CR) is prefixed with ' so a
+    food name from Open Food Facts or a note can never run as a spreadsheet formula."""
+    if isinstance(value, float):
+        return str(value).replace(".", ",")
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + value
+    return value
+
+
 def register_data_routes(app) -> None:
     @app.get("/api/backup")
     def backup_list():
@@ -82,7 +92,7 @@ def register_data_routes(app) -> None:
         writer = csv.writer(buffer, delimiter=";")
         writer.writerow(headers)
         for row in rows:
-            writer.writerow([str(value).replace(".", ",") if isinstance(value, float) else value for value in row])
+            writer.writerow([_csv_cell(value) for value in row])
         stamp = datetime.now().strftime("%Y%m%d")
         # BOM so Excel opens UTF-8 accents correctly.
         return Response(

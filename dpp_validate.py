@@ -85,6 +85,33 @@ def text(value: Any, max_len: int = 500, default: str = "") -> str:
     return str(value if value is not None else default).strip()[:max_len]
 
 
+def public_error(exc: BaseException, fallback: str = "Error interno; revisa los logs del servidor") -> str:
+    """Message safe to return to the client.
+
+    Our own errors (ApiError, RuntimeError and ValueError raised with Spanish user
+    messages) pass through; library errors (HTTP clients, SQLite, KeyError…) can embed
+    URLs, SQL or internals, so they are logged and replaced by a generic message.
+    """
+    try:
+        import requests
+
+        if isinstance(exc, requests.HTTPError):
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            return f"El servicio externo respondió con un error (HTTP {status})" if status else "Error del servicio externo"
+        if isinstance(exc, requests.RequestException):
+            return "No se pudo contactar con el servicio externo"
+    except ImportError:  # pragma: no cover
+        pass
+    if isinstance(exc, ApiError):
+        return exc.message
+    if type(exc) in (RuntimeError, ValueError) or (isinstance(exc, RuntimeError) and type(exc).__module__.startswith("dpp")):
+        return str(exc)[:300]
+    import logging
+
+    logging.getLogger("dpp").warning("Hidden internal error: %s: %s", type(exc).__name__, exc)
+    return fallback
+
+
 def register_error_handlers(app) -> None:
     from flask import jsonify, request
     from werkzeug.exceptions import HTTPException

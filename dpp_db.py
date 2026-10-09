@@ -47,8 +47,14 @@ def _table_exists(db: sqlite3.Connection, table: str) -> bool:
     ).fetchone() is not None
 
 
+def qident(name: str) -> str:
+    """Quote an SQL identifier. Identifiers are never taken from requests: callers pass
+    literals or names read from sqlite_master/PRAGMA, and this keeps even those inert."""
+    return '"' + str(name).replace('"', '""') + '"'
+
+
 def _columns(db: sqlite3.Connection, table: str) -> list[str]:
-    return [row[1] for row in db.execute(f'PRAGMA table_info("{table}")').fetchall()]
+    return [row[1] for row in db.execute(f"PRAGMA table_info({qident(table)})").fetchall()]
 
 
 # ---------------------------------------------------------------------------
@@ -87,8 +93,8 @@ def _m1_meals_without_unique(db: sqlite3.Connection) -> None:
     seq_row = db.execute("SELECT seq FROM sqlite_sequence WHERE name='meals'").fetchone() if _table_exists(db, "sqlite_sequence") else None
     for kind, name, _sql in dependents:
         if kind == "view":
-            db.execute(f'DROP VIEW IF EXISTS "{name}"')
-    cols = ", ".join(f'"{c}"' for c in _columns(db, "meals"))
+            db.execute(f"DROP VIEW IF EXISTS {qident(name)}")
+    cols = ", ".join(qident(c) for c in _columns(db, "meals"))
     db.execute(new_sql)
     db.execute(f"INSERT INTO meals__new({cols}) SELECT {cols} FROM meals")
     db.execute("DROP TABLE meals")
@@ -227,7 +233,7 @@ def has_user_data(path: Path | str | None = None) -> bool:
         return False
     with connect(target) as db:
         for table in ("meals", "weights", "workouts"):
-            if _table_exists(db, table) and db.execute(f'SELECT 1 FROM "{table}" LIMIT 1').fetchone():
+            if _table_exists(db, table) and db.execute(f"SELECT 1 FROM {qident(table)} LIMIT 1").fetchone():
                 return True
     return False
 

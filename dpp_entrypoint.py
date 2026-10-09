@@ -59,7 +59,7 @@ def serve() -> None:
             print(f"[DPP] {legacy.config.APP_NAME} {legacy.config.VERSION} on http://{host}:{port} (waitress)")
             waitress_serve(legacy.app, host=host, port=port, threads=int(os.environ.get("DPP_THREADS", "8")))
             return
-    legacy.app.run(host=host, port=port, threaded=True)
+    legacy.app.run(host=host, port=port, threaded=True, debug=False)
 
 
 if __name__ == "__main__":

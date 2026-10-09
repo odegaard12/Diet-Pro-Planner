@@ -59,7 +59,7 @@
     const goal = d.summary.goal_weight;
     const weights = s.map((x) => x.weight).filter((v) => v !== null);
     const nearGoal = weights.length && goal >= Math.min(...weights) - 3;
-    charts.timeChart('#pgWeight', {
+    if (document.querySelector('#pgWeight')) charts.timeChart('#pgWeight', {
       dates, ariaLabel: 'Peso diario y tendencia', unit: ' kg',
       series: [
         {label: 'Pesaje', type: 'dots', color: C().muted, values: s.map((x) => x.weight), unit: ' kg', digits: 2},
@@ -67,6 +67,7 @@
       ],
       ref: nearGoal ? {value: goal, label: `Objetivo ${nf(goal, 1)} kg`} : null,
     });
+    if (!document.querySelector('#pgEnergy')) return;
     charts.timeChart('#pgEnergy', {
       dates, zeroBased: true, ariaLabel: 'Calorías diarias frente al objetivo', tickDigits: 0,
       series: [
@@ -94,18 +95,23 @@
   function view(d) {
     const s = d.summary;
     const ranges = [30, 60, 90, 180].map((n) => `<button class="${n === range ? 'is-active' : ''}" onclick="dppProgressRange(${n})">${n} días</button>`).join('');
-    return `<section class="pg-head"><div><span class="ui5-kicker">Progreso · ${esc(window.DPPCharts.shortDate(d.range.from))} – ${esc(window.DPPCharts.shortDate(d.range.to))}</span><h3>Tendencias reales con tus propios datos</h3><p class="muted">La tendencia suaviza agua y glucógeno. El gasto real se calcula con lo que comes y cómo cambia tu peso.</p></div><div class="pg-range" role="group" aria-label="Rango">${ranges}</div></section>
+    const hasWeights = d.series.some((x) => x.weight !== null);
+    const hasDays = s.complete_days > 0;
+    const nutrition = hasDays ? `
+        <article class="card pg-card"><header><h3>Energía diaria</h3><p class="muted">Media ${nf(s.avg_kcal, 0)} kcal en días completos · dentro de ±10%: ${s.kcal_in_range_days}/${s.complete_days}</p></header><div id="pgEnergy"></div></article>
+        <article class="card pg-card"><header><h3>Proteína diaria</h3><p class="muted">Media ${nf(s.avg_protein, 0)} g · en objetivo ${s.protein_hit_days}/${s.complete_days} días</p></header><div id="pgProtein"></div></article>
+        <article class="card pg-card"><header><h3>Reparto de macros</h3><p class="muted">Media de días completos (% de kcal)</p></header><div id="pgMacros"></div></article>
+        <article class="card pg-card"><header><h3>Lo que más calorías aporta</h3></header>${foodsTable(d.top_foods_kcal, 'kcal', 'kcal')}</article>
+        <article class="card pg-card"><header><h3>Tus fuentes de proteína</h3></header>${foodsTable(d.top_foods_protein, 'protein', 'g')}</article>`
+      : `<article class="card pg-card pg-wide"><header><h3>Comida y proteína</h3></header><div class="empty">Aún no hay días completos en este rango. Registra todas las comidas de un día para ver energía, proteína y macros.<div class="empty-cta"><button class="btn small" onclick="go('register')">Registrar comida</button></div></div></article>`;
+    return `<section class="pg-head"><p class="muted">${esc(window.DPPCharts.shortDate(d.range.from))} – ${esc(window.DPPCharts.shortDate(d.range.to))}</p><div class="pg-range" role="group" aria-label="Rango">${ranges}</div></section>
       ${tiles(d)}
       ${insights(d)}
       <section class="pg-grid">
-        <article class="card pg-card pg-wide"><header><h3>Peso: pesajes y tendencia</h3><p class="muted">Puntos grises = pesajes oficiales · línea azul = tendencia (media móvil exponencial)</p></header><div id="pgWeight"></div></article>
-        <article class="card pg-card"><header><h3>Energía diaria</h3><p class="muted">Días registrados · media ${nf(s.avg_kcal, 0)} kcal en días completos · dentro de ±10%: ${s.kcal_in_range_days}/${s.complete_days}</p></header><div id="pgEnergy"></div></article>
-        <article class="card pg-card"><header><h3>Proteína diaria</h3><p class="muted">Media ${nf(s.avg_protein, 0)} g · en objetivo ${s.protein_hit_days}/${s.complete_days} días</p></header><div id="pgProtein"></div></article>
-        <article class="card pg-card"><header><h3>Reparto de macros</h3><p class="muted">Media de días completos (% de kcal)</p></header><div id="pgMacros">${d.macro_split ? '' : '<div class="empty">Sin días completos.</div>'}</div>
-          <div class="pg-mini"><span><b>${nf(s.workout_sessions, 0)}</b><small>sesiones deporte</small></span><span><b>${nf(s.workout_kcal, 0)}</b><small>kcal deporte</small></span><span><b>${nf(s.weekday_avg_kcal, 0)}</b><small>kcal entre semana</small></span><span><b>${nf(s.weekend_avg_kcal, 0)}</b><small>kcal fin de semana</small></span></div></article>
-        <article class="card pg-card"><header><h3>Resumen semanal</h3></header>${weeklyTable(d)}</article>
-        <article class="card pg-card"><header><h3>Lo que más calorías aporta</h3></header>${foodsTable(d.top_foods_kcal, 'kcal', 'kcal')}</article>
-        <article class="card pg-card"><header><h3>Tus fuentes de proteína</h3></header>${foodsTable(d.top_foods_protein, 'protein', 'g')}</article>
+        <article class="card pg-card pg-wide"><header><h3>Peso y tendencia</h3><p class="muted">Puntos = pesajes oficiales · línea = tendencia</p></header>${hasWeights ? '<div id="pgWeight"></div>' : '<div class="empty">No hay pesos en este rango.<div class="empty-cta"><button class="btn small" onclick="go(\'weights\')">Registrar peso</button></div></div>'}</article>
+        ${nutrition}
+        <article class="card pg-card pg-wide"><header><h3>Deporte</h3></header><div class="pg-mini"><span><b>${nf(s.workout_sessions, 0)}</b><small>sesiones</small></span><span><b>${nf(s.workout_kcal, 0)}</b><small>kcal deporte</small></span><span><b>${nf(s.weekday_avg_kcal, 0)}</b><small>kcal/día entre semana</small></span><span><b>${nf(s.weekend_avg_kcal, 0)}</b><small>kcal/día fin de semana</small></span></div></article>
+        <article class="card pg-card pg-wide"><header><h3>Resumen semanal</h3></header>${weeklyTable(d)}</article>
       </section>
       ${dailyTable(d)}
       <div class="footer-space"></div>`;

@@ -194,6 +194,23 @@
     MORE.forEach((item) => grid.appendChild(navButton(item, 'dpp-mobile-more-sheet__item')));
     sheet.appendChild(grid);
 
+    // Top-bar actions are hidden on phones; they live here instead.
+    const actions = document.createElement('div');
+    actions.className = 'dpp-mobile-more-sheet__grid dpp-mobile-more-sheet__actions';
+    [
+      {icon: '❓', label: 'Ayuda', run: () => window.openHelpModal?.()},
+      {icon: '💾', label: 'Exportar DB', run: () => { window.location.href = '/api/backup/download'; }},
+      {icon: '🚪', label: 'Salir', run: () => document.getElementById('btnLogout')?.click()},
+    ].forEach((action) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dpp-mobile-more-sheet__item';
+      btn.innerHTML = '<span class="dpp-mobile-nav__icon">' + action.icon + '</span><span class="dpp-mobile-nav__label">' + action.label + '</span>';
+      btn.addEventListener('click', () => { closeMore(); action.run(); });
+      actions.appendChild(btn);
+    });
+    sheet.appendChild(actions);
+
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'dpp-mobile-more-sheet__close';

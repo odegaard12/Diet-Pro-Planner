@@ -12,3 +12,19 @@ services:
       - TZ=Europe/Madrid
     volumes:
       - ./data:/app/data
+    # Hardening: code is immutable at runtime, only /app/data and /tmp are writable.
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Only what the entrypoint needs to chown ./data and switch to uid 10001;
+    # all capabilities are gone once it drops to the app user.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    pids_limit: 256

@@ -1,0 +1,26 @@
+# Never bake secrets or personal data into the image.
+.env
+*.env
+!.env.example
+data/
+backups/
+*.db
+*.db-*
+*.sqlite*
+strava_tokens.json
+reports/
+
+# Local tooling / caches
+.git/
+.github/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+graphify-out/
+.claude/
+*.bak
+*.bak-*
+*.log

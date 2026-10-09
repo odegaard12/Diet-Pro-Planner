@@ -13,6 +13,7 @@ import requests
 from flask import jsonify, redirect, request
 
 from dpp_security import is_private_request
+from dpp_validate import ApiError, iso_date, public_error
 
 
 VERSION = "v0.0.18"
@@ -395,7 +396,7 @@ def register_strava_v018(app, legacy) -> None:
                 "rate": rate_snapshot(),
             })
         except Exception as exc:
-            return jsonify({"error": str(exc), "rate": rate_snapshot()}), 400
+            return jsonify({"error": public_error(exc), "rate": rate_snapshot()}), 400
         finally:
             _SYNC_LOCK.release()
 
@@ -426,9 +427,10 @@ def register_strava_v018(app, legacy) -> None:
         if not _SYNC_LOCK.acquire(blocking=False):
             return jsonify({"error": "Ya hay otra operación Strava en curso"}), 409
         try:
-            body = request.get_json(silent=True) or {}
-            after_date = str(body.get("after_date") or date.today().isoformat())
-            before_date = str(body.get("before_date") or date.today().isoformat())
+            body = request.get_json(silent=True)
+            body = body if isinstance(body, dict) else {}
+            after_date = iso_date(body.get("after_date"), date.today().isoformat(), "after_date")
+            before_date = iso_date(body.get("before_date"), date.today().isoformat(), "before_date")
             tokens = get_tokens()
             summaries = list_activities(tokens["access_token"], after_date, before_date)
             with legacy.con() as db:
@@ -447,7 +449,7 @@ def register_strava_v018(app, legacy) -> None:
                 "rate": rate_snapshot(),
             })
         except Exception as exc:
-            return jsonify({"error": str(exc), "rate": rate_snapshot()}), 400
+            return jsonify({"error": public_error(exc), "rate": rate_snapshot()}), 400
         finally:
             _SYNC_LOCK.release()
 
@@ -455,12 +457,16 @@ def register_strava_v018(app, legacy) -> None:
         if not _SYNC_LOCK.acquire(blocking=False):
             return jsonify({"error": "Ya hay otra operación Strava en curso"}), 409
         try:
-            body = request.get_json(silent=True) or {}
-            selected = {str(value) for value in body.get("ids") or [] if str(value)}
+            body = request.get_json(silent=True)
+            body = body if isinstance(body, dict) else {}
+            raw_ids = body.get("ids") or []
+            if not isinstance(raw_ids, list) or len(raw_ids) > 500:
+                raise ApiError("ids debe ser una lista")
+            selected = {str(value) for value in raw_ids if str(value)}
             if not selected:
                 return jsonify({"error": "No seleccionaste actividades"}), 400
-            after_date = str(body.get("after_date") or date.today().isoformat())
-            before_date = str(body.get("before_date") or date.today().isoformat())
+            after_date = iso_date(body.get("after_date"), date.today().isoformat(), "after_date")
+            before_date = iso_date(body.get("before_date"), date.today().isoformat(), "before_date")
             tokens = get_tokens()
             summaries = list_activities(tokens["access_token"], after_date, before_date)
             selected_items = [item for item in summaries if str(item.get("id") or "") in selected]
@@ -487,7 +493,7 @@ def register_strava_v018(app, legacy) -> None:
                 "rate": rate_snapshot(),
             })
         except Exception as exc:
-            return jsonify({"error": str(exc), "rate": rate_snapshot()}), 400
+            return jsonify({"error": public_error(exc), "rate": rate_snapshot()}), 400
         finally:
             _SYNC_LOCK.release()
 
@@ -554,10 +560,10 @@ def register_strava_v018(app, legacy) -> None:
             cfg = legacy.read_strava_auto_config()
             label = legacy._auto_now_label()
             cfg["last_sync_at"] = label
-            cfg["last_message"] = str(exc)
+            cfg["last_message"] = public_error(exc)
             cfg["_last_run_ts"] = int(time.time())
             legacy.write_strava_auto_config(cfg)
-            return {"ok": False, "error": str(exc), "message": cfg["last_message"], "rate": rate_snapshot()}
+            return {"ok": False, "error": public_error(exc), "message": cfg["last_message"], "rate": rate_snapshot()}
         finally:
             _SYNC_LOCK.release()
 

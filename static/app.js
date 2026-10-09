@@ -80,16 +80,20 @@ function mealAdvice(items) {
   return {cls, label, text, t};
 }
 
+function shiftDay(n) { const d = new Date(day() + 'T12:00:00'); d.setDate(d.getDate() + n); setSelectedDate(localIso(d)); render(); }
+/* Compact day switcher: ‹ day › ; the transparent date input over the label opens the native picker. */
 function dateBar() {
-  const label = day() === today() ? 'Día de hoy' : 'Día seleccionado';
-  return `<div class="datebar"><div class="field"><label>${label}</label><input id="dashDate" type="date" value="${esc(day())}" onchange="setSelectedDate(this.value);render()"></div><button class="btn secondary" onclick="setSelectedDate(today());render()">Ir a hoy real</button><span class="muted">Así no se mezclan actividades de ayer con hoy.</span></div>`;
+  const d = day(), isToday = d === today();
+  const long = new Date(d + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'});
+  return `<div class="datebar"><button class="btn small secondary" type="button" aria-label="Día anterior" onclick="shiftDay(-1)">‹</button><label class="datebar-pick"><b>${isToday ? 'Hoy' : esc(long)}</b>${isToday ? `<small>${esc(long)}</small>` : ''}<input id="dashDate" type="date" value="${esc(d)}" aria-label="Elegir día" onchange="setSelectedDate(this.value);render()"></label><button class="btn small secondary" type="button" aria-label="Día siguiente" onclick="shiftDay(1)" ${isToday ? 'disabled' : ''}>›</button>${isToday ? '' : '<button class="btn small" type="button" onclick="setSelectedDate(today());render()">Hoy</button>'}</div>`;
 }
 function mealCard(m) {
   return `<article class="list-card"><header><div><h4>${esc(m.date)} · ${esc(m.time)} · ${esc(m.name)}</h4><p class="muted">${esc(m.notes || '')}</p></div><div class="card-actions"><button class="btn small secondary" title="Repetir hoy" onclick="repeatMeal(${Number(m.id)}, this)">↻</button><button class="btn small danger" onclick="deleteMeal(${Number(m.id)})">×</button></div></header><div class="chips">${(m.items || []).map((i) => `<span class="chip">${esc(i.food_name)} ${fmt(i.grams)}g</span>`).join('')}</div><b>${fmt(m.totals?.kcal)} kcal · ${fmt(m.totals?.protein)} g prot.</b></article>`;
 }
 function workoutCard(w) {
-  return `<article class="list-card"><header><div><h4>${esc(w.date)} · ${esc(w.time)} · ${esc(w.name)}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km ? `· ${fmt(w.distance_km)} km` : ''} · ${esc(w.notes || '')}</p></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></header><b>${fmt(w.kcal)} kcal</b></article>`;
+  return `<article class="list-card"><header><div><h4>${esc(w.date)} · ${esc(w.time)} · ${esc(w.name)}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km ? `· ${fmt(w.distance_km)} km` : ''} · ${esc(cleanWorkoutNote(w.notes))}</p></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></header><b>${fmt(w.kcal)} kcal</b></article>`;
 }
+function cleanWorkoutNote(n) { return window.DPPDashboardWorkoutCard.cleanNote(n); }
 function mealCardCompact(m) { return window.DPPDashboardMealCard.mealCardCompact(m); }
 function workoutCardCompact(w) { return window.DPPDashboardWorkoutCard.workoutCardCompact(w); }
 async function deleteMeal(id) { if (!confirm('¿Borrar comida?')) return; await api('/api/meals/' + id, {method: 'DELETE'}); toast('Comida borrada'); await load(); }
@@ -130,17 +134,6 @@ function renderRegister() {
       <div id="suggestions" class="suggestions"></div>
       <p class="muted">Tip: si es una plantilla, cárgala y cambia solo gramos. Enter añade el primer resultado.</p>
     </section>
-    <section class="card weight-mini">
-      <h3>⚖️ Peso rápido</h3>
-      <div class="row">
-        <div class="field span-4"><label>Fecha</label><input id="wDate" type="date" value="${esc(today())}"></div>
-        <div class="field span-3"><label>Hora</label><input id="wTime" type="time" value="${esc(nowHM())}"></div>
-        <div class="field span-3"><label>Kg</label><input id="wKg" type="number" step="0.01" inputmode="decimal" placeholder="kg de hoy"></div>
-        <div class="field span-2"><label>Tipo</label><select id="wOfficial"><option value="1">Oficial</option><option value="0">Referencia</option></select></div>
-        <div class="field span-12"><label>Contexto</label><input id="wCtx" placeholder="mañana, después baño"></div>
-      </div>
-      <button class="btn" onclick="saveWeight(this)">Guardar peso</button>
-    </section>
   </div>`;
   renderMealBuilder(); renderSuggestions();
 }
@@ -154,9 +147,9 @@ function renderSuggestions() {
     if (terms.length && !terms.every((t) => hay.includes(t))) return null;
     const starts = terms.length && normText(f.name).startsWith(terms[0]) ? 2 : 0;
     return {f, score: starts + (Number(f.purchased) ? 1 : 0)};
-  }).filter(Boolean).sort((a, b) => b.score - a.score || a.f.name.localeCompare(b.f.name, 'es')).slice(0, 14);
-  box.innerHTML = scored.length ? scored.map(({f}) => `<button type="button" onclick="addFood(${Number(f.id)})"><b>${Number(f.purchased) ? '✅ ' : ''}${esc(f.name)}</b><br><small class="muted">${fmt(f.kcal)} kcal · ${fmt(f.protein)} g prot /100 g · ración ${fmt(f.typical_g)} g${f.brand ? ' · ' + esc(f.brand) : ''}</small></button>`).join('')
-    : `<div class="empty">Sin resultados. Créalo en <a href="#" onclick="go('foods');return false">Alimentos</a> (OCR, código de barras o manual).</div>`;
+  }).filter(Boolean).sort((a, b) => b.score - a.score || a.f.name.localeCompare(b.f.name, 'es')).slice(0, terms.length ? 12 : 6);
+  box.innerHTML = (terms.length ? '' : '<small class="muted">Frecuentes · escribe para buscar en todo el catálogo</small>') + (scored.length ? scored.map(({f}) => `<button type="button" onclick="addFood(${Number(f.id)})"><b>${Number(f.purchased) ? '✅ ' : ''}${esc(f.name)}</b><br><small class="muted">${fmt(f.kcal)} kcal · ${fmt(f.protein)} g prot /100 g · ración ${fmt(f.typical_g)} g${f.brand ? ' · ' + esc(f.brand) : ''}</small></button>`).join('')
+    : `<div class="empty">Sin resultados. Créalo en <a href="#" onclick="go('foods');return false">Alimentos</a> (OCR, código de barras o manual).</div>`);
 }
 function loadTemplateToMeal(id) {
   if (!id) { toast('Elige una plantilla'); return; }
@@ -202,7 +195,7 @@ async function saveMealAsTemplate() {
 
 /* ---------- Plantillas ---------- */
 function templateItems(t) { let p = {items: []}; try { p = JSON.parse(t.payload); } catch (e) { /* keep empty */ } return (p.items || []).map((it) => { const f = foodByName(it.food); return f ? calcFood(f, it.grams) : null; }).filter(Boolean); }
-function renderTemplates() { $('#view').innerHTML = `<div class="section-title"><div><h3>Plantillas rápidas</h3><p>Cambia gramos y guarda en 2 clics</p></div></div><div class="grid cols-2">${state.templates.map(templateCard).join('')}</div>`; }
+function renderTemplates() { $('#view').innerHTML = `<p class="muted page-hint">Cambia los gramos y guarda la comida en dos toques.</p><div class="grid cols-2">${state.templates.map(templateCard).join('') || '<div class="empty">Aún no hay plantillas: créalas desde Registrar con «Guardar como plantilla».</div>'}</div>`; }
 function templateCard(t) {
   const items = templateItems(t); const total = calcList(items);
   return `<div class="card template-card" data-template="${Number(t.id)}"><h3>${esc(t.name)}</h3><p class="muted">${esc(t.notes || '')}</p><div class="template-items">${items.map((it, idx) => `<div class="template-item"><div><b>${esc(it.food_name)}</b><br><small>${fmt(it.kcal)} kcal · ${fmt(it.protein)} g prot.</small></div><input type="number" inputmode="decimal" value="${Number(it.grams)}" data-tgram="${idx}" data-food="${esc(it.food_name)}"></div>`).join('')}</div><div class="totals"><b>${fmt(total.kcal)} kcal</b><b>${fmt(total.protein)} g prot.</b></div><button class="btn" onclick="saveTemplateMeal(${Number(t.id)}, this)">Guardar ahora</button></div>`;
@@ -248,7 +241,7 @@ function renderFoods() {
 function renderFoodList() {
   const q = normText($('#foodFilter')?.value);
   const foods = state.foods.filter((f) => normText(`${f.name} ${f.brand} ${f.source_note}`).includes(q));
-  $('#foodList').innerHTML = foods.map((f) => `<div class="card food-card">${/^\/uploads\/[\w.-]+$/.test(f.photo_path || '') ? `<img class="food-photo" src="${esc(f.photo_path)}" alt="foto etiqueta" loading="lazy">` : ''}<h3>${Number(f.purchased) ? '✅' : '🥫'} ${esc(f.name)}</h3><p class="muted">${esc(f.brand || '')}${f.barcode ? ' · ' + esc(f.barcode) : ''}</p><div class="chips"><span class="chip">${fmt(f.kcal)} kcal/100g</span><span class="chip">${fmt(f.protein)} g prot</span><span class="chip">típico ${fmt(f.typical_g)} g</span></div><p class="source">${esc(f.source_note || '')}</p><p>${esc(f.notes || '')}</p><div class="card-actions"><button class="btn small secondary" onclick="editFood(${Number(f.id)})">Editar</button><button class="btn small danger" onclick="deleteFood(${Number(f.id)})">Borrar</button></div></div>`).join('') || '<div class="empty">Sin alimentos con ese filtro.</div>';
+  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="card food-card">${/^\/uploads\/[\w.-]+$/.test(f.photo_path || '') ? `<img class="food-photo" src="${esc(f.photo_path)}" alt="foto etiqueta" loading="lazy">` : ''}<h3>${Number(f.purchased) ? '✅' : '🥫'} ${esc(f.name)}</h3><p class="muted">${esc(f.brand || '')}${f.barcode ? ' · ' + esc(f.barcode) : ''}</p><div class="chips"><span class="chip">${fmt(f.kcal)} kcal/100g</span><span class="chip">${fmt(f.protein)} g prot</span><span class="chip">típico ${fmt(f.typical_g)} g</span></div><p class="source">${esc(f.source_note || '')}</p><p>${esc(f.notes || '')}</p><div class="card-actions"><button class="btn small secondary" onclick="editFood(${Number(f.id)})">Editar</button><button class="btn small danger" onclick="deleteFood(${Number(f.id)})">Borrar</button></div></div>`).join('') || '<div class="empty">Sin alimentos con ese filtro.</div>') + moreButton('foods', foods.length);
 }
 function fillFoodForm(food) {
   const set = (id, val) => { const el = $(id); if (el && val !== undefined && val !== null) el.value = String(val); };
@@ -296,7 +289,7 @@ async function saveFood(btn) {
 
 /* ---------- Deporte ---------- */
 function ui5SportCard(w) {
-  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(w.date || '')} · ${esc(w.time || '')}</small></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span><span><b>${fmt(w.distance_km)}</b><small>km</small></span><span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div><p>${esc(w.notes || '')}</p></article>`;
+  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(w.date || '')} · ${esc(w.time || '')}</small></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span><span><b>${fmt(w.distance_km)}</b><small>km</small></span><span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div><p>${esc(cleanWorkoutNote(w.notes))}</p></article>`;
 }
 function renderSport() {
   const all = [...state.workouts].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
@@ -324,7 +317,7 @@ function renderSport() {
       </div></div>
     </div>
     <div class="section-title ui5-section-title"><div><h3>Historial deporte</h3><p>${all.length} entrenos · últimos primero</p></div></div>
-    <div class="ui5-sport-history">${all.slice(0, 120).map(ui5SportCard).join('')}</div>`;
+    <div class="ui5-sport-history">${all.slice(0, listLimit('sport')).map(ui5SportCard).join('')}</div>${moreButton('sport', all.length)}`;
 }
 async function saveWorkout(btn) {
   await busy(btn, async () => {
@@ -356,13 +349,22 @@ function weightChart() {
   const tr = ui5Trend();
   return `<div class="ui5-chartbox"><svg class="chart ui5-weight-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Peso oficial reciente">${ticks}<polyline points="${pts}" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}<text x="${L}" y="${H - 18}" font-size="13" font-weight="800" fill="#54677f">${esc(ws[0].date)}</text><text x="${W - R}" y="${H - 18}" text-anchor="end" font-size="13" font-weight="800" fill="#54677f">${esc(ws.at(-1).date)}</text></svg><div class="ui5-trend"><span class="ui5-chip ${tr.cls}">${esc(tr.label)}</span><b>${esc(tr.text)}</b></div></div>`;
 }
+/* Long lists render 30 rows; "Ver más" adds 30 more (phones choked on 20 000 px pages). */
+const LIST_LIMITS = {};
+function listLimit(key) { return LIST_LIMITS[key] || 30; }
+function moreButton(key, total) { const shown = listLimit(key); return total > shown ? `<button class="btn secondary more-btn" type="button" onclick="LIST_LIMITS['${key}']=${shown + 30};render()">Ver más (${total - shown})</button>` : ''; }
 function renderWeights() {
   const all = [...state.weights].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
-  $('#view').innerHTML = `<div class="grid cols-2"><div class="card"><h3>📉 Gráfica peso oficial</h3>${weightChart()}<p class="muted">La tendencia usa solo pesos oficiales. Las referencias ayudan a entender variaciones por comida/agua. Más detalle en <a href="#" onclick="go('progress');return false">Progreso</a>.</p></div><div class="card"><h3>⚖️ Registrar peso</h3><div class="row"><div class="field span-4"><label>Fecha</label><input id="wDate" type="date" value="${esc(today())}"></div><div class="field span-3"><label>Hora</label><input id="wTime" type="time" value="${esc(nowHM())}"></div><div class="field span-3"><label>Kg</label><input id="wKg" type="number" step="0.01" inputmode="decimal" placeholder="kg de hoy"></div><div class="field span-2"><label>Tipo</label><select id="wOfficial"><option value="1">Oficial</option><option value="0">Referencia</option></select></div><div class="field span-12"><label>Contexto</label><input id="wCtx" placeholder="mañana, después baño"></div></div><button class="btn" onclick="saveWeight(this)">Guardar peso</button></div></div><div class="section-title"><h3>Historial de peso</h3></div><div class="list">${all.map((w) => `<div class="list-card"><header><div><h4>${esc(w.date)} ${esc(w.time)} · ${fmt(w.kg)} kg</h4><p class="muted">${w.official ? 'Oficial' : 'Referencia'} · ${esc(w.context || '')}</p></div><button class="btn small danger" onclick="deleteWeight(${Number(w.id)})">×</button></header></div>`).join('')}</div>`;
+  $('#view').innerHTML = `<div class="grid cols-2"><div class="card weight-form"><h3>Registrar peso</h3>
+      <div class="row compact-row"><div class="field span-6"><label>Kg</label><input id="wKg" type="number" step="0.01" inputmode="decimal" placeholder="kg de hoy"></div><div class="field span-6"><label>Tipo</label><select id="wOfficial"><option value="1">Oficial (mañana)</option><option value="0">Referencia</option></select></div></div>
+      <details class="more-fields"><summary>Fecha, hora y contexto</summary><div class="row compact-row"><div class="field span-6"><label>Fecha</label><input id="wDate" type="date" value="${esc(today())}"></div><div class="field span-6"><label>Hora</label><input id="wTime" type="time" value="${esc(nowHM())}"></div><div class="field span-12"><label>Contexto</label><input id="wCtx" placeholder="mañana, después del baño"></div></div></details>
+      <button class="btn block" onclick="saveWeight(this)">Guardar peso</button></div>
+    <div class="card"><h3>Peso oficial</h3>${weightChart()}<p class="muted small-note">Solo pesos oficiales. Más detalle en <a href="#" onclick="go('progress');return false">Progreso</a>.</p></div></div>
+    <div class="section-title"><div><h3>Historial</h3><p>${all.length} registros</p></div></div><div class="list">${all.slice(0, listLimit('weights')).map((w) => `<div class="list-card row-card"><div><b>${fmt(w.kg)} kg</b><small class="muted">${esc(w.date)} ${esc(w.time)} · ${w.official ? 'oficial' : 'referencia'}${w.context ? ' · ' + esc(w.context) : ''}</small></div><button class="btn small danger" aria-label="Borrar peso" onclick="deleteWeight(${Number(w.id)})">×</button></div>`).join('')}</div>${moreButton('weights', all.length)}`;
 }
 async function deleteWeight(id) { if (!confirm('¿Borrar peso?')) return; await api('/api/weights/' + id, {method: 'DELETE'}); toast('Peso borrado'); await load(); }
 
-function renderHistory() { $('#view').innerHTML = `<div class="grid cols-2"><div><div class="section-title"><h3>Comidas</h3><p>Últimas 300 · ↻ repite una comida hoy</p></div><div class="list">${state.meals.map(mealCard).join('')}</div></div><div><div class="section-title"><h3>Deporte</h3></div><div class="list">${state.workouts.map(workoutCard).join('')}</div></div></div>`; }
+function renderHistory() { $('#view').innerHTML = `<div class="grid cols-2"><div><div class="section-title"><div><h3>Comidas</h3><p>${state.meals.length} registradas · ↻ repite una comida hoy</p></div></div><div class="list">${state.meals.slice(0, listLimit('hmeals')).map(mealCard).join('')}</div>${moreButton('hmeals', state.meals.length)}</div><div><div class="section-title"><div><h3>Deporte</h3><p>${state.workouts.length} entrenos</p></div></div><div class="list">${state.workouts.slice(0, listLimit('hwork')).map(workoutCard).join('')}</div>${moreButton('hwork', state.workouts.length)}</div></div>`; }
 function renderIntegrations() { $('#view').innerHTML = '<div class="empty">Cargando integraciones…</div>'; }
 
 /* ---------- Shell ---------- */
@@ -374,9 +376,7 @@ function ui5ApplyShell() {
   if (r && r.dataset.ui5 !== '1') { r.dataset.ui5 = '1'; r.innerHTML = '<article class="ui5-rule protein"><span>Proteína</span><b id="ruleProtein">130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b id="ruleOil">5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>'; }
   const sr = document.querySelector('.sidebar .side-rule');
   if (sr && sr.dataset.ui5 !== '1') { sr.dataset.ui5 = '1'; sr.innerHTML = '<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'; }
-  if (!document.getElementById('ui5Badge')) { const b = document.createElement('div'); b.id = 'ui5Badge'; b.className = 'ui5-badge'; document.querySelector('.topbar')?.appendChild(b); }
-  const badge = document.getElementById('ui5Badge'); if (badge) badge.textContent = version || 'local';
-  if (!document.getElementById('floatingHelp')) { const h = document.createElement('button'); h.id = 'floatingHelp'; h.className = 'floating-help'; h.textContent = '?'; h.onclick = openHelpModal; h.title = 'Ayuda'; h.setAttribute('aria-label', 'Ayuda'); document.body.appendChild(h); }
+  if (!document.getElementById('btnHelp')) { const h = document.createElement('button'); h.id = 'btnHelp'; h.className = 'ghost'; h.type = 'button'; h.textContent = 'Ayuda'; h.onclick = openHelpModal; document.querySelector('.top-actions')?.prepend(h); }
 }
 function openHelpModal() {
   closeHelpModal(); const o = document.createElement('div'); o.id = 'helpOverlay'; o.className = 'help-overlay';
