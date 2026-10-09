@@ -32,6 +32,18 @@ register_security(legacy.app)
 app = legacy.app
 
 
+@app.get("/sw.js")
+def service_worker():
+    """Offline shell. Served from the root so it controls "/", with the version in its cache name
+    so every deploy replaces the cached UI (public on purpose: it contains no data)."""
+    from flask import Response
+    body = (legacy.config.BASE_DIR / "static" / "sw.js").read_text(encoding="utf-8")
+    resp = Response(body.replace("__DPP_VERSION__", legacy.config.VERSION), mimetype="text/javascript")
+    resp.headers["Cache-Control"] = "no-cache"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
+
+
 def start_background_jobs() -> None:
     try:
         legacy.start_strava_auto_thread()

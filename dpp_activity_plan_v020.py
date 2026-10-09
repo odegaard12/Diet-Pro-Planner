@@ -95,6 +95,10 @@ def _ensure_schema(db: sqlite3.Connection) -> None:
     db.commit()
 
 
+# Fixed text: exception messages are never echoed to the client (CodeQL py/stack-trace-exposure).
+PLAN_INPUT_ERROR = "Revisa la actividad: fecha AAAA-MM-DD, hora HH:MM y números válidos"
+
+
 def _plan_payload(payload: dict[str, Any], existing: dict[str, Any] | None = None) -> dict[str, Any]:
     base = dict(existing or {})
     title = str(payload.get("title", base.get("title", ""))).strip()[:120]
@@ -275,8 +279,8 @@ def register_activity_plan_v020(app, legacy) -> None:
             return jsonify({"ok": False, "error": "La planificación solo se puede editar desde la red local"}), 403
         try:
             item = _plan_payload(request.get_json(silent=True) or {})
-        except ValueError as exc:
-            return jsonify({"ok": False, "error": str(exc)}), 400
+        except ValueError:
+            return jsonify({"ok": False, "error": PLAN_INPUT_ERROR}), 400
         with legacy.con() as db:
             _ensure_schema(db)
             cur = db.execute(
@@ -302,8 +306,8 @@ def register_activity_plan_v020(app, legacy) -> None:
                 return jsonify({"ok": False, "error": "Actividad planificada no encontrada"}), 404
             try:
                 item = _plan_payload(request.get_json(silent=True) or {}, dict(current))
-            except ValueError as exc:
-                return jsonify({"ok": False, "error": str(exc)}), 400
+            except ValueError:
+                return jsonify({"ok": False, "error": PLAN_INPUT_ERROR}), 400
             db.execute(
                 """
                 UPDATE activity_plans SET

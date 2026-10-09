@@ -68,7 +68,11 @@
     btn.title = 'Cerrar sesión en este dispositivo';
     btn.onclick = async () => {
       if (!confirm('¿Cerrar sesión en este dispositivo?')) return;
-      try { await fetch('/api/auth/logout', {method: 'POST', credentials: 'same-origin'}); } finally { location.reload(); }
+      try {
+        // Drop the offline copy of the data on this device too.
+        if (window.caches) await Promise.all((await caches.keys()).filter((k) => k.startsWith('dpp-')).map((k) => caches.delete(k)));
+        await fetch('/api/auth/logout', {method: 'POST', credentials: 'same-origin'});
+      } finally { location.reload(); }
     };
     actions.appendChild(btn);
   }

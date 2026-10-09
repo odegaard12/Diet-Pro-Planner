@@ -17,23 +17,21 @@
     const used = Array.isArray(pantry.used) ? pantry.used : [];
     const avoid = Array.isArray(next.avoid) ? next.avoid.filter(Boolean) : [];
     const flags = Array.isArray(c.flags) ? c.flags : [];
-    const sub = slot.querySelector('header p');
-    if (sub && c.headline) sub.textContent = c.headline;
     slot.querySelector('.coach-body').innerHTML = `
       <div class="dpp-coach-visual">
         <div class="dpp-coach-main">
-          <div class="dpp-coach-label">MEJOR COMIDA AHORA</div>
+          <div class="dpp-coach-label">COACH · SIGUIENTE COMIDA</div>
           <div class="dpp-coach-decision">${esc(next.primary || 'Registra comida real para afinar la recomendación.')}</div>
-          <div class="dpp-coach-why">${esc(next.why || '')}</div>
+          <div class="dpp-coach-why">${esc(next.why || c.headline || '')}</div>
         </div>
-        <details class="dpp-coach-grid coach-why" ${window.matchMedia('(min-width: 901px)').matches ? 'open' : ''}>
+        <details class="dpp-coach-grid coach-why">
           <summary>Por qué esta comida</summary>
           <div class="dpp-coach-box"><span>💪</span><b>Proteína</b><small>${esc(messages.protein || 'Prioriza proteína útil.')}</small></div>
           <div class="dpp-coach-box"><span>⚡</span><b>Recuperación</b><small>${esc(messages.biocharge || 'Sin dato de recuperación.')}</small></div>
           <div class="dpp-coach-box"><span>🧠</span><b>Contexto</b><small>${esc(messages.yesterday || 'Sin señales fuertes de ayer.')}</small></div>
         </details>
-        ${used.length ? `<div class="dpp-coach-row">${chip('despensa', used.join(' · '))}</div>` : ''}
         ${avoid.length ? `<div class="dpp-coach-avoid"><b>Evita ahora:</b> ${esc(avoid.join(' · '))}</div>` : ''}
+        ${used.length ? `<div class="dpp-coach-row">${chip('despensa', used.join(' · '))}</div>` : ''}
         ${flags.length ? `<div class="dpp-coach-signals">Señales: ${flags.map(esc).join(' · ')}</div>` : ''}
       </div>`;
   }

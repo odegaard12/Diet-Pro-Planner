@@ -27,9 +27,47 @@ const day = () => selectedDate || today();
 function remember(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* private mode */ } }
 function setSelectedDate(value) { selectedDate = value; remember('selectedDate', value); }
 
-function toast(msg) { const t = $('#toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
+let toastLockUntil = 0; // keeps "guardado en el móvil" visible over the caller's own "guardado" toast
+function toast(msg, lock) { if (!lock && Date.now() < toastLockUntil) return; if (lock) toastLockUntil = Date.now() + 2500; const t = $('#toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
+/* Offline queue: new meals, weights and workouts saved without connection wait on this device
+   (localStorage) and are sent in order as soon as the Raspberry is reachable again. */
+const QUEUE_KEY = 'dppQueue', QUEUEABLE = ['/api/meals', '/api/weights', '/api/workouts'];
+function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { return []; } }
+function writeQueue(q) { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch (e) { /* private mode */ } }
+let flushing = false;
+async function flushQueue() {
+  const q = readQueue();
+  if (flushing || !q.length || !navigator.onLine) return;
+  flushing = true;
+  let sent = 0;
+  try {
+    while (q.length) {
+      const job = q[0];
+      let r;
+      try { r = await fetch(job.path, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: job.body}); } catch (e) { break; }
+      if (r.status === 401 || r.status >= 500) break; // keep it: sign in again / server busy
+      q.shift(); writeQueue(q); // 2xx sent; 4xx would never succeed, drop it
+      if (r.ok) sent += 1;
+    }
+  } finally { flushing = false; }
+  if (sent) { toast(`${sent} registro${sent > 1 ? 's' : ''} guardado${sent > 1 ? 's' : ''} sin conexión ya enviado${sent > 1 ? 's' : ''}`); load().catch(() => {}); }
+}
 async function api(path, opts = {}) {
-  const r = await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts});
+  if ((opts.method || 'GET') === 'POST' && QUEUEABLE.includes(path)) {
+    try {
+      const r = await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts});
+      if (r.status === 503 && !navigator.onLine) throw new TypeError('offline');
+      return handle(r);
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e; // a real API error, not a network failure
+      const q = readQueue(); q.push({path, body: opts.body, at: Date.now()}); writeQueue(q);
+      toast('Sin conexión: guardado en el móvil, se enviará al volver', true);
+      return {ok: true, queued: true};
+    }
+  }
+  return handle(await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts}));
+}
+async function handle(r) {
   if (r.status === 401) { location.reload(); throw new Error('Sesión caducada'); }
   if (!r.ok) { let e = `Error ${r.status}`; try { e = (await r.json()).error || e; } catch (x) { /* not JSON */ } throw new Error(e); }
   return r.json();
@@ -47,12 +85,31 @@ async function busy(btn, fn) {
 }
 
 async function load() { state = await api('/api/state'); if (!selectedDate) setSelectedDate(today()); renderNav(); render(); }
+/* Five sections (same on desktop sidebar and phone bottom bar); related pages are tabs inside one section. */
+const SECTIONS = [
+  {id: 'hoy', label: 'Hoy', icon: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>', tabs: [['home', 'Hoy']]},
+  {id: 'comidas', label: 'Comidas', icon: '<path d="M4 11h16a8 8 0 0 1-16 0zM8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/>', tabs: [['register', 'Registrar'], ['templates', 'Plantillas'], ['foods', 'Alimentos'], ['pantry', 'Despensa'], ['plan', 'Plan semanal']]},
+  {id: 'deporte', label: 'Deporte', icon: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', tabs: [['sport', 'Entrenos'], ['activity-plan', 'Plan'], ['integrations', 'Strava']]},
+  {id: 'progreso', label: 'Progreso', icon: '<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>', tabs: [['progress', 'Tendencias'], ['weights', 'Peso'], ['history', 'Historial']]},
+  {id: 'ajustes', label: 'Ajustes', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', tabs: [['goals', 'Objetivos']]},
+];
+const sectionOf = (p) => SECTIONS.find((s) => s.tabs.some(([id]) => id === p)) || SECTIONS[0];
+const navIcon = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+window.DPP_NAV = {sections: SECTIONS, sectionOf, navIcon};
 function renderNav() {
-  const nav = $('#nav'); if (!nav) return;
-  nav.innerHTML = PAGES.map(([id, ico, label]) => { const p = UI5_NAV[id] || [ico, label, '']; return `<button class="${page === id ? 'active' : ''}" data-page="${id}"><span class="nav-ico">${p[0]}</span><span class="nav-copy"><b>${esc(p[1])}</b><small>${esc(p[2])}</small></span></button>`; }).join('');
-  nav.querySelectorAll('[data-page]').forEach((b) => { b.onclick = () => go(b.dataset.page); });
+  const cur = sectionOf(page);
+  const nav = $('#nav');
+  if (nav) {
+    nav.innerHTML = SECTIONS.map((s) => `<button class="${s === cur ? 'active' : ''}" data-page="${s.tabs[0][0]}"${s === cur ? ' aria-current="page"' : ''}><span class="nav-ico">${navIcon(s.icon)}</span><span class="nav-copy"><b>${esc(s.label)}</b></span></button>`).join('');
+    nav.querySelectorAll('[data-page]').forEach((b) => { b.onclick = () => go(b.dataset.page); });
+  }
+  const tabs = $('#sectionTabs');
+  if (tabs) {
+    const actions = cur.id === 'ajustes' ? '<span class="tab-actions"><button type="button" onclick="openHelpModal()">Ayuda</button><a href="/api/backup/download">Exportar datos</a><button type="button" onclick="document.getElementById(\'btnLogout\')?.click()">Salir</button></span>' : '';
+    tabs.innerHTML = cur.tabs.length > 1 || actions ? `<div class="tabs" role="tablist">${cur.tabs.length > 1 ? cur.tabs.map(([id, label]) => `<button type="button" role="tab" aria-selected="${id === page}" class="${id === page ? 'is-active' : ''}" onclick="go('${id}')">${esc(label)}</button>`).join('') : ''}${actions}</div>` : '';
+  }
 }
-function setTitle(t) { const el = $('#pageTitle'); if (el) el.textContent = t; }
+function setTitle() { const el = $('#pageTitle'); if (el) el.textContent = sectionOf(page).label; }
 function go(p) { page = p; document.body.classList.toggle('fi13-home', p === 'home'); renderNav(); render(); document.dispatchEvent(new CustomEvent('dpp:page', {detail: p})); try { window.scrollTo({top: 0}); } catch (e) { /* old browsers */ } }
 function render() {
   setTitle(PAGE_TITLES[page] || (window.DPP_PAGE_TITLES || {})[page] || 'Diet Pro Planner');
@@ -210,8 +267,10 @@ async function saveTemplateMeal(id, btn) {
 /* ---------- Alimentos ---------- */
 function renderFoods() {
   selectedFoodPhoto = '';
-  $('#view').innerHTML = `<div class="grid cols-2">
-    <div class="card"><h3>🥫 Nuevo alimento</h3>
+  $('#view').innerHTML = `<div class="food-search"><input id="foodFilter" type="search" placeholder="Buscar: leche, Hacendado, 8480000…" oninput="renderFoodList()">
+    <button class="btn" type="button" onclick="openFoodForm()">+ Nuevo</button></div>
+  <div class="chips food-kinds">${[['all','Todos'],['mine','Míos'],['super','Supermercado'],['generic','Genéricos']].map(([k,l]) => `<button type="button" class="chip${foodKind === k ? ' active' : ''}" onclick="foodKind='${k}';render()">${l}</button>`).join('')}</div>
+  <details id="foodForm" class="card"><summary><h3>Nuevo o editar alimento</h3><small>Escanea el código, sube una foto de la etiqueta o escribe los valores por 100 g.</small></summary>
       <div id="foodLookup"></div>
       <div class="photo-box"><div><b>📷 Foto etiqueta</b><small>OCR real local: sube foto, revisa las sugerencias y guarda.</small></div><input id="fPhoto" type="file" accept="image/*" onchange="uploadFoodPhoto()"><div id="photoPreview"></div></div>
       <div class="row">
@@ -230,18 +289,15 @@ function renderFoods() {
         <div class="field span-12"><label>Uso</label><input id="fNotes" placeholder="Desayuno, merienda, tupper..."></div>
       </div>
       <button class="btn" onclick="saveFood(this)">Guardar alimento</button>
-    </div>
-    <div class="card note-box"><h3>📌 Tres formas de añadir</h3><p><b>Código de barras</b>: busca en Open Food Facts (base abierta) y rellena todo.</p><p><b>Foto de etiqueta</b>: OCR local con Tesseract; si configuras IA, también lectura con IA.</p><p class="muted">Revisa siempre los valores antes de guardar. Guardar con un nombre existente actualiza ese alimento.</p></div>
-  </div>
-  <div class="section-title"><div><h3>Alimentos guardados</h3><p>Se usan en Registrar para cambiar solo gramos.</p></div><input id="foodFilter" placeholder="filtrar..." style="max-width:300px" oninput="renderFoodList()"></div>
-  <div id="foodList" class="grid cols-3"></div>`;
+    </details>
+  <div id="foodList" class="food-rows"></div>`;
   renderFoodList();
   window.DPPFoodLookup?.mount('#foodLookup');
 }
 function renderFoodList() {
   const q = normText($('#foodFilter')?.value);
-  const foods = state.foods.filter((f) => normText(`${f.name} ${f.brand} ${f.source_note}`).includes(q));
-  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="card food-card">${/^\/uploads\/[\w.-]+$/.test(f.photo_path || '') ? `<img class="food-photo" src="${esc(f.photo_path)}" alt="foto etiqueta" loading="lazy">` : ''}<h3>${Number(f.purchased) ? '✅' : '🥫'} ${esc(f.name)}</h3><p class="muted">${esc(f.brand || '')}${f.barcode ? ' · ' + esc(f.barcode) : ''}</p><div class="chips"><span class="chip">${fmt(f.kcal)} kcal/100g</span><span class="chip">${fmt(f.protein)} g prot</span><span class="chip">típico ${fmt(f.typical_g)} g</span></div><p class="source">${esc(f.source_note || '')}</p><p>${esc(f.notes || '')}</p><div class="card-actions"><button class="btn small secondary" onclick="editFood(${Number(f.id)})">Editar</button><button class="btn small danger" onclick="deleteFood(${Number(f.id)})">Borrar</button></div></div>`).join('') || '<div class="empty">Sin alimentos con ese filtro.</div>') + moreButton('foods', foods.length);
+  const foods = state.foods.filter((f) => foodKindOf(f) && normText(`${f.name} ${f.brand} ${f.barcode || ''}`).includes(q));
+  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="food-row" role="button" tabindex="0" onclick="editFood(${Number(f.id)})"><div><b>${esc(f.name)}</b><small>${esc(f.brand || 'Mío')} · ración ${fmt(f.typical_g)} g</small></div><span class="food-kcal">${fmt(f.kcal)}<small>kcal/100 g</small></span><span class="food-prot">${fmt(f.protein)} g<small>prot</small></span><button class="icon-btn" type="button" aria-label="Borrar ${esc(f.name)}" onclick="event.stopPropagation();deleteFood(${Number(f.id)})">×</button></div>`).join('') || '<div class="empty">Nada con esa búsqueda. Prueba el código de barras en «+ Nuevo».</div>') + moreButton('foods', foods.length);
 }
 function fillFoodForm(food) {
   const set = (id, val) => { const el = $(id); if (el && val !== undefined && val !== null) el.value = String(val); };
@@ -251,7 +307,10 @@ function fillFoodForm(food) {
   if (food.purchased !== undefined) set('#fPurchased', Number(food.purchased) ? '1' : '0');
   if (food.photo_path) selectedFoodPhoto = food.photo_path;
 }
-function editFood(id) { const f = foodById(id); if (!f) return; selectedFoodPhoto = f.photo_path || ''; fillFoodForm(f); $('#fName')?.scrollIntoView({behavior: 'smooth', block: 'center'}); toast('Edita y guarda (mismo nombre = actualizar)'); }
+let foodKind = 'all';
+function foodKindOf(f) { const k = /Open Food Facts/.test(f.source_note || '') ? 'super' : f.brand === 'Genérico (aprox.)' ? 'generic' : 'mine'; return foodKind === 'all' || foodKind === k; }
+function openFoodForm() { const d = $('#foodForm'); if (d) { d.open = true; d.scrollIntoView({behavior: 'smooth', block: 'start'}); } }
+function editFood(id) { const f = foodById(id); if (!f) return; selectedFoodPhoto = f.photo_path || ''; fillFoodForm(f); openFoodForm(); toast('Edita y guarda (mismo nombre = actualizar)'); }
 async function deleteFood(id) { const f = foodById(id); if (!f || !confirm(`¿Borrar "${f.name}" del catálogo? Las comidas ya registradas no cambian.`)) return; try { await api('/api/foods/' + Number(id), {method: 'DELETE'}); toast('Alimento borrado'); await load(); } catch (e) { toast(e.message); } }
 function ocr3Set(id, val) { const el = document.querySelector(id); if (!el || val === undefined || val === null || val === '') return; el.value = String(val).replace(',', '.'); }
 function ocr3Badge(text, cls = 'info') { return `<span class="ocr3-badge ${cls}">${esc(text)}</span>`; }
@@ -368,7 +427,24 @@ function renderHistory() { $('#view').innerHTML = `<div class="grid cols-2"><div
 function renderIntegrations() { $('#view').innerHTML = '<div class="empty">Cargando integraciones…</div>'; }
 
 /* ---------- Shell ---------- */
+function linkFieldLabels() {
+  // Templates write <div class="field"><label>Kg</label><input>…>: tie them so tapping the label focuses the input.
+  document.querySelectorAll('#view .field').forEach((f, i) => {
+    const l = f.querySelector(':scope > label'), c = f.querySelector('input, select, textarea');
+    if (!l || !c || l.htmlFor) return;
+    if (!c.id) c.id = `f-${page}-${i}`;
+    l.htmlFor = c.id;
+  });
+  // Controls without a visible label still get an accessible name.
+  const named = {tplSelect: 'Plantilla', fPhoto: 'Foto de la etiqueta', pantryNewCategory: 'Categoría', planRaw: 'JSON del plan'};
+  document.querySelectorAll('#view input:not([type=hidden]), #view select, #view textarea').forEach((c) => {
+    if (c.labels?.length || c.getAttribute('aria-label')) return;
+    const name = c.dataset.food ? `Gramos de ${c.dataset.food}` : c.dataset.planField === 'day' ? 'Nombre del día' : c.dataset.planField === 'status' ? 'Estado del día' : (named[c.id] || c.placeholder || '');
+    if (name) c.setAttribute('aria-label', name);
+  });
+}
 function ui5ApplyShell() {
+  linkFieldLabels();
   document.documentElement.dataset.ui = 'ui5';
   const version = window.DPP_VERSION || '';
   const e = document.querySelector('.eyebrow'); if (e) e.textContent = `Dieta controlada${version ? ' · ' + version : ''}`;
@@ -376,7 +452,6 @@ function ui5ApplyShell() {
   if (r && r.dataset.ui5 !== '1') { r.dataset.ui5 = '1'; r.innerHTML = '<article class="ui5-rule protein"><span>Proteína</span><b id="ruleProtein">130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b id="ruleOil">5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>'; }
   const sr = document.querySelector('.sidebar .side-rule');
   if (sr && sr.dataset.ui5 !== '1') { sr.dataset.ui5 = '1'; sr.innerHTML = '<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'; }
-  if (!document.getElementById('btnHelp')) { const h = document.createElement('button'); h.id = 'btnHelp'; h.className = 'ghost'; h.type = 'button'; h.textContent = 'Ayuda'; h.onclick = openHelpModal; document.querySelector('.top-actions')?.prepend(h); }
 }
 function openHelpModal() {
   closeHelpModal(); const o = document.createElement('div'); o.id = 'helpOverlay'; o.className = 'help-overlay';
@@ -388,5 +463,11 @@ document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeHel
 
 $('#btnRefresh').onclick = () => load().then(() => toast('Datos actualizados')).catch((e) => toast(e.message));
 // Start after every module script has registered its pages/renderers.
-function boot() { load().catch((e) => { const v = $('#view'); if (v) v.innerHTML = `<div class="card note-box"><h3>Error cargando la app</h3><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reintentar</button></div>`; }); }
+// Offline shell (static/sw.js): network first, last copy when the Raspberry is unreachable.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* http on some browsers */ });
+window.addEventListener('offline', () => toast('Sin conexión: ves los últimos datos guardados'));
+window.addEventListener('online', () => { toast('Conexión recuperada'); flushQueue().then(() => load()).catch(() => {}); });
+// Home-screen shortcuts open a page directly: /?page=register|weights|progress
+function openStartPage() { const p = new URLSearchParams(location.search).get('page'); if (p && /^[a-z-]{2,30}$/.test(p)) { history.replaceState(null, '', '/'); go(p); } }
+function boot() { load().then(openStartPage).then(flushQueue).catch((e) => { const v = $('#view'); if (v) v.innerHTML = `<div class="card note-box"><h3>Error cargando la app</h3><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reintentar</button></div>`; }); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else setTimeout(boot, 0);
