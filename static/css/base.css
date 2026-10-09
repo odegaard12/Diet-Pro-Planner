@@ -226,23 +226,23 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
   .main { padding: 18px 18px 40px; }
 }
 @media (max-width: 760px), (pointer: coarse) {
-  body.dpp-mobile-bottom-nav-enabled { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  body.dpp-mobile-bottom-nav-enabled { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
   body.dpp-mobile-bottom-nav-enabled .sidebar .nav { display: none; }
-  .dpp-mobile-nav { position: fixed; left: 10px; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 9999; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px; border: 1px solid var(--border); border-radius: 20px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: var(--shadow-pop); }
-  .dpp-mobile-nav__item { display: grid; place-items: center; gap: 2px; min-width: 0; min-height: 54px; padding: 6px 2px; border: 0; border-radius: 14px; background: transparent; color: var(--text-3); font: inherit; cursor: pointer; }
+  .dpp-mobile-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 6px 8px calc(4px + env(safe-area-inset-bottom, 0px)); border: 0; border-top: 1px solid var(--border); border-radius: 0; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 -4px 16px rgba(15, 27, 45, .06); }
+  .dpp-mobile-nav__item { display: grid; place-items: center; gap: 2px; min-width: 0; min-height: 52px; padding: 4px 2px; border: 0; border-radius: 14px; background: transparent; color: var(--text-3); font: inherit; cursor: pointer; }
   .dpp-mobile-nav__item.is-active { background: var(--primary-soft); color: var(--primary); }
   .dpp-mobile-nav__icon { font-size: 19px; line-height: 1; }
   .dpp-mobile-nav__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 650; }
   .dpp-mobile-more-backdrop { position: fixed; inset: 0; z-index: 9997; border: 0; background: rgba(5, 10, 20, .45); }
   body.dpp-mobile-more-open .dpp-mobile-more-backdrop { display: block; }
-  .dpp-mobile-more-sheet { position: fixed; left: 10px; right: 10px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 9998; display: block; padding: 10px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none; transform: translateY(14px); transition: opacity .16s, transform .16s; }
+  .dpp-mobile-more-sheet { position: fixed; left: 10px; right: 10px; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); z-index: 9998; display: block; padding: 10px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none; transform: translateY(14px); transition: opacity .16s, transform .16s; }
   body.dpp-mobile-more-open .dpp-mobile-more-sheet { opacity: 1; pointer-events: auto; transform: none; }
   .dpp-mobile-more-sheet__handle { width: 40px; height: 4px; margin: 2px auto 8px; border-radius: 999px; background: var(--border-strong); }
   .dpp-mobile-more-sheet h2 { margin: 0 4px 10px; font-size: 15px; }
   .dpp-mobile-more-sheet__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .dpp-mobile-more-sheet__item, .dpp-mobile-more-sheet__close { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); color: var(--text); font: inherit; font-weight: 650; cursor: pointer; }
   .dpp-mobile-more-sheet__close { width: 100%; margin-top: 8px; }
-  .toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 760px), (pointer: coarse) and (max-width: 1023px) {
   /* Phone shell: one compact sticky app bar; nav lives in the bottom bar, actions in "Más". */

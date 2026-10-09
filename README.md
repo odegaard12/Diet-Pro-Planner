@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
 
-**Current version:** v0.2.0  
-**Latest release:** v0.2.0 — New design system and real login  
+**Current version:** v0.2.1  
+**Latest release:** v0.2.1 — Bottom bar docked on iPhone  
 **License:** MIT  
 **Stack:** Python · Flask · Waitress · SQLite · Vanilla JS · Docker · Local-first
 
@@ -314,6 +314,10 @@ All settings live in `.env` (see [`.env.example`](.env.example)):
 | `TZ` | Local time zone (set in `docker-compose.yml`) |
 
 ## Releases
+
+### v0.2.1 — Bottom bar docked on iPhone
+
+- The mobile bottom navigation sits on the screen edge, with the home-indicator area inside the bar instead of floating ~40 px above it.
 
 ### v0.2.0 — New design system and real login
 

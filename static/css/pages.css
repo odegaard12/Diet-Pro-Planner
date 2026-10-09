@@ -406,7 +406,7 @@
 @media (max-width: 900px) {
   .home-two, .register-grid, .ui5-sport-layout, .dpp-coach-visual, .strava-settings-body { grid-template-columns: 1fr; }
   .register-grid { grid-template-areas: "add" "main"; }
-  .register-main .sticky-actions { position: sticky; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 5; margin: 14px -14px -14px; padding: 12px 14px; border-top: 1px solid var(--border); border-radius: 0 0 14px 14px; background: var(--surface); }
+  .register-main .sticky-actions { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); z-index: 5; margin: 14px -14px -14px; padding: 12px 14px; border-top: 1px solid var(--border); border-radius: 0 0 14px 14px; background: var(--surface); }
   .register-main .sticky-actions .btn:first-child { flex: 1; }
   .strava-diagnostics-panel { padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--border); }
   .pantry-toolbar { grid-template-columns: 1fr auto; }
