@@ -368,7 +368,17 @@ function renderHistory() { $('#view').innerHTML = `<div class="grid cols-2"><div
 function renderIntegrations() { $('#view').innerHTML = '<div class="empty">Cargando integraciones…</div>'; }
 
 /* ---------- Shell ---------- */
+function linkFieldLabels() {
+  // Templates write <div class="field"><label>Kg</label><input>…>: tie them so tapping the label focuses the input.
+  document.querySelectorAll('#view .field').forEach((f, i) => {
+    const l = f.querySelector(':scope > label'), c = f.querySelector('input, select, textarea');
+    if (!l || !c || l.htmlFor) return;
+    if (!c.id) c.id = `f-${page}-${i}`;
+    l.htmlFor = c.id;
+  });
+}
 function ui5ApplyShell() {
+  linkFieldLabels();
   document.documentElement.dataset.ui = 'ui5';
   const version = window.DPP_VERSION || '';
   const e = document.querySelector('.eyebrow'); if (e) e.textContent = `Dieta controlada${version ? ' · ' + version : ''}`;
@@ -388,5 +398,7 @@ document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeHel
 
 $('#btnRefresh').onclick = () => load().then(() => toast('Datos actualizados')).catch((e) => toast(e.message));
 // Start after every module script has registered its pages/renderers.
-function boot() { load().catch((e) => { const v = $('#view'); if (v) v.innerHTML = `<div class="card note-box"><h3>Error cargando la app</h3><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reintentar</button></div>`; }); }
+// Home-screen shortcuts open a page directly: /?page=register|weights|progress
+function openStartPage() { const p = new URLSearchParams(location.search).get('page'); if (p && /^[a-z-]{2,30}$/.test(p)) { history.replaceState(null, '', '/'); go(p); } }
+function boot() { load().then(openStartPage).catch((e) => { const v = $('#view'); if (v) v.innerHTML = `<div class="card note-box"><h3>Error cargando la app</h3><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reintentar</button></div>`; }); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else setTimeout(boot, 0);

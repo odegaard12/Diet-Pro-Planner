@@ -81,3 +81,21 @@
   .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .wk-strip { max-width: 640px; }
 }
+
+/* ---------- Motion (v0.3.1): short, purposeful; off with prefers-reduced-motion (base rule) ---------- */
+@keyframes dpp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes dpp-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes dpp-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes dpp-draw { from { stroke-dashoffset: 400; } to { stroke-dashoffset: 0; } }
+#view > * { animation: dpp-rise .32s ease-out both; }
+#view > :nth-child(2) { animation-delay: .04s; }
+#view > :nth-child(3) { animation-delay: .08s; }
+#view > :nth-child(4) { animation-delay: .12s; }
+#view > :nth-child(5) { animation-delay: .16s; }
+#view > :nth-child(n+6) { animation-delay: .2s; }
+.balance-bar .seg { transform-origin: left; animation: dpp-grow-x .6s cubic-bezier(.2, .8, .2, 1) .15s both; }
+.spark rect.p, .spark rect.s, .spark rect.empty { transform-box: fill-box; transform-origin: bottom; animation: dpp-grow-y .5s ease-out .2s both; }
+.spark .line { stroke-dasharray: 400; animation: dpp-draw .9s ease-out .2s both; }
+.tl-row { animation: dpp-rise .3s ease-out both; }
+.btn, .wk-day, .coach-action, .dpp-mobile-nav__item, .tl-card .mini-actions button { transition: transform .12s ease, background .15s ease, border-color .15s ease; }
+.btn:active, .wk-day:active, .coach-action:active, .dpp-mobile-nav__item:active, .tl-card .mini-actions button:active { transform: scale(.96); }

@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
 
-**Current version:** v0.3.0  
-**Latest release:** v0.3.0 — Sporty dark redesign  
+**Current version:** v0.3.1  
+**Latest release:** v0.3.1 — Web app polish and motion  
 **License:** MIT  
 **Stack:** Python · Flask · Waitress · SQLite · Vanilla JS · Docker · Local-first
 
@@ -314,6 +314,12 @@ All settings live in `.env` (see [`.env.example`](.env.example)):
 | `TZ` | Local time zone (set in `docker-compose.yml`) |
 
 ## Releases
+
+### v0.3.1 — Web app polish and motion
+
+- Installed app: dark splash and theme colours, portrait, home-screen shortcuts (Registrar comida, Registrar peso, Progreso).
+- Short animations (cards rise in, balance and chart bars grow, weight line draws, count-up on the daily balance, press feedback); all off with reduced motion.
+- Form labels linked to their fields (tap the label to focus; better VoiceOver); small text fixes.
 
 ### v0.3.0 — Sporty dark redesign
 
