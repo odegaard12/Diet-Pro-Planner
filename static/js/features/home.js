@@ -108,7 +108,7 @@
 
     const sportDays = last7.map(sportOf);
     const sessions = state.workouts.filter((w) => last7.includes(w.date)).length;
-    const sportTile = tile('Deporte 7 días', fmt(sportDays.reduce((a, b) => a + b, 0)), 'kcal', bars(sportDays, 's'), `${sessions} sesión${sessions === 1 ? '' : 'es'}`);
+    const sportTile = tile('Deporte 7 días', fmt(sportDays.reduce((a, b) => a + b, 0)), 'kcal', bars(sportDays, 's'), `${sessions} ${sessions === 1 ? 'sesión' : 'sesiones'}`);
 
     let rateTile;
     const since = isoAdd(today(), -28);
@@ -139,6 +139,21 @@
     </section>`;
   }
 
+  /* Big balance number counts up once (skipped with reduced motion). */
+  function countUp(el) {
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const text = el.textContent, sign = text.startsWith('+') ? '+' : '';
+    const target = Number(text.replace(/[^\d,]/g, '').replace(',', '.'));
+    if (!Number.isFinite(target) || target <= 0) return;
+    const t0 = performance.now(), dur = 600;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur), eased = 1 - Math.pow(1 - k, 3);
+      el.textContent = sign + fmt(Math.round(target * eased));
+      if (k < 1) requestAnimationFrame(step); else el.textContent = text;
+    };
+    requestAnimationFrame(step);
+  }
+
   function homeHtml(d, data) {
     const bal = balance(d, data);
     return `${header(d, bal.eaten, bal.target)}${weekStrip(d)}${bal.html}${tiles(d)}${timeline(d)}<div id="aiCoachSlot"></div>`;
@@ -155,6 +170,7 @@
       ]);
       if (token !== renderToken || page !== 'home') return;
       $('#view').innerHTML = homeHtml(d, data);
+      countUp(document.querySelector('.balance-big b'));
       window.DPPCoachV17?.load(d);
       window.DPPAICoach?.mountHome('#aiCoachSlot', d);
     } catch (e) {
