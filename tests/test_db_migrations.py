@@ -169,3 +169,16 @@ class MigrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GenericCatalogTests(unittest.TestCase):
+    def test_adds_missing_and_keeps_user_foods(self) -> None:
+        import sqlite3
+        import dpp_catalog
+        db = sqlite3.connect(":memory:")
+        db.execute("CREATE TABLE foods(id INTEGER PRIMARY KEY, name TEXT, brand TEXT, kcal REAL, protein REAL, carbs REAL, fat REAL, sugar REAL, salt REAL, typical_g REAL, purchased INTEGER, source_note TEXT, notes TEXT)")
+        db.execute("INSERT INTO foods(name, brand, kcal, protein) VALUES('Salmón', 'Mío', 999, 1)")
+        added = dpp_catalog.add_missing(db)
+        self.assertEqual(added, len(dpp_catalog.GENERIC_FOODS) - 1)
+        self.assertEqual(db.execute("SELECT kcal, brand FROM foods WHERE name='Salmón'").fetchone(), (999, "Mío"))
+        self.assertEqual(dpp_catalog.add_missing(db), 0)
