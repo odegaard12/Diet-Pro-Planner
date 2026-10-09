@@ -1,66 +1,41 @@
-/* Diet Pro Planner v0.2.0 · design tokens, shell and shared components.
-   One stylesheet pair (base.css + pages.css) replaces the nine historical layers.
+/* Diet Pro Planner v0.3.0 · design tokens, shell and shared components.
+   Sporty dark theme (chosen 09/10/2026): one palette, orange accent, blue for intake.
    No !important: specificity stays flat so pages.css can refine components. */
 
 :root {
-  color-scheme: light;
-  --bg: #f3f5f9;
-  --surface: #ffffff;
-  --surface-2: #f6f8fb;
-  --surface-3: #eef2f7;
-  --border: #e2e8f0;
-  --border-strong: #cfd8e3;
-  --text: #0f1b2d;
-  --text-2: #4f5f75;
-  --text-3: #7a889b;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-ink: #ffffff;
-  --primary-soft: #e8efff;
-  --good: #15803d;
-  --good-soft: #e9f7ef;
-  --warn: #b45309;
-  --warn-soft: #fff5e6;
-  --bad: #c42b2b;
-  --bad-soft: #fdecec;
+  color-scheme: dark;
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #1c2129;
+  --surface-3: #262c36;
+  --border: #262c36;
+  --border-strong: #30363d;
+  --text: #e6edf3;
+  --text-2: #8b949e;
+  --text-3: #6e7681;
+  --primary: #fb923c;
+  --primary-hover: #fdba74;
+  --primary-ink: #1c1510;
+  --primary-soft: #2a1d12;
+  --intake: #58a6ff;
+  --intake-2: #79c0ff;
+  --good: #86efac;
+  --good-soft: #15281c;
+  --warn: #fdba74;
+  --warn-soft: #2a1d12;
+  --bad: #f87171;
+  --bad-soft: #321417;
   --strava: #fc4c02;
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-3: #1baf7a;
-  --shadow: 0 1px 2px rgba(15, 27, 45, .05), 0 4px 16px rgba(15, 27, 45, .05);
-  --shadow-pop: 0 12px 36px rgba(15, 27, 45, .16);
-  --radius: 16px;
-  --radius-sm: 10px;
-  --gap: 16px;
+  --series-1: #58a6ff;
+  --series-2: #fb923c;
+  --series-3: #3fb950;
+  --shadow: none;
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, .55);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --gap: 12px;
   --sidebar-w: 248px;
-  --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --bg: #0b1220;
-    --surface: #121b2c;
-    --surface-2: #172238;
-    --surface-3: #1e2b44;
-    --border: #243250;
-    --border-strong: #31426a;
-    --text: #e7eef8;
-    --text-2: #a6b4c8;
-    --text-3: #7d8ca3;
-    --primary: #5b9cff;
-    --primary-hover: #7db0ff;
-    --primary-ink: #08111f;
-    --primary-soft: #18294a;
-    --good: #4ade80;
-    --good-soft: #10291c;
-    --warn: #fbbf24;
-    --warn-soft: #2d230e;
-    --bad: #f87171;
-    --bad-soft: #321417;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
-    --shadow-pop: 0 16px 40px rgba(0, 0, 0, .5);
-  }
+  --font: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* ---------- Base ---------- */
@@ -230,7 +205,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
   body.dpp-mobile-bottom-nav-enabled .sidebar .nav { display: none; }
   .dpp-mobile-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 6px 8px calc(4px + env(safe-area-inset-bottom, 0px)); border: 0; border-top: 1px solid var(--border); border-radius: 0; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 -4px 16px rgba(15, 27, 45, .06); }
   .dpp-mobile-nav__item { display: grid; place-items: center; gap: 2px; min-width: 0; min-height: 52px; padding: 4px 2px; border: 0; border-radius: 14px; background: transparent; color: var(--text-3); font: inherit; cursor: pointer; }
-  .dpp-mobile-nav__item.is-active { background: var(--primary-soft); color: var(--primary); }
+  .dpp-mobile-nav__item.is-active { color: var(--primary); }
   .dpp-mobile-nav__icon { font-size: 19px; line-height: 1; }
   .dpp-mobile-nav__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 650; }
   .dpp-mobile-more-backdrop { position: fixed; inset: 0; z-index: 9997; border: 0; background: rgba(5, 10, 20, .45); }

@@ -12,11 +12,13 @@
   const mq = window.matchMedia(MOBILE_QUERY);
 
   // Navigates by page id through the app's go(); text matching is only a fallback.
+  // Line icons (stroke = currentColor) so the active tab takes the accent colour.
+  const svg = (d) => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
   const MAIN = [
-    { id: 'summary', page: 'home', label: 'Resumen', icon: '🏠', match: ['resumen'] },
-    { id: 'meals', page: 'register', label: 'Comidas', icon: '🍽️', match: ['registrar', 'comidas'] },
-    { id: 'weight', page: 'weights', label: 'Peso', icon: '⚖️', match: ['peso'] },
-    { id: 'progress', page: 'progress', label: 'Progreso', icon: '📈', match: ['progreso'] },
+    { id: 'summary', page: 'home', label: 'Hoy', icon: svg('<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>'), match: ['resumen'] },
+    { id: 'meals', page: 'register', label: 'Comidas', icon: svg('<path d="M4 11h16a8 8 0 0 1-16 0zM8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/>'), match: ['registrar', 'comidas'] },
+    { id: 'weight', page: 'weights', label: 'Peso', icon: svg('<path d="M6 20h12M8 20l1-12h6l1 12M12 8V4"/>'), match: ['peso'] },
+    { id: 'progress', page: 'progress', label: 'Progreso', icon: svg('<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>'), match: ['progreso'] },
   ];
 
   const MORE = [
@@ -173,7 +175,7 @@
     more.className = 'dpp-mobile-nav__item';
     more.setAttribute('data-dpp-mobile-nav-id', 'more');
     more.innerHTML =
-      '<span class="dpp-mobile-nav__icon">☰</span>' +
+      '<span class="dpp-mobile-nav__icon">' + svg('<path d="M4 6h16M4 12h16M4 18h16"/>') + '</span>' +
       '<span class="dpp-mobile-nav__label">Más</span>';
     more.addEventListener('click', toggleMore);
     nav.appendChild(more);

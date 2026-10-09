@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
 
-**Current version:** v0.2.1  
-**Latest release:** v0.2.1 — Bottom bar docked on iPhone  
+**Current version:** v0.3.0  
+**Latest release:** v0.3.0 — Sporty dark redesign  
 **License:** MIT  
 **Stack:** Python · Flask · Waitress · SQLite · Vanilla JS · Docker · Local-first
 
@@ -314,6 +314,12 @@ All settings live in `.env` (see [`.env.example`](.env.example)):
 | `TZ` | Local time zone (set in `docker-compose.yml`) |
 
 ## Releases
+
+### v0.3.0 — Sporty dark redesign
+
+- One dark theme with an orange accent across the whole app (chosen from three mockups).
+- New Resumen: week strip with a dot per logged day, big daily balance (kcal left, intake split by meal, workout), four tiles with mini charts (protein 7 days, weight trend, sport 7 days, weekly rate) and the day as a timeline ending with the Coach.
+- Line icons in the bottom bar; login restyled to match.
 
 ### v0.2.1 — Bottom bar docked on iPhone
 
