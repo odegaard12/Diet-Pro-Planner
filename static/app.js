@@ -85,17 +85,31 @@ async function busy(btn, fn) {
 }
 
 async function load() { state = await api('/api/state'); if (!selectedDate) setSelectedDate(today()); renderNav(); render(); }
-/* One menu structure for the desktop sidebar and the phone "Más" sheet (mobile-bottom-nav.js). */
-const NAV_LABELS = {home: ['🏠', 'Hoy'], register: ['🍽️', 'Comidas'], weights: ['⚖️', 'Peso'], progress: ['📈', 'Progreso'], foods: ['🥫', 'Alimentos'], templates: ['⚡', 'Plantillas'], pantry: ['🧺', 'Despensa'], plan: ['📅', 'Plan de comidas'], sport: ['🏋️', 'Entrenos'], 'activity-plan': ['🗓️', 'Plan deporte'], integrations: ['🔗', 'Strava'], history: ['📚', 'Historial'], goals: ['🎯', 'Objetivos y ajustes']};
-const NAV_GROUPS = [['', ['home', 'register', 'weights', 'progress']], ['Comida', ['foods', 'templates', 'pantry', 'plan']], ['Deporte', ['sport', 'activity-plan', 'integrations']], ['Datos', ['history', 'goals']]];
-const PAGE_HEADINGS = {home: 'Hoy', register: 'Registrar comida'};
-window.DPP_NAV = {labels: NAV_LABELS, groups: NAV_GROUPS};
+/* Five sections (same on desktop sidebar and phone bottom bar); related pages are tabs inside one section. */
+const SECTIONS = [
+  {id: 'hoy', label: 'Hoy', icon: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>', tabs: [['home', 'Hoy']]},
+  {id: 'comidas', label: 'Comidas', icon: '<path d="M4 11h16a8 8 0 0 1-16 0zM8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/>', tabs: [['register', 'Registrar'], ['templates', 'Plantillas'], ['foods', 'Alimentos'], ['pantry', 'Despensa'], ['plan', 'Plan semanal']]},
+  {id: 'deporte', label: 'Deporte', icon: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', tabs: [['sport', 'Entrenos'], ['activity-plan', 'Plan'], ['integrations', 'Strava']]},
+  {id: 'progreso', label: 'Progreso', icon: '<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>', tabs: [['progress', 'Tendencias'], ['weights', 'Peso'], ['history', 'Historial']]},
+  {id: 'ajustes', label: 'Ajustes', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', tabs: [['goals', 'Objetivos']]},
+];
+const sectionOf = (p) => SECTIONS.find((s) => s.tabs.some(([id]) => id === p)) || SECTIONS[0];
+const navIcon = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+window.DPP_NAV = {sections: SECTIONS, sectionOf, navIcon};
 function renderNav() {
-  const nav = $('#nav'); if (!nav) return;
-  nav.innerHTML = NAV_GROUPS.map(([title, ids]) => `${title ? `<span class="nav-group">${esc(title)}</span>` : ''}${ids.map((id) => { const [ico, label] = NAV_LABELS[id]; return `<button class="${page === id ? 'active' : ''}" data-page="${id}"><span class="nav-ico">${ico}</span><span class="nav-copy"><b>${esc(label)}</b></span></button>`; }).join('')}`).join('');
-  nav.querySelectorAll('[data-page]').forEach((b) => { b.onclick = () => go(b.dataset.page); });
+  const cur = sectionOf(page);
+  const nav = $('#nav');
+  if (nav) {
+    nav.innerHTML = SECTIONS.map((s) => `<button class="${s === cur ? 'active' : ''}" data-page="${s.tabs[0][0]}"${s === cur ? ' aria-current="page"' : ''}><span class="nav-ico">${navIcon(s.icon)}</span><span class="nav-copy"><b>${esc(s.label)}</b></span></button>`).join('');
+    nav.querySelectorAll('[data-page]').forEach((b) => { b.onclick = () => go(b.dataset.page); });
+  }
+  const tabs = $('#sectionTabs');
+  if (tabs) {
+    const actions = cur.id === 'ajustes' ? '<span class="tab-actions"><button type="button" onclick="openHelpModal()">Ayuda</button><a href="/api/backup/download">Exportar datos</a><button type="button" onclick="document.getElementById(\'btnLogout\')?.click()">Salir</button></span>' : '';
+    tabs.innerHTML = cur.tabs.length > 1 || actions ? `<div class="tabs" role="tablist">${cur.tabs.length > 1 ? cur.tabs.map(([id, label]) => `<button type="button" role="tab" aria-selected="${id === page}" class="${id === page ? 'is-active' : ''}" onclick="go('${id}')">${esc(label)}</button>`).join('') : ''}${actions}</div>` : '';
+  }
 }
-function setTitle(t) { const el = $('#pageTitle'); if (el) el.textContent = PAGE_HEADINGS[page] || NAV_LABELS[page]?.[1] || t; }
+function setTitle() { const el = $('#pageTitle'); if (el) el.textContent = sectionOf(page).label; }
 function go(p) { page = p; document.body.classList.toggle('fi13-home', p === 'home'); renderNav(); render(); document.dispatchEvent(new CustomEvent('dpp:page', {detail: p})); try { window.scrollTo({top: 0}); } catch (e) { /* old browsers */ } }
 function render() {
   setTitle(PAGE_TITLES[page] || (window.DPP_PAGE_TITLES || {})[page] || 'Diet Pro Planner');
@@ -436,7 +450,6 @@ function ui5ApplyShell() {
   if (r && r.dataset.ui5 !== '1') { r.dataset.ui5 = '1'; r.innerHTML = '<article class="ui5-rule protein"><span>Proteína</span><b id="ruleProtein">130–150 g/día</b><small>Prioridad antes de recortar de más.</small></article><article class="ui5-rule oil"><span>Aceite</span><b id="ruleOil">5 g normal · 10 g máximo</b><small>Medido, no a ojo.</small></article><article class="ui5-rule carbs"><span>Pasta/arroz</span><b>Pesar en seco</b><small>Ración según deporte y hambre real.</small></article>'; }
   const sr = document.querySelector('.sidebar .side-rule');
   if (sr && sr.dataset.ui5 !== '1') { sr.dataset.ui5 = '1'; sr.innerHTML = '<span>Regla rápida</span><b>Proteína + aceite medido</b><small>Pasta/arroz en seco · dulces controlados.</small>'; }
-  if (!document.getElementById('btnHelp')) { const h = document.createElement('button'); h.id = 'btnHelp'; h.className = 'ghost'; h.type = 'button'; h.textContent = 'Ayuda'; h.onclick = openHelpModal; document.querySelector('.top-actions')?.prepend(h); }
 }
 function openHelpModal() {
   closeHelpModal(); const o = document.createElement('div'); o.id = 'helpOverlay'; o.className = 'help-overlay';
