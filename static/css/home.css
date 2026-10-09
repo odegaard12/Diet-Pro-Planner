@@ -99,3 +99,4 @@
 .tl-row { animation: dpp-rise .3s ease-out both; }
 .btn, .wk-day, .coach-action, .dpp-mobile-nav__item, .tl-card .mini-actions button { transition: transform .12s ease, background .15s ease, border-color .15s ease; }
 .btn:active, .wk-day:active, .coach-action:active, .dpp-mobile-nav__item:active, .tl-card .mini-actions button:active { transform: scale(.96); }
+.day-pick b.cap { font-size: 22px; }

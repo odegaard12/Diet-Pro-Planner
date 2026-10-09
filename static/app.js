@@ -85,12 +85,17 @@ async function busy(btn, fn) {
 }
 
 async function load() { state = await api('/api/state'); if (!selectedDate) setSelectedDate(today()); renderNav(); render(); }
+/* One menu structure for the desktop sidebar and the phone "Más" sheet (mobile-bottom-nav.js). */
+const NAV_LABELS = {home: ['🏠', 'Hoy'], register: ['🍽️', 'Comidas'], weights: ['⚖️', 'Peso'], progress: ['📈', 'Progreso'], foods: ['🥫', 'Alimentos'], templates: ['⚡', 'Plantillas'], pantry: ['🧺', 'Despensa'], plan: ['📅', 'Plan de comidas'], sport: ['🏋️', 'Entrenos'], 'activity-plan': ['🗓️', 'Plan deporte'], integrations: ['🔗', 'Strava'], history: ['📚', 'Historial'], goals: ['🎯', 'Objetivos y ajustes']};
+const NAV_GROUPS = [['', ['home', 'register', 'weights', 'progress']], ['Comida', ['foods', 'templates', 'pantry', 'plan']], ['Deporte', ['sport', 'activity-plan', 'integrations']], ['Datos', ['history', 'goals']]];
+const PAGE_HEADINGS = {home: 'Hoy', register: 'Registrar comida'};
+window.DPP_NAV = {labels: NAV_LABELS, groups: NAV_GROUPS};
 function renderNav() {
   const nav = $('#nav'); if (!nav) return;
-  nav.innerHTML = PAGES.map(([id, ico, label]) => { const p = UI5_NAV[id] || [ico, label, '']; return `<button class="${page === id ? 'active' : ''}" data-page="${id}"><span class="nav-ico">${p[0]}</span><span class="nav-copy"><b>${esc(p[1])}</b><small>${esc(p[2])}</small></span></button>`; }).join('');
+  nav.innerHTML = NAV_GROUPS.map(([title, ids]) => `${title ? `<span class="nav-group">${esc(title)}</span>` : ''}${ids.map((id) => { const [ico, label] = NAV_LABELS[id]; return `<button class="${page === id ? 'active' : ''}" data-page="${id}"><span class="nav-ico">${ico}</span><span class="nav-copy"><b>${esc(label)}</b></span></button>`; }).join('')}`).join('');
   nav.querySelectorAll('[data-page]').forEach((b) => { b.onclick = () => go(b.dataset.page); });
 }
-function setTitle(t) { const el = $('#pageTitle'); if (el) el.textContent = t; }
+function setTitle(t) { const el = $('#pageTitle'); if (el) el.textContent = PAGE_HEADINGS[page] || NAV_LABELS[page]?.[1] || t; }
 function go(p) { page = p; document.body.classList.toggle('fi13-home', p === 'home'); renderNav(); render(); document.dispatchEvent(new CustomEvent('dpp:page', {detail: p})); try { window.scrollTo({top: 0}); } catch (e) { /* old browsers */ } }
 function render() {
   setTitle(PAGE_TITLES[page] || (window.DPP_PAGE_TITLES || {})[page] || 'Diet Pro Planner');
