@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/privacy-local--first-167D62)](#local-first-privacy)
 
-**Current version:** v0.3.1  
-**Latest release:** v0.3.1 — Web app polish and motion  
+**Current version:** v0.3.2  
+**Latest release:** v0.3.2 — Works offline  
 **License:** MIT  
 **Stack:** Python · Flask · Waitress · SQLite · Vanilla JS · Docker · Local-first
 
@@ -314,6 +314,11 @@ All settings live in `.env` (see [`.env.example`](.env.example)):
 | `TZ` | Local time zone (set in `docker-compose.yml`) |
 
 ## Releases
+
+### v0.3.2 — Works offline
+
+- Service worker (network first): online you always get the latest version; without connection the app opens with the last data seen on the device (read-only). Writes are never cached. Logging out clears the offline copy.
+- Every form control has an accessible name.
 
 ### v0.3.1 — Web app polish and motion
 
