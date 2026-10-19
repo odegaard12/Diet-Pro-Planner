@@ -142,7 +142,7 @@
 .ui5-sport-card { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); display: grid; gap: 8px; }
 .ui5-sport-head { display: flex; justify-content: space-between; gap: 8px; }
 .ui5-sport-head small { display: block; color: var(--text-2); }
-.ui5-sport-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ui5-sport-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
 .ui5-sport-metrics span { display: grid; padding: 6px 8px; border-radius: 8px; background: var(--surface-2); }
 .ui5-sport-metrics small { color: var(--text-3); font-size: 11.5px; }
 .ui5-sport-card p { color: var(--text-2); font-size: 12.5px; }

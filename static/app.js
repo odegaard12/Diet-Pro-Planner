@@ -165,7 +165,7 @@ function renderRegister() {
   mealItems = [];
   $('#view').innerHTML = `<div class="register-grid">
     <section class="card register-main">
-      <div class="section-title compact-title"><div><h3>🍽️ Nueva comida</h3><p>1) carga plantilla o busca alimentos · 2) cambia gramos · 3) guarda</p></div></div>
+      <div class="section-title compact-title"><div><h3>Nueva comida</h3><p>1) carga plantilla o busca alimentos · 2) cambia gramos · 3) guarda</p></div></div>
       <div class="row">
         <div class="field span-3"><label>Fecha</label><input id="mDate" type="date" value="${esc(day())}"></div>
         <div class="field span-2"><label>Hora</label><input id="mTime" type="time" value="${esc(nowHM())}"></div>
@@ -173,7 +173,7 @@ function renderRegister() {
         <div class="field span-4"><label>Notas</label><input id="mNotes" placeholder="pasta seca, tupper, post-HIIT..."></div>
       </div>
       <div class="template-loader">
-        <div><b>⚡ Cargar plantilla</b><small>Se añade a esta comida y puedes cambiar gramos antes de guardar.</small></div>
+        <div><b>Cargar plantilla</b><small>Se añade a esta comida y puedes cambiar gramos antes de guardar.</small></div>
         <select id="tplSelect"><option value="">Elegir plantilla...</option>${templateOptions()}</select>
         <button class="btn secondary" onclick="loadTemplateToMeal($('#tplSelect').value)">Cargar</button>
       </div>
@@ -185,7 +185,7 @@ function renderRegister() {
       </div>
     </section>
     <section class="card add-food-panel" aria-label="Añadir producto">
-      <h3>➕ Añadir producto</h3>
+      <h3>Añadir producto</h3>
       <div class="field"><label>Buscar alimento guardado</label><input id="foodSearch" placeholder="pollo, pasta, yogur..." autocomplete="off" oninput="renderSuggestions()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.add-food-panel').querySelector('.suggestions button')?.click()}"></div>
       <div class="field" style="margin-top:10px"><label>Gramos</label><input id="foodGrams" type="number" inputmode="decimal" min="0" placeholder="ración típica"></div>
       <div id="suggestions" class="suggestions"></div>
@@ -272,7 +272,7 @@ function renderFoods() {
   <div class="chips food-kinds">${[['all','Todos'],['mine','Míos'],['super','Supermercado'],['generic','Genéricos']].map(([k,l]) => `<button type="button" class="chip${foodKind === k ? ' active' : ''}" onclick="foodKind='${k}';render()">${l}</button>`).join('')}</div>
   <details id="foodForm" class="card"><summary><h3>Nuevo o editar alimento</h3><small>Escanea el código, sube una foto de la etiqueta o escribe los valores por 100 g.</small></summary>
       <div id="foodLookup"></div>
-      <div class="photo-box"><div><b>📷 Foto etiqueta</b><small>OCR real local: sube foto, revisa las sugerencias y guarda.</small></div><input id="fPhoto" type="file" accept="image/*" onchange="uploadFoodPhoto()"><div id="photoPreview"></div></div>
+      <div class="photo-box"><div><b>Foto etiqueta</b><small>OCR real local: sube foto, revisa las sugerencias y guarda.</small></div><input id="fPhoto" type="file" accept="image/*" onchange="uploadFoodPhoto()"><div id="photoPreview"></div></div>
       <div class="row">
         <div class="field span-6"><label>Nombre</label><input id="fName" placeholder="Ej. Yogur Eroski +Proteína 120 g"></div>
         <div class="field span-6"><label>Marca</label><input id="fBrand" placeholder="Eroski, ElPozo..."></div>
@@ -297,7 +297,7 @@ function renderFoods() {
 function renderFoodList() {
   const q = normText($('#foodFilter')?.value);
   const foods = state.foods.filter((f) => foodKindOf(f) && normText(`${f.name} ${f.brand} ${f.barcode || ''}`).includes(q));
-  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="food-row" role="button" tabindex="0" onclick="editFood(${Number(f.id)})"><div><b>${esc(f.name)}</b><small>${esc(f.brand || 'Mío')} · ración ${fmt(f.typical_g)} g</small></div><span class="food-kcal">${fmt(f.kcal)}<small>kcal/100 g</small></span><span class="food-prot">${fmt(f.protein)} g<small>prot</small></span><button class="icon-btn" type="button" aria-label="Borrar ${esc(f.name)}" onclick="event.stopPropagation();deleteFood(${Number(f.id)})">×</button></div>`).join('') || '<div class="empty">Nada con esa búsqueda. Prueba el código de barras en «+ Nuevo».</div>') + moreButton('foods', foods.length);
+  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="food-row" role="button" tabindex="0" onclick="editFood(${Number(f.id)})"><div><b>${esc(f.brand ? f.name.replace(/ · [^·]+$/, '') : f.name)}</b><small>${esc(f.brand || 'Mío')} · ración ${fmt(f.typical_g)} g</small></div><span class="food-kcal">${fmt(f.kcal)}<small>kcal/100 g</small></span><span class="food-prot">${fmt(f.protein)} g<small>prot</small></span><button class="icon-btn" type="button" aria-label="Borrar ${esc(f.name)}" onclick="event.stopPropagation();deleteFood(${Number(f.id)})">×</button></div>`).join('') || '<div class="empty">Nada con esa búsqueda. Prueba el código de barras en «+ Nuevo».</div>') + moreButton('foods', foods.length);
 }
 function fillFoodForm(food) {
   const set = (id, val) => { const el = $(id); if (el && val !== undefined && val !== null) el.value = String(val); };
@@ -348,17 +348,19 @@ async function saveFood(btn) {
 
 /* ---------- Deporte ---------- */
 function ui5SportCard(w) {
-  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(w.date || '')} · ${esc(w.time || '')}</small></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span><span><b>${fmt(w.distance_km)}</b><small>km</small></span><span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div><p>${esc(cleanWorkoutNote(w.notes))}</p></article>`;
+  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(w.date ? new Date(w.date + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric', month: 'short'}) : '')} · ${esc(w.time || '')}</small></div><button class="icon-btn" type="button" aria-label="Borrar entreno" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span>${Number(w.distance_km) > 0 ? `<span><b>${fmt(w.distance_km)}</b><small>km</small></span>` : ''}<span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div>${cleanWorkoutNote(w.notes) ? `<p>${esc(cleanWorkoutNote(w.notes))}</p>` : ''}</article>`;
 }
 function renderSport() {
   const all = [...state.workouts].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
   const last7 = all.filter((w) => Date.now() - new Date(w.date + 'T12:00:00').getTime() <= 7 * 86400000);
   const sum = (k) => last7.reduce((a, w) => a + Number(w[k] || 0), 0);
   $('#view').innerHTML = `
-    <section class="ui5-sport-hero"><div><span class="ui5-kicker">Deporte</span><h3>Registrar o revisar actividad</h3><p>Strava queda como fuente principal; el manual sirve para ajustes rápidos.</p></div>
-      <div class="ui5-sport-summary"><span><b>${fmt(sum('kcal'))}</b><small>kcal 7 días</small></span><span><b>${fmt(sum('minutes'))}</b><small>min 7 días</small></span><span><b>${fmt(sum('distance_km'))}</b><small>km 7 días</small></span></div></section>
+    <section class="ui5-sport-hero"><div class="ui5-sport-summary"><span><b>${fmt(sum('kcal'))}</b><small>kcal 7 días</small></span><span><b>${fmt(sum('minutes'))}</b><small>min 7 días</small></span><span><b>${fmt(sum('distance_km'))}</b><small>km 7 días</small></span></div></section>
+    <div class="section-title ui5-section-title"><div><h3>Historial</h3><p>${all.length} entrenos · últimos primero</p></div><button class="btn" type="button" onclick="const d=$('#sportForm');d.open=true;d.scrollIntoView({behavior:'smooth'})">+ Entreno</button></div>
+    <div class="ui5-sport-history">${all.slice(0, listLimit('sport')).map(ui5SportCard).join('')}</div>${moreButton('sport', all.length)}
+    <details id="sportForm" class="card"><summary><h3>Añadir entreno o tipo de ejercicio</h3><small>Strava importa solo; esto es para ajustes manuales.</small></summary>
     <div class="ui5-sport-layout">
-      <div class="card ui5-sport-form"><h3>🏋️ Nuevo entreno</h3><div class="row compact-row">
+      <div class="card ui5-sport-form"><h3>Nuevo entreno</h3><div class="row compact-row">
         <div class="field span-3"><label>Fecha</label><input id="sDate" type="date" value="${esc(day())}"></div>
         <div class="field span-2"><label>Hora</label><input id="sTime" type="time" value="${esc(nowHM())}"></div>
         <div class="field span-4"><label>Ejercicio</label><select id="sName">${state.exercises.map((e) => `<option>${esc(e.name)}</option>`).join('')}</select></div>
@@ -368,15 +370,14 @@ function renderSport() {
         <div class="field span-6"><label>Notas</label><input id="sNotes" placeholder="Strava, reloj, sensación, etc."></div>
         <div class="field span-3"><label>&nbsp;</label><button class="btn" onclick="saveWorkout(this)">Guardar entreno</button></div>
       </div></div>
-      <div class="card ui5-exercise-form"><h3>➕ Tipo ejercicio</h3><p class="muted">Añade solo si falta un tipo manual. Para Strava no hace falta.</p><div class="row compact-row">
+      <div class="card ui5-exercise-form"><h3>Tipo ejercicio</h3><p class="muted">Añade solo si falta un tipo manual. Para Strava no hace falta.</p><div class="row compact-row">
         <div class="field span-6"><label>Nombre</label><input id="eName" placeholder="Ej. Caminata suave"></div>
         <div class="field span-3"><label>MET</label><input id="eMet" type="number" value="5"></div>
         <div class="field span-3"><label>&nbsp;</label><button class="btn secondary" onclick="saveExercise(this)">Guardar</button></div>
         <div class="field span-12"><label>Notas</label><input id="eNotes"></div>
       </div></div>
     </div>
-    <div class="section-title ui5-section-title"><div><h3>Historial deporte</h3><p>${all.length} entrenos · últimos primero</p></div></div>
-    <div class="ui5-sport-history">${all.slice(0, listLimit('sport')).map(ui5SportCard).join('')}</div>${moreButton('sport', all.length)}`;
+    </details>`;
 }
 async function saveWorkout(btn) {
   await busy(btn, async () => {
@@ -455,7 +456,7 @@ function ui5ApplyShell() {
 }
 function openHelpModal() {
   closeHelpModal(); const o = document.createElement('div'); o.id = 'helpOverlay'; o.className = 'help-overlay';
-  o.innerHTML = `<div class="help-modal" role="dialog" aria-modal="true" aria-label="Ayuda"><button class="help-close" onclick="closeHelpModal()" aria-label="Cerrar">×</button><span class="ui5-kicker">Ayuda rápida</span><h2>Diet Pro Planner</h2><div class="help-grid"><div><b>🍽️ Comidas</b><p>Busca alimentos o carga una plantilla, cambia gramos y guarda. ↻ repite una comida.</p></div><div><b>⚖️ Peso</b><p>Oficial por la mañana. Post-comida, noche o post-entreno son referencia.</p></div><div><b>📈 Progreso</b><p>Tendencia real, ritmo kg/semana y tu gasto energético medido con tus propios datos.</p></div><div><b>🥫 Alimentos</b><p>Código de barras (Open Food Facts), OCR de etiqueta o IA opcional.</p></div><div><b>🎯 Objetivos</b><p>Tus metas de peso, kcal y proteína. Copias de seguridad y exportación.</p></div><div><b>🔐 Privacidad</b><p>Todo se guarda en tu Raspberry. La IA y Open Food Facts son opcionales.</p></div></div><div class="help-actions"><button class="btn" onclick="closeHelpModal();go('register')">Registrar comida</button><button class="btn secondary" onclick="closeHelpModal();go('progress')">Progreso</button><button class="btn secondary" onclick="closeHelpModal();go('goals')">Objetivos</button></div></div>`;
+  o.innerHTML = `<div class="help-modal" role="dialog" aria-modal="true" aria-label="Ayuda"><button class="help-close" onclick="closeHelpModal()" aria-label="Cerrar">×</button><span class="ui5-kicker">Ayuda rápida</span><h2>Diet Pro Planner</h2><div class="help-grid"><div><b>Comidas</b><p>Busca alimentos o carga una plantilla, cambia gramos y guarda. ↻ repite una comida.</p></div><div><b>Peso</b><p>Oficial por la mañana. Post-comida, noche o post-entreno son referencia.</p></div><div><b>Progreso</b><p>Tendencia real, ritmo kg/semana y tu gasto energético medido con tus propios datos.</p></div><div><b>Alimentos</b><p>Código de barras (Open Food Facts), OCR de etiqueta o IA opcional.</p></div><div><b>Objetivos</b><p>Tus metas de peso, kcal y proteína. Copias de seguridad y exportación.</p></div><div><b>Privacidad</b><p>Todo se guarda en tu Raspberry. La IA y Open Food Facts son opcionales.</p></div></div><div class="help-actions"><button class="btn" onclick="closeHelpModal();go('register')">Registrar comida</button><button class="btn secondary" onclick="closeHelpModal();go('progress')">Progreso</button><button class="btn secondary" onclick="closeHelpModal();go('goals')">Objetivos</button></div></div>`;
   o.onclick = (ev) => { if (ev.target.id === 'helpOverlay') closeHelpModal(); }; document.body.appendChild(o);
 }
 function closeHelpModal() { document.getElementById('helpOverlay')?.remove(); }
