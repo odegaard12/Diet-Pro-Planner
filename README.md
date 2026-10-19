@@ -11,11 +11,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/data-stays%20on%20your%20server-167D62)](#privacy)
 
-<img src="docs/screenshots/resumen.png" width="150" alt="Hoy: week strip, daily balance and tiles">&nbsp;
-<img src="docs/screenshots/tu-dia.png" width="150" alt="The day as a timeline with the Coach">&nbsp;
-<img src="docs/screenshots/alimentos.png" width="150" alt="Foods: search, filters and Spanish supermarket products">&nbsp;
-<img src="docs/screenshots/deporte.png" width="150" alt="Sport: weekly totals and workout history">&nbsp;
-<img src="docs/screenshots/progreso.png" width="150" alt="Progress: trend, real rate and goal date">
+<img src="docs/screenshots/resumen.png" width="125" alt="Hoy: week strip, daily balance and tiles">&nbsp;
+<img src="docs/screenshots/tu-dia.png" width="125" alt="The day as a timeline with the Coach">&nbsp;
+<img src="docs/screenshots/alimentos.png" width="125" alt="Foods: search, filters and Spanish supermarket products">&nbsp;
+<img src="docs/screenshots/deporte.png" width="125" alt="Sport: weekly totals and workout history">&nbsp;
+<img src="docs/screenshots/progreso.png" width="125" alt="Progress: trend, real rate and goal date">&nbsp;
+<img src="docs/screenshots/historial.png" width="125" alt="History grouped by day with totals">
 
 <sub>Screenshots use demo data. The interface is in Spanish.</sub>
 
@@ -51,7 +52,7 @@ Five sections, the same on desktop (sidebar) and phone (bottom bar); the pages i
 | **Hoy** | Day summary, timeline and Coach |
 | **Comidas** | Registrar · Plantillas · Alimentos · Despensa · Plan semanal |
 | **Deporte** | Entrenos · Plan · Strava |
-| **Progreso** | Tendencias · Peso · Historial |
+| **Progreso** | Tendencias · Peso · Historial (meals and workouts grouped by day, with daily totals) |
 | **Ajustes** | Objetivos, Ayuda, Exportar datos, Salir |
 
 ## Quick start

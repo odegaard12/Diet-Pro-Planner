@@ -254,8 +254,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button, .tabs a { flex: 0 0 auto; min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--text-2); font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; white-space: nowrap; }
 .tabs button.is-active { background: var(--primary); color: var(--primary-ink); }
-.tab-actions { display: flex; gap: 4px; margin-left: auto; }
-.tab-actions button, .tab-actions a { color: var(--text); }
+.tab-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tab-actions button, .tab-actions a { color: var(--text); border: 1px solid var(--border-strong); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; text-decoration: none; background: transparent; cursor: pointer; }
 .nav-ico { display: inline-flex; align-items: center; justify-content: center; }
 .nav button.active .nav-ico { color: var(--primary); }
 /* v0.3.9 · Alimentos: search first, compact rows */
@@ -279,3 +279,20 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .plan-more { margin-top: 10px; }
 .plan-more > summary, .ui5-plan-json > summary { cursor: pointer; color: var(--text-2); list-style: none; }
 .ui5-plan-json > summary h3 { display: inline; }
+
+/* v0.5.0 · Historial grouped by day */
+.hist-lead { margin: 0 0 12px; }
+.hist-day { padding: 0; margin-bottom: 12px; overflow: hidden; }
+.hist-day > header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; padding: 12px 16px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.hist-day h3 { margin: 0; text-transform: capitalize; }
+.hist-total { color: var(--text-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.hist-total b { color: var(--text); }
+.hist-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.hist-row:last-child { border-bottom: 0; }
+.hist-row time { color: var(--text-2); font-size: 13px; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.hist-row.sport { border-left: 3px solid var(--primary); }
+.hist-main { min-width: 0; }
+.hist-main b { display: block; }
+.hist-kcal { color: var(--text-2); font-size: 13px; }
+.hist-main .chips { margin-top: 6px; }
+.hist-actions { display: flex; gap: 2px; align-items: flex-start; }

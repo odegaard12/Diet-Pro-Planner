@@ -49,7 +49,7 @@
   }
 
   function dailyTable(d) {
-    const rows = d.series.slice().reverse().map((x) => `<tr><td>${esc(x.date)}</td><td>${x.meals ? nf(x.kcal, 0) : '—'}</td><td>${nf(x.kcal_target, 0)}</td><td>${x.meals ? nf(x.protein, 0) : '—'}</td><td>${nf(x.workout_kcal, 0)}</td><td>${nf(x.weight, 2)}</td><td>${nf(x.trend, 2)}</td></tr>`).join('');
+    const rows = d.series.slice().reverse().map((x) => `<tr><td>${esc(window.friendlyDate(x.date))}</td><td>${x.meals ? nf(x.kcal, 0) : '—'}</td><td>${nf(x.kcal_target, 0)}</td><td>${x.meals ? nf(x.protein, 0) : '—'}</td><td>${nf(x.workout_kcal, 0)}</td><td>${nf(x.weight, 2)}</td><td>${nf(x.trend, 2)}</td></tr>`).join('');
     return `<details class="pg-details"><summary>Ver datos diarios (tabla)</summary><div class="pg-table-wrap"><table class="pg-table"><thead><tr><th>Fecha</th><th>kcal</th><th>Objetivo</th><th>Prot. g</th><th>Deporte</th><th>Peso</th><th>Tendencia</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
   }
 

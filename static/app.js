@@ -144,12 +144,6 @@ function dateBar() {
   const long = new Date(d + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'});
   return `<div class="datebar"><button class="btn small secondary" type="button" aria-label="Día anterior" onclick="shiftDay(-1)">‹</button><label class="datebar-pick"><b>${isToday ? 'Hoy' : esc(long)}</b>${isToday ? `<small>${esc(long)}</small>` : ''}<input id="dashDate" type="date" value="${esc(d)}" aria-label="Elegir día" onchange="setSelectedDate(this.value);render()"></label><button class="btn small secondary" type="button" aria-label="Día siguiente" onclick="shiftDay(1)" ${isToday ? 'disabled' : ''}>›</button>${isToday ? '' : '<button class="btn small" type="button" onclick="setSelectedDate(today());render()">Hoy</button>'}</div>`;
 }
-function mealCard(m) {
-  return `<article class="list-card"><header><div><h4>${esc(m.date)} · ${esc(m.time)} · ${esc(m.name)}</h4><p class="muted">${esc(m.notes || '')}</p></div><div class="card-actions"><button class="btn small secondary" title="Repetir hoy" onclick="repeatMeal(${Number(m.id)}, this)">↻</button><button class="btn small danger" onclick="deleteMeal(${Number(m.id)})">×</button></div></header><div class="chips">${(m.items || []).map((i) => `<span class="chip">${esc(i.food_name)} ${fmt(i.grams)}g</span>`).join('')}</div><b>${fmt(m.totals?.kcal)} kcal · ${fmt(m.totals?.protein)} g prot.</b></article>`;
-}
-function workoutCard(w) {
-  return `<article class="list-card"><header><div><h4>${esc(w.date)} · ${esc(w.time)} · ${esc(w.name)}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km ? `· ${fmt(w.distance_km)} km` : ''} · ${esc(cleanWorkoutNote(w.notes))}</p></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></header><b>${fmt(w.kcal)} kcal</b></article>`;
-}
 function cleanWorkoutNote(n) { return window.DPPDashboardWorkoutCard.cleanNote(n); }
 function mealCardCompact(m) { return window.DPPDashboardMealCard.mealCardCompact(m); }
 function workoutCardCompact(w) { return window.DPPDashboardWorkoutCard.workoutCardCompact(w); }
@@ -348,7 +342,7 @@ async function saveFood(btn) {
 
 /* ---------- Deporte ---------- */
 function ui5SportCard(w) {
-  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(w.date ? new Date(w.date + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric', month: 'short'}) : '')} · ${esc(w.time || '')}</small></div><button class="icon-btn" type="button" aria-label="Borrar entreno" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span>${Number(w.distance_km) > 0 ? `<span><b>${fmt(w.distance_km)}</b><small>km</small></span>` : ''}<span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div>${cleanWorkoutNote(w.notes) ? `<p>${esc(cleanWorkoutNote(w.notes))}</p>` : ''}</article>`;
+  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(window.friendlyDate(w.date))} · ${esc(w.time || '')}</small></div><button class="icon-btn" type="button" aria-label="Borrar entreno" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span>${Number(w.distance_km) > 0 ? `<span><b>${fmt(w.distance_km)}</b><small>km</small></span>` : ''}<span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div>${cleanWorkoutNote(w.notes) ? `<p>${esc(cleanWorkoutNote(w.notes))}</p>` : ''}</article>`;
 }
 function renderSport() {
   const all = [...state.workouts].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
@@ -420,11 +414,10 @@ function renderWeights() {
       <details class="more-fields"><summary>Fecha, hora y contexto</summary><div class="row compact-row"><div class="field span-6"><label>Fecha</label><input id="wDate" type="date" value="${esc(today())}"></div><div class="field span-6"><label>Hora</label><input id="wTime" type="time" value="${esc(nowHM())}"></div><div class="field span-12"><label>Contexto</label><input id="wCtx" placeholder="mañana, después del baño"></div></div></details>
       <button class="btn block" onclick="saveWeight(this)">Guardar peso</button></div>
     <div class="card"><h3>Peso oficial</h3>${weightChart()}<p class="muted small-note">Solo pesos oficiales. Más detalle en <a href="#" onclick="go('progress');return false">Progreso</a>.</p></div></div>
-    <div class="section-title"><div><h3>Historial</h3><p>${all.length} registros</p></div></div><div class="list">${all.slice(0, listLimit('weights')).map((w) => `<div class="list-card row-card"><div><b>${fmt(w.kg)} kg</b><small class="muted">${esc(w.date)} ${esc(w.time)} · ${w.official ? 'oficial' : 'referencia'}${w.context ? ' · ' + esc(w.context) : ''}</small></div><button class="btn small danger" aria-label="Borrar peso" onclick="deleteWeight(${Number(w.id)})">×</button></div>`).join('')}</div>${moreButton('weights', all.length)}`;
+    <div class="section-title"><div><h3>Historial</h3><p>${all.length} registros</p></div></div><div class="list">${all.slice(0, listLimit('weights')).map((w) => `<div class="list-card row-card"><div><b>${fmt(w.kg)} kg</b><small class="muted">${esc(window.friendlyDate(w.date))} ${esc(w.time)} · ${w.official ? 'oficial' : 'referencia'}${w.context ? ' · ' + esc(w.context) : ''}</small></div><button class="btn small danger" aria-label="Borrar peso" onclick="deleteWeight(${Number(w.id)})">×</button></div>`).join('')}</div>${moreButton('weights', all.length)}`;
 }
 async function deleteWeight(id) { if (!confirm('¿Borrar peso?')) return; await api('/api/weights/' + id, {method: 'DELETE'}); toast('Peso borrado'); await load(); }
 
-function renderHistory() { $('#view').innerHTML = `<div class="grid cols-2"><div><div class="section-title"><div><h3>Comidas</h3><p>${state.meals.length} registradas · ↻ repite una comida hoy</p></div></div><div class="list">${state.meals.slice(0, listLimit('hmeals')).map(mealCard).join('')}</div>${moreButton('hmeals', state.meals.length)}</div><div><div class="section-title"><div><h3>Deporte</h3><p>${state.workouts.length} entrenos</p></div></div><div class="list">${state.workouts.slice(0, listLimit('hwork')).map(workoutCard).join('')}</div>${moreButton('hwork', state.workouts.length)}</div></div>`; }
 function renderIntegrations() { $('#view').innerHTML = '<div class="empty">Cargando integraciones…</div>'; }
 
 /* ---------- Shell ---------- */
