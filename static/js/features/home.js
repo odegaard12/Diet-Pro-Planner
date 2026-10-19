@@ -137,8 +137,8 @@
       ...byDate(state.workouts, d).map((w) => ({time: w.time, kind: 'sport', html: `<div class="tl-card sport"><div><b>${esc(w.name)} · ${fmt(w.minutes)} min</b><small>${esc(cleanWorkoutNote(w.notes) || 'Entreno')}</small></div><strong>+${fmt(w.kcal)}</strong><span class="mini-actions"><button class="mini-delete" title="Borrar" aria-label="Borrar" onclick="deleteWorkout(${Number(w.id)})">×</button></span></div>`})),
     ].sort((a, b) => String(a.time).localeCompare(String(b.time)));
     const rows = items.map((it) => `<div class="tl-row ${it.kind}"><time>${esc(it.time || '')}</time><i></i>${it.html}</div>`).join('');
-    const empty = items.length ? '' : '<div class="tl-row"><time></time><i></i><div class="tl-card empty-card">Nada registrado este día. Usa <b>Comidas</b> para añadir lo que comes; los entrenos de Strava entran solos.</div></div>';
-    return `<h2 class="sec-title">Tu día</h2><section class="timeline">${rows}${empty}
+    const empty = items.length ? '' : '<div class="tl-row"><time></time><i></i><div class="tl-card empty-card">Nada registrado este día. Pulsa <b>+ Comida</b> para añadir lo que comes; los entrenos de Strava entran solos.</div></div>';
+    return `<div class="sec-head"><h2 class="sec-title">Tu día</h2><button class="btn small" type="button" onclick="go('register')">+ Comida</button></div><section class="timeline">${rows}${empty}
       <div class="tl-row next"><time>Ahora</time><i></i><section id="coachSlot" class="tl-card coach-card"><div class="coach-body"><span class="coach-kicker">COACH · SIGUIENTE COMIDA</span><p class="muted">Calculando…</p></div></section></div>
     </section>`;
   }

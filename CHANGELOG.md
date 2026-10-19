@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.0 — History by day
+
+- Historial is one timeline grouped by day ('Hoy', 'Ayer', 'lun 19 oct') with the day's kcal, protein and workout burn; meals and workouts interleaved by time; older days load on demand.
+- Friendly dates everywhere instead of ISO (workout cards, weight history, progress table, weekly activity plan range).
+- 'Tu día' has an inline '+ Comida' shortcut (no floating button).
+- Ajustes actions (Ayuda, Exportar datos, Salir) are real buttons instead of tab-like links.
+- Removed the old meal/workout history cards and the duplicated renderer.
+
 ## v0.4.0 — Calmer screens, cleaner catalog
 
 - Deporte opens on your history (week totals, then workouts); adding a workout or exercise type is folded under '+ Entreno'. Dates read 'lun, 19 oct' and empty metrics (0 km) are hidden.
