@@ -50,7 +50,7 @@
 
   function view(data, ai, backups) {
     const p = data.profile;
-    return `<section class="pg-head"><div><span class="ui5-kicker">Objetivos personales</span><h3>Tus metas mandan sobre todo el análisis</h3><p class="muted">Coach, score, Progreso e IA usan estos valores. Nada sale de tu Raspberry.</p></div></section>
+    return `<p class="muted page-hint">Coach, Progreso e IA usan estos valores. Nada sale de tu Raspberry.</p>
       <article class="card goals-card">${computedPanel(data)}</article>
       <article class="card goals-card"><h3>Perfil y metas</h3>
         <div class="row">

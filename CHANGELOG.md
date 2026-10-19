@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.1 — Barcode in Registrar
+
+- Registrar adds a product by barcode: type or paste the digits (8 to 14) in the search box and tap 'Añadir producto con el código…'. It looks in your catalog first and then in Open Food Facts, saves the product and adds it to the meal. Works on any phone.
+- 'Escanear código' (camera) shows up only where the browser allows it (BarcodeDetector over https or localhost).
+- A product from Open Food Facts never overwrites one of yours: if the name is taken by a food with another barcode, the brand is appended to the name. Incomplete data opens the Alimentos form to review first.
+- Ajustes: removed the long headline box, one line of context instead.
+
 ## v0.5.0 — History by day
 
 - Historial is one timeline grouped by day ('Hoy', 'Ayer', 'lun 19 oct') with the day's kcal, protein and workout burn; meals and workouts interleaved by time; older days load on demand.
