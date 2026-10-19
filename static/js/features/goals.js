@@ -34,14 +34,14 @@
     const status = ai.enabled
       ? `<span class="pill good">Activa</span> ${esc(ai.provider === 'anthropic' ? 'Claude' : 'Compatible OpenAI')} · <code>${esc(ai.model)}</code> · ${ai.used_today}/${ai.daily_limit} usos hoy`
       : '<span class="pill warn">Desactivada</span> El Coach local por reglas sigue funcionando.';
-    return `<article class="card goals-card"><h3>🤖 IA opcional (BYOK)</h3><p>${status}</p>
+    return `<article class="card goals-card"><h3>IA opcional (BYOK)</h3><p>${status}</p>
       <p class="muted">${esc(ai.privacy)}</p>
       ${ai.enabled ? '' : '<p class="muted">Para activarla añade <code>ANTHROPIC_API_KEY</code> a tu <code>.env</code> (o <code>DPP_AI_BASE_URL</code> + <code>DPP_AI_MODEL</code> para Ollama/compatibles) y reinicia. La clave nunca se guarda en la base de datos.</p>'}</article>`;
   }
 
   function dataPanel(b) {
     const list = (b?.backups || []).slice(0, 6).map((x) => `<li><b>${esc(x.name)}</b><small>${esc(x.created_at)} · ${nf(x.size_kb)} KB</small></li>`).join('');
-    return `<article class="card goals-card"><h3>💾 Copias y exportación</h3>
+    return `<article class="card goals-card"><h3>Copias y exportación</h3>
       <p class="muted">Copia automática diaria (se guardan ${nf(b?.keep_daily)}) y antes de cada actualización de esquema. Esquema v${esc(b?.schema_version ?? '?')}.</p>
       <div class="goals-actions"><a class="btn" href="/api/backup/download">Descargar copia (.db)</a><button class="btn secondary" onclick="dppBackupNow(this)">Crear copia ahora</button></div>
       <div class="goals-actions"><a class="btn secondary" href="/api/export/meals.csv">Comidas CSV</a><a class="btn secondary" href="/api/export/weights.csv">Pesos CSV</a><a class="btn secondary" href="/api/export/workouts.csv">Entrenos CSV</a><a class="btn secondary" href="/api/export" target="_blank" rel="noopener">JSON</a></div>
@@ -52,7 +52,7 @@
     const p = data.profile;
     return `<section class="pg-head"><div><span class="ui5-kicker">Objetivos personales</span><h3>Tus metas mandan sobre todo el análisis</h3><p class="muted">Coach, score, Progreso e IA usan estos valores. Nada sale de tu Raspberry.</p></div></section>
       <article class="card goals-card">${computedPanel(data)}</article>
-      <article class="card goals-card"><h3>🎯 Perfil y metas</h3>
+      <article class="card goals-card"><h3>Perfil y metas</h3>
         <div class="row">
           ${select('gSex', 'Sexo (para el basal)', {'': '—', male: 'Hombre', female: 'Mujer'}, p.sex)}
           ${field('gBirth', 'Año de nacimiento', p.birth_year, 'type="number" inputmode="numeric" placeholder="1990"')}

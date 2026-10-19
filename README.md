@@ -11,10 +11,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Local-first](https://img.shields.io/badge/data-stays%20on%20your%20server-167D62)](#privacy)
 
-<img src="docs/screenshots/resumen.png" width="200" alt="Today: week strip, daily balance and tiles">&nbsp;
-<img src="docs/screenshots/tu-dia.png" width="200" alt="The day as a timeline with the Coach">&nbsp;
-<img src="docs/screenshots/comidas.png" width="200" alt="Logging a meal">&nbsp;
-<img src="docs/screenshots/progreso.png" width="200" alt="Progress: trend, real rate and goal date">
+<img src="docs/screenshots/resumen.png" width="150" alt="Hoy: week strip, daily balance and tiles">&nbsp;
+<img src="docs/screenshots/tu-dia.png" width="150" alt="The day as a timeline with the Coach">&nbsp;
+<img src="docs/screenshots/alimentos.png" width="150" alt="Foods: search, filters and Spanish supermarket products">&nbsp;
+<img src="docs/screenshots/deporte.png" width="150" alt="Sport: weekly totals and workout history">&nbsp;
+<img src="docs/screenshots/progreso.png" width="150" alt="Progress: trend, real rate and goal date">
 
 <sub>Screenshots use demo data. The interface is in Spanish.</sub>
 
@@ -32,6 +33,7 @@ to eat next. Everything lives on your own server.
 | --- | --- |
 | **Today at a glance** | Week strip, daily balance (kcal left, intake by meal, workout), protein / weight / sport / rate tiles with mini charts, and your day as a timeline. |
 | **Fast logging** | Search your catalog, load templates, change grams and save; repeat any meal with one tap. Barcode and name search via Open Food Facts, label OCR on-device. |
+| **Spanish catalog** | About 60 generic foods plus ~170 own-brand products from Mercadona (Hacendado), Eroski, Consum and Lidl (Milbona), with barcode and label values. Search-first list with Todos / Míos / Supermercado / Genéricos filters. |
 | **Smart Coach** | Suggests the next meal from what is actually in your pantry and what the day still needs; works without AI. |
 | **Real progress** | Trend weight (EMA), real kg/week, goal date and measured TDEE from your own data; adherence and weekly tables. |
 | **Sport** | Strava import with auto-sync, manual workouts, planned vs real training week. |
@@ -39,6 +41,18 @@ to eat next. Everything lives on your own server.
 | **Optional AI (BYOK)** | Claude or a local Ollama for coaching and label reading; off by default. |
 | **Web app** | Installable on the phone, dark theme, home-screen shortcuts, works offline with the last data seen. |
 | **Safe data** | Versioned migrations with automatic backups, daily copies, SQLite download and CSV export. |
+
+## Navigation
+
+Five sections, the same on desktop (sidebar) and phone (bottom bar); the pages inside a section are tabs at the top.
+
+| Section | Tabs |
+| --- | --- |
+| **Hoy** | Day summary, timeline and Coach |
+| **Comidas** | Registrar · Plantillas · Alimentos · Despensa · Plan semanal |
+| **Deporte** | Entrenos · Plan · Strava |
+| **Progreso** | Tendencias · Peso · Historial |
+| **Ajustes** | Objetivos, Ayuda, Exportar datos, Salir |
 
 ## Quick start
 

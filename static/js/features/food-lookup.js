@@ -14,7 +14,7 @@
     if (!host) return;
     const canScan = 'BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia;
     host.innerHTML = `<div class="lookup-box">
-      <div><b>🔎 Buscar producto</b><small>Código de barras o nombre · Open Food Facts</small></div>
+      <div><b>Buscar producto</b><small>Código de barras o nombre · Open Food Facts</small></div>
       <div class="lookup-row">
         <input id="lookupQuery" placeholder="8410000000000 o “yogur proteico”" autocomplete="off" inputmode="search" onkeydown="if(event.key==='Enter'){event.preventDefault();dppLookup()}">
         <button class="btn secondary" type="button" onclick="dppLookup(this)">Buscar</button>

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.0 — Calmer screens, cleaner catalog
+
+- Deporte opens on your history (week totals, then workouts); adding a workout or exercise type is folded under '+ Entreno'. Dates read 'lun, 19 oct' and empty metrics (0 km) are hidden.
+- Plan semanal: one short header with the day counts, two main actions (save, add day) and the rest under 'Más opciones'; JSON import is folded away.
+- One icon style: card titles no longer start with emoji (status icons stay).
+- Supermarket catalog cleanup (migration 8): readable names, no foreign-language rows (about 167 products); products you already use in meals, templates or plans are never renamed or removed. Brand suffix is hidden in the list where the brand is already shown.
+- README: navigation table and fresh screenshots (Hoy, Tu día, Alimentos, Deporte, Progreso).
+
 ## v0.3.9 — Spanish supermarket products, simpler food list
 
 - 200 own-brand products from Mercadona (Hacendado), Eroski, Consum and Lidl (Milbona), with barcode and label values from Open Food Facts (ODbL). Added by migration 7 only when the barcode or name is new.

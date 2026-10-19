@@ -226,6 +226,13 @@ def _m7_supermarket_catalog(db: sqlite3.Connection) -> None:
         dpp_catalog.add_supermarket(db)
 
 
+def _m8_supermarket_cleanup(db: sqlite3.Connection) -> None:
+    """Tidy the supermarket catalog added by migration 7 (clearer names, no foreign-language rows)."""
+    if _table_exists(db, "foods") and _table_exists(db, "meal_items"):
+        import dpp_catalog
+        dpp_catalog.refresh_supermarket(db)
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "meals without UNIQUE constraint", _m1_meals_without_unique),
     (2, "indexes + workouts.source/external_id", _m2_indexes_and_workout_source),
@@ -234,6 +241,7 @@ MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (5, "repair meal items stored without macros", _m5_repair_zero_macro_items),
     (6, "generic food catalog (only missing names)", _m6_generic_catalog),
     (7, "Spanish supermarket products (only missing barcodes)", _m7_supermarket_catalog),
+    (8, "supermarket catalog cleanup (names, unused foreign rows)", _m8_supermarket_cleanup),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 
