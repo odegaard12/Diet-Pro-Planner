@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5.3 — Image and deployment hardening
+
+- OCR preprocessing no longer scales a very narrow image to billions of pixels (out-of-memory): upscaling is capped at 4x and the result at 16 megapixels; the file is closed after reading.
+- Photo uploads are validated before anything is written to disk (a fake image never reaches `uploads/`).
+- `docker-compose.yml`: the published port can be bound to one address with `DPP_BIND` (default unchanged), and the container has a 768 MB memory cap.
+- Dependencies are pinned with hashes: edit `requirements.in`, compile `requirements.txt` with `pip-compile --generate-hashes`, and the Docker build installs it with `--require-hashes`.
+- Dependabot also watches the GitHub Actions versions.
+- New tests for the image limits.
+
 ## v0.5.2 — Offline queue hardening
 
 - The offline queue lives in its own `apiQueued()` and accepts only meals, weights and workouts (anything else is rejected); the general `api()` never touches `localStorage`. Fixes the CodeQL alert `js/clear-text-storage-of-sensitive-data` (the Strava client secret could never reach the queue, now the code shows it).

@@ -29,7 +29,7 @@ Use `.env.example`, `data/pantry.example.json` and synthetic fixtures when an ex
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.txt   # pinned with hashes; edit requirements.in and run: pip-compile --generate-hashes -o requirements.txt requirements.in
 DPP_AUTH_TOKEN=dev python dpp_entrypoint.py
 ```
 
