@@ -56,3 +56,9 @@ http://raspberrypi.local:8099
 ## Offline queue
 
 Meals, weights and workouts saved without a connection wait in `localStorage` (`dppQueue`) until the server is reachable. Only those three endpoints can be queued (`apiQueued()` in `static/app.js`); settings, tokens and Strava credentials always go through `api()` and are never stored on the device. Signing out warns you if something is still unsent and then clears the queue, so nothing stays on a shared device.
+
+## Images and supply chain
+
+- Uploaded photos are validated (real format, pixel limit) before they are stored; OCR preprocessing caps upscaling so a thin image cannot exhaust memory.
+- The container has a memory cap and a read-only filesystem; set `DPP_BIND` in `.env` to publish the port only on your LAN address.
+- Python dependencies are pinned with hashes (`requirements.txt`, compiled from `requirements.in`) and CI runs `pip-audit`; Dependabot updates pip, Docker and GitHub Actions.
