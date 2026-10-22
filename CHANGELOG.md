@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.2 — Offline queue hardening
+
+- The offline queue lives in its own `apiQueued()` and accepts only meals, weights and workouts (anything else is rejected); the general `api()` never touches `localStorage`. Fixes the CodeQL alert `js/clear-text-storage-of-sensitive-data` (the Strava client secret could never reach the queue, now the code shows it).
+- Signing out now warns when records are still unsent and clears the queue (before, they stayed on the device).
+- The 10 `py/stack-trace-exposure` alerts are dismissed as false positives: those responses already go through `public_error()`, which hides library and internal errors (covered by `test_public_error_hides_library_details`).
+- Reviewed the Bandit-style findings (`ruff --select S`): SQL identifiers are quoted or allow-listed and values are parametrized; nothing to change.
+
 ## v0.5.1 — Barcode in Registrar
 
 - Registrar adds a product by barcode: type or paste the digits (8 to 14) in the search box and tap 'Añadir producto con el código…'. It looks in your catalog first and then in Open Food Facts, saves the product and adds it to the meal. Works on any phone.

@@ -53,19 +53,22 @@ async function flushQueue() {
   if (sent) { toast(`${sent} registro${sent > 1 ? 's' : ''} guardado${sent > 1 ? 's' : ''} sin conexión ya enviado${sent > 1 ? 's' : ''}`); load().catch(() => {}); }
 }
 async function api(path, opts = {}) {
-  if ((opts.method || 'GET') === 'POST' && QUEUEABLE.includes(path)) {
-    try {
-      const r = await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts});
-      if (r.status === 503 && !navigator.onLine) throw new TypeError('offline');
-      return handle(r);
-    } catch (e) {
-      if (!(e instanceof TypeError)) throw e; // a real API error, not a network failure
-      const q = readQueue(); q.push({path, body: opts.body, at: Date.now()}); writeQueue(q);
-      toast('Sin conexión: guardado en el móvil, se enviará al volver', true);
-      return {ok: true, queued: true};
-    }
-  }
   return handle(await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts}));
+}
+/* Only meals, weights and workouts may wait offline; everything else (settings, secrets) goes through api() and is never stored. */
+async function apiQueued(path, payload) {
+  if (!QUEUEABLE.includes(path)) throw new Error('Ruta no admitida sin conexión');
+  const body = JSON.stringify(payload);
+  try {
+    const r = await fetch(path, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body});
+    if (r.status === 503 && !navigator.onLine) throw new TypeError('offline');
+    return handle(r);
+  } catch (e) {
+    if (!(e instanceof TypeError)) throw e; // a real API error, not a network failure
+    const q = readQueue(); q.push({path, body, at: Date.now()}); writeQueue(q);
+    toast('Sin conexión: guardado en el móvil, se enviará al volver', true);
+    return {ok: true, queued: true};
+  }
 }
 async function handle(r) {
   if (r.status === 401) { location.reload(); throw new Error('Sesión caducada'); }
@@ -228,13 +231,13 @@ function clearMeal() { mealItems = []; renderMealBuilder(); }
 async function saveMeal(btn) {
   if (!mealItems.length) { toast('Añade alimentos'); return; }
   await busy(btn, async () => {
-    await api('/api/meals', {method: 'POST', body: JSON.stringify({date: $('#mDate').value, time: $('#mTime').value, name: $('#mName').value, notes: $('#mNotes').value, items: mealItems.map((i) => ({food_id: i.food_id, food_name: i.food_name, grams: i.grams}))})});
+    await apiQueued('/api/meals', {date: $('#mDate').value, time: $('#mTime').value, name: $('#mName').value, notes: $('#mNotes').value, items: mealItems.map((i) => ({food_id: i.food_id, food_name: i.food_name, grams: i.grams}))});
     toast('Comida guardada'); setSelectedDate($('#mDate').value); mealItems = []; await load(); go('home');
   });
 }
 async function saveWeight(btn) {
   await busy(btn, async () => {
-    const r = await api('/api/weights', {method: 'POST', body: JSON.stringify({date: $('#wDate').value, time: $('#wTime').value, kg: $('#wKg').value, official: $('#wOfficial').value === '1', context: $('#wCtx').value})});
+    const r = await apiQueued('/api/weights', {date: $('#wDate').value, time: $('#wTime').value, kg: $('#wKg').value, official: $('#wOfficial').value === '1', context: $('#wCtx').value});
     toast(r.duplicate ? 'Ese peso ya estaba registrado' : 'Peso guardado'); await load(); go('weights');
   });
 }
@@ -255,7 +258,7 @@ async function saveTemplateMeal(id, btn) {
   const t = state.templates.find((x) => Number(x.id) === Number(id)); const card = document.querySelector(`[data-template="${Number(id)}"]`);
   const items = [...card.querySelectorAll('[data-tgram]')].map((i) => ({food_name: i.dataset.food, grams: Number(i.value)}));
   if (!items.length) { toast('La plantilla no tiene alimentos del catálogo'); return; }
-  await busy(btn, async () => { await api('/api/meals', {method: 'POST', body: JSON.stringify({date: day(), time: nowHM(), name: t.name, notes: t.notes, items})}); toast('Plantilla registrada'); await load(); go('home'); });
+  await busy(btn, async () => { await apiQueued('/api/meals', {date: day(), time: nowHM(), name: t.name, notes: t.notes, items}); toast('Plantilla registrada'); await load(); go('home'); });
 }
 
 /* ---------- Alimentos ---------- */
@@ -375,7 +378,7 @@ function renderSport() {
 }
 async function saveWorkout(btn) {
   await busy(btn, async () => {
-    const r = await api('/api/workouts', {method: 'POST', body: JSON.stringify({date: $('#sDate').value, time: $('#sTime').value, name: $('#sName').value, minutes: $('#sMin').value, distance_km: $('#sKm').value, kcal: $('#sKcal').value, notes: $('#sNotes').value})});
+    const r = await apiQueued('/api/workouts', {date: $('#sDate').value, time: $('#sTime').value, name: $('#sName').value, minutes: $('#sMin').value, distance_km: $('#sKm').value, kcal: $('#sKcal').value, notes: $('#sNotes').value});
     toast(r.id ? `Entreno guardado · ${fmt(r.kcal)} kcal` : 'Ese entreno ya existía'); setSelectedDate($('#sDate').value); await load(); go('home');
   });
 }

@@ -67,7 +67,9 @@
     btn.id = 'btnLogout'; btn.className = 'ghost'; btn.type = 'button'; btn.textContent = 'Salir';
     btn.title = 'Cerrar sesión en este dispositivo';
     btn.onclick = async () => {
-      if (!confirm('¿Cerrar sesión en este dispositivo?')) return;
+      const pending = readQueue().length;
+      if (!confirm(pending ? `Hay ${pending} registro${pending > 1 ? 's' : ''} sin enviar y se perderán si cierras sesión. ¿Cerrar sesión de todos modos?` : '¿Cerrar sesión en este dispositivo?')) return;
+      try { localStorage.removeItem(QUEUE_KEY); } catch (e) { /* storage blocked */ }
       try {
         // Drop the offline copy of the data on this device too.
         if (window.caches) await Promise.all((await caches.keys()).filter((k) => k.startsWith('dpp-')).map((k) => caches.delete(k)));

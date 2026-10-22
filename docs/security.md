@@ -52,3 +52,7 @@ LAN example:
 ```text
 http://raspberrypi.local:8099
 ```
+
+## Offline queue
+
+Meals, weights and workouts saved without a connection wait in `localStorage` (`dppQueue`) until the server is reachable. Only those three endpoints can be queued (`apiQueued()` in `static/app.js`); settings, tokens and Strava credentials always go through `api()` and are never stored on the device. Signing out warns you if something is still unsent and then clears the queue, so nothing stays on a shared device.
