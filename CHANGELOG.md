@@ -1,5 +1,55 @@
 # Changelog
 
+## v0.5.5 — First-run guide and clearer empty states
+
+- 'Hoy' shows a three-step guide on a new install (about you, first weight, first meal): each step ticks itself off, the next one has a button, it can be hidden, and it never appears for someone who already logs meals.
+- Deporte opens with the add-workout form when there are no workouts yet, and says so instead of showing an empty list.
+- Despensa hides the four zero counters until there is something to count.
+
+## v0.5.4 — Carrefour, Dia and Alcampo
+
+- 116 more own-brand products from Carrefour, Dia and Alcampo (283 supermarket products in total across seven chains), with barcode and label values from Open Food Facts (ODbL). Migration 9 adds them only where the barcode or name is new.
+- Keyboard: the rows in Alimentos open for editing with Enter or Space (and Enter on the delete button still only deletes); visible focus ring.
+
+## v0.5.3 — Image and deployment hardening
+
+- OCR preprocessing no longer scales a very narrow image to billions of pixels (out-of-memory): upscaling is capped at 4x and the result at 16 megapixels; the file is closed after reading.
+- Photo uploads are validated before anything is written to disk (a fake image never reaches `uploads/`).
+- `docker-compose.yml`: the published port can be bound to one address with `DPP_BIND` (default unchanged), and the container has a 768 MB memory cap.
+- Dependencies are pinned with hashes: edit `requirements.in`, compile `requirements.txt` with `pip-compile --generate-hashes`, and the Docker build installs it with `--require-hashes`.
+- Dependabot also watches the GitHub Actions versions.
+- New tests for the image limits.
+
+## v0.5.2 — Offline queue hardening
+
+- The offline queue lives in its own `apiQueued()` and accepts only meals, weights and workouts (anything else is rejected); the general `api()` never touches `localStorage`. Fixes the CodeQL alert `js/clear-text-storage-of-sensitive-data` (the Strava client secret could never reach the queue, now the code shows it).
+- Signing out now warns when records are still unsent and clears the queue (before, they stayed on the device).
+- The 10 `py/stack-trace-exposure` alerts are dismissed as false positives: those responses already go through `public_error()`, which hides library and internal errors (covered by `test_public_error_hides_library_details`).
+- Reviewed the Bandit-style findings (`ruff --select S`): SQL identifiers are quoted or allow-listed and values are parametrized; nothing to change.
+
+## v0.5.1 — Barcode in Registrar
+
+- Registrar adds a product by barcode: type or paste the digits (8 to 14) in the search box and tap 'Añadir producto con el código…'. It looks in your catalog first and then in Open Food Facts, saves the product and adds it to the meal. Works on any phone.
+- 'Escanear código' (camera) shows up only where the browser allows it (BarcodeDetector over https or localhost).
+- A product from Open Food Facts never overwrites one of yours: if the name is taken by a food with another barcode, the brand is appended to the name. Incomplete data opens the Alimentos form to review first.
+- Ajustes: removed the long headline box, one line of context instead.
+
+## v0.5.0 — History by day
+
+- Historial is one timeline grouped by day ('Hoy', 'Ayer', 'lun 19 oct') with the day's kcal, protein and workout burn; meals and workouts interleaved by time; older days load on demand.
+- Friendly dates everywhere instead of ISO (workout cards, weight history, progress table, weekly activity plan range).
+- 'Tu día' has an inline '+ Comida' shortcut (no floating button).
+- Ajustes actions (Ayuda, Exportar datos, Salir) are real buttons instead of tab-like links.
+- Removed the old meal/workout history cards and the duplicated renderer.
+
+## v0.4.0 — Calmer screens, cleaner catalog
+
+- Deporte opens on your history (week totals, then workouts); adding a workout or exercise type is folded under '+ Entreno'. Dates read 'lun, 19 oct' and empty metrics (0 km) are hidden.
+- Plan semanal: one short header with the day counts, two main actions (save, add day) and the rest under 'Más opciones'; JSON import is folded away.
+- One icon style: card titles no longer start with emoji (status icons stay).
+- Supermarket catalog cleanup (migration 8): readable names, no foreign-language rows (about 167 products); products you already use in meals, templates or plans are never renamed or removed. Brand suffix is hidden in the list where the brand is already shown.
+- README: navigation table and fresh screenshots (Hoy, Tu día, Alimentos, Deporte, Progreso).
+
 ## v0.3.9 — Spanish supermarket products, simpler food list
 
 - 200 own-brand products from Mercadona (Hacendado), Eroski, Consum and Lidl (Milbona), with barcode and label values from Open Food Facts (ODbL). Added by migration 7 only when the barcode or name is new.

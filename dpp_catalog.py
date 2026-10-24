@@ -137,3 +137,33 @@ def add_supermarket(db: sqlite3.Connection) -> int:
         db.execute(f"INSERT INTO foods({keys}) VALUES({', '.join('?' for _ in data)})", tuple(data.values()))
         added += 1
     return added
+
+
+def _in_use(db: sqlite3.Connection, food_id: int, name: str) -> bool:
+    """True when meals, templates or plans refer to this food (by id or by name)."""
+    if db.execute("SELECT 1 FROM meal_items WHERE food_id=? OR food_name=? LIMIT 1", (food_id, name)).fetchone():
+        return True
+    have = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    for table in ("templates", "plans"):
+        if table in have and db.execute(f"SELECT 1 FROM {table} WHERE instr(payload, ?) > 0 LIMIT 1", (name,)).fetchone():  # noqa: S608 - fixed table names
+            return True
+    return False
+
+
+def refresh_supermarket(db: sqlite3.Connection) -> int:
+    """Rename or retire supermarket rows that an older catalog added; foods in use are never touched."""
+    wanted = {f["barcode"]: f["name"] for f in supermarket_foods()}
+    names = {r[0].lower() for r in db.execute("SELECT name FROM foods")}
+    changed = 0
+    for fid, name, code in db.execute("SELECT id, name, barcode FROM foods WHERE source_note=?", (SUPERMARKET_NOTE,)).fetchall():
+        if _in_use(db, fid, name):
+            continue
+        new = wanted.get(code)
+        if new is None:
+            db.execute("DELETE FROM foods WHERE id=?", (fid,))
+            changed += 1
+        elif new != name and new.lower() not in names:
+            db.execute("UPDATE foods SET name=? WHERE id=?", (new, fid))
+            names.add(new.lower())
+            changed += 1
+    return changed + add_supermarket(db)

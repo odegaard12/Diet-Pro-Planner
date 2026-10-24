@@ -182,7 +182,7 @@
       <section class="activity-plan-layout">
         <div class="card activity-plan-calendar">
           <header class="activity-section-head">
-            <div><span>SEMANA</span><h3>${range.from} → ${range.to}</h3></div>
+            <div><span>SEMANA</span><h3>${[range.from, range.to].map((x) => new Date(x + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'}).replace(/\./g, '')).join(' – ')}</h3></div>
             <button class="btn" onclick="activityPlanNewForDate('${new Date().toISOString().slice(0, 10)}')">+ Planificar actividad</button>
           </header>
           <div id="activityWeek" class="activity-week-grid"><div class="activity-loading">Cargando planes y entrenos reales…</div></div>

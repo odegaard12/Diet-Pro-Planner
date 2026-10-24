@@ -4,7 +4,8 @@ services:
     container_name: diet-pro-planner
     restart: unless-stopped
     ports:
-      - "8099:8099"
+      # Set DPP_BIND in .env to your server's LAN address to stop listening on every interface.
+      - "${DPP_BIND:-0.0.0.0}:8099:8099"
     env_file:
       - .env
     environment:
@@ -28,3 +29,5 @@ services:
       - SETUID
       - SETGID
     pids_limit: 256
+    # OCR on a large photo is the heaviest job; cap it so one bad request cannot starve the host.
+    mem_limit: 768m

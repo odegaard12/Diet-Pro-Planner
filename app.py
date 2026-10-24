@@ -594,22 +594,22 @@ def save_uploaded_photo() -> tuple[Path, str]:
     ext = Path(secure_filename(file.filename)).suffix.lower()
     if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
         raise ApiError("Formato no soportado (usa JPG, PNG o WEBP)")
-    name = f"food-{int(time.time())}-{secrets.token_hex(4)}{ext}"
-    path = UPLOADS / name
-    file.save(path)
+    # Validate the content before anything is written to disk.
     try:
-        with Image.open(path) as img:
+        with Image.open(file.stream) as img:
             detected = img.format
             img.verify()
         # The content must really be one of the allowed formats (not just the extension).
         if detected not in {"JPEG", "PNG", "WEBP", "MPO"}:
             raise ValueError("unsupported image format")
     except Image.DecompressionBombError:
-        path.unlink(missing_ok=True)
         raise ApiError("Imagen demasiado grande; reduce la resolución de la foto", 413) from None
     except Exception:
-        path.unlink(missing_ok=True)
         raise ApiError("El archivo no es una imagen válida") from None
+    file.stream.seek(0)
+    name = f"food-{int(time.time())}-{secrets.token_hex(4)}{ext}"
+    path = UPLOADS / name
+    file.save(path)
     return path, f"/uploads/{name}"
 
 
@@ -1581,22 +1581,21 @@ def _ocr3_generic_extract(text):
 
 
 def _ocr3_preprocess_fast(path):
-    img = Image.open(path)
-    img = ImageOps.exif_transpose(img).convert("L")
+    with Image.open(path) as src:
+        img = ImageOps.exif_transpose(src).convert("L")
     img = ImageOps.autocontrast(img)
     w, h = img.size
 
     # Down/up-scale to a sweet spot. Too huge = slow; too small = bad OCR.
     target = 1650
-    if w > 2200:
-        ratio = target / w
-        img = img.resize((int(w * ratio), int(h * ratio)))
-    elif w < 1200:
-        ratio = 1200 / max(1, w)
-        img = img.resize((int(w * ratio), int(h * ratio)))
+    ratio = target / w if w > 2200 else (1200 / max(1, w) if w < 1200 else 1.0)
+    # A very narrow image would otherwise be scaled to billions of pixels (out-of-memory):
+    # never upscale more than 4x and keep the result under a pixel budget.
+    ratio = min(ratio, 4.0)
+    if ratio != 1.0 and w * h * ratio * ratio <= 16_000_000:
+        img = img.resize((max(1, int(w * ratio)), max(1, int(h * ratio))))
 
-    img = img.filter(ImageFilter.SHARPEN)
-    return img
+    return img.filter(ImageFilter.SHARPEN)
 
 
 def _ocr3_text_fast(path):

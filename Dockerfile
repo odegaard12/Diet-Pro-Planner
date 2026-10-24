@@ -16,7 +16,8 @@ RUN apt-get update \
  && groupadd --system --gid 10001 dpp \
  && useradd --system --uid 10001 --gid dpp --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin dpp
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# requirements.txt is compiled from requirements.in with hashes: only the exact files we audited can install.
+RUN pip install --no-cache-dir --require-hashes -r requirements.txt
 # Code is owned by root and read-only for the app user; only /app/data is writable.
 # .dockerignore keeps .env, data/, .git and local caches out of the image.
 COPY . .

@@ -53,19 +53,22 @@ async function flushQueue() {
   if (sent) { toast(`${sent} registro${sent > 1 ? 's' : ''} guardado${sent > 1 ? 's' : ''} sin conexión ya enviado${sent > 1 ? 's' : ''}`); load().catch(() => {}); }
 }
 async function api(path, opts = {}) {
-  if ((opts.method || 'GET') === 'POST' && QUEUEABLE.includes(path)) {
-    try {
-      const r = await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts});
-      if (r.status === 503 && !navigator.onLine) throw new TypeError('offline');
-      return handle(r);
-    } catch (e) {
-      if (!(e instanceof TypeError)) throw e; // a real API error, not a network failure
-      const q = readQueue(); q.push({path, body: opts.body, at: Date.now()}); writeQueue(q);
-      toast('Sin conexión: guardado en el móvil, se enviará al volver', true);
-      return {ok: true, queued: true};
-    }
-  }
   return handle(await fetch(path, {credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...opts}));
+}
+/* Only meals, weights and workouts may wait offline; everything else (settings, secrets) goes through api() and is never stored. */
+async function apiQueued(path, payload) {
+  if (!QUEUEABLE.includes(path)) throw new Error('Ruta no admitida sin conexión');
+  const body = JSON.stringify(payload);
+  try {
+    const r = await fetch(path, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body});
+    if (r.status === 503 && !navigator.onLine) throw new TypeError('offline');
+    return handle(r);
+  } catch (e) {
+    if (!(e instanceof TypeError)) throw e; // a real API error, not a network failure
+    const q = readQueue(); q.push({path, body, at: Date.now()}); writeQueue(q);
+    toast('Sin conexión: guardado en el móvil, se enviará al volver', true);
+    return {ok: true, queued: true};
+  }
 }
 async function handle(r) {
   if (r.status === 401) { location.reload(); throw new Error('Sesión caducada'); }
@@ -144,12 +147,6 @@ function dateBar() {
   const long = new Date(d + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'});
   return `<div class="datebar"><button class="btn small secondary" type="button" aria-label="Día anterior" onclick="shiftDay(-1)">‹</button><label class="datebar-pick"><b>${isToday ? 'Hoy' : esc(long)}</b>${isToday ? `<small>${esc(long)}</small>` : ''}<input id="dashDate" type="date" value="${esc(d)}" aria-label="Elegir día" onchange="setSelectedDate(this.value);render()"></label><button class="btn small secondary" type="button" aria-label="Día siguiente" onclick="shiftDay(1)" ${isToday ? 'disabled' : ''}>›</button>${isToday ? '' : '<button class="btn small" type="button" onclick="setSelectedDate(today());render()">Hoy</button>'}</div>`;
 }
-function mealCard(m) {
-  return `<article class="list-card"><header><div><h4>${esc(m.date)} · ${esc(m.time)} · ${esc(m.name)}</h4><p class="muted">${esc(m.notes || '')}</p></div><div class="card-actions"><button class="btn small secondary" title="Repetir hoy" onclick="repeatMeal(${Number(m.id)}, this)">↻</button><button class="btn small danger" onclick="deleteMeal(${Number(m.id)})">×</button></div></header><div class="chips">${(m.items || []).map((i) => `<span class="chip">${esc(i.food_name)} ${fmt(i.grams)}g</span>`).join('')}</div><b>${fmt(m.totals?.kcal)} kcal · ${fmt(m.totals?.protein)} g prot.</b></article>`;
-}
-function workoutCard(w) {
-  return `<article class="list-card"><header><div><h4>${esc(w.date)} · ${esc(w.time)} · ${esc(w.name)}</h4><p class="muted">${fmt(w.minutes)} min ${w.distance_km ? `· ${fmt(w.distance_km)} km` : ''} · ${esc(cleanWorkoutNote(w.notes))}</p></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></header><b>${fmt(w.kcal)} kcal</b></article>`;
-}
 function cleanWorkoutNote(n) { return window.DPPDashboardWorkoutCard.cleanNote(n); }
 function mealCardCompact(m) { return window.DPPDashboardMealCard.mealCardCompact(m); }
 function workoutCardCompact(w) { return window.DPPDashboardWorkoutCard.workoutCardCompact(w); }
@@ -165,7 +162,7 @@ function renderRegister() {
   mealItems = [];
   $('#view').innerHTML = `<div class="register-grid">
     <section class="card register-main">
-      <div class="section-title compact-title"><div><h3>🍽️ Nueva comida</h3><p>1) carga plantilla o busca alimentos · 2) cambia gramos · 3) guarda</p></div></div>
+      <div class="section-title compact-title"><div><h3>Nueva comida</h3><p>1) carga plantilla o busca alimentos · 2) cambia gramos · 3) guarda</p></div></div>
       <div class="row">
         <div class="field span-3"><label>Fecha</label><input id="mDate" type="date" value="${esc(day())}"></div>
         <div class="field span-2"><label>Hora</label><input id="mTime" type="time" value="${esc(nowHM())}"></div>
@@ -173,7 +170,7 @@ function renderRegister() {
         <div class="field span-4"><label>Notas</label><input id="mNotes" placeholder="pasta seca, tupper, post-HIIT..."></div>
       </div>
       <div class="template-loader">
-        <div><b>⚡ Cargar plantilla</b><small>Se añade a esta comida y puedes cambiar gramos antes de guardar.</small></div>
+        <div><b>Cargar plantilla</b><small>Se añade a esta comida y puedes cambiar gramos antes de guardar.</small></div>
         <select id="tplSelect"><option value="">Elegir plantilla...</option>${templateOptions()}</select>
         <button class="btn secondary" onclick="loadTemplateToMeal($('#tplSelect').value)">Cargar</button>
       </div>
@@ -185,7 +182,7 @@ function renderRegister() {
       </div>
     </section>
     <section class="card add-food-panel" aria-label="Añadir producto">
-      <h3>➕ Añadir producto</h3>
+      <h3>Añadir producto</h3>
       <div class="field"><label>Buscar alimento guardado</label><input id="foodSearch" placeholder="pollo, pasta, yogur..." autocomplete="off" oninput="renderSuggestions()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.add-food-panel').querySelector('.suggestions button')?.click()}"></div>
       <div class="field" style="margin-top:10px"><label>Gramos</label><input id="foodGrams" type="number" inputmode="decimal" min="0" placeholder="ración típica"></div>
       <div id="suggestions" class="suggestions"></div>
@@ -234,13 +231,13 @@ function clearMeal() { mealItems = []; renderMealBuilder(); }
 async function saveMeal(btn) {
   if (!mealItems.length) { toast('Añade alimentos'); return; }
   await busy(btn, async () => {
-    await api('/api/meals', {method: 'POST', body: JSON.stringify({date: $('#mDate').value, time: $('#mTime').value, name: $('#mName').value, notes: $('#mNotes').value, items: mealItems.map((i) => ({food_id: i.food_id, food_name: i.food_name, grams: i.grams}))})});
+    await apiQueued('/api/meals', {date: $('#mDate').value, time: $('#mTime').value, name: $('#mName').value, notes: $('#mNotes').value, items: mealItems.map((i) => ({food_id: i.food_id, food_name: i.food_name, grams: i.grams}))});
     toast('Comida guardada'); setSelectedDate($('#mDate').value); mealItems = []; await load(); go('home');
   });
 }
 async function saveWeight(btn) {
   await busy(btn, async () => {
-    const r = await api('/api/weights', {method: 'POST', body: JSON.stringify({date: $('#wDate').value, time: $('#wTime').value, kg: $('#wKg').value, official: $('#wOfficial').value === '1', context: $('#wCtx').value})});
+    const r = await apiQueued('/api/weights', {date: $('#wDate').value, time: $('#wTime').value, kg: $('#wKg').value, official: $('#wOfficial').value === '1', context: $('#wCtx').value});
     toast(r.duplicate ? 'Ese peso ya estaba registrado' : 'Peso guardado'); await load(); go('weights');
   });
 }
@@ -261,7 +258,7 @@ async function saveTemplateMeal(id, btn) {
   const t = state.templates.find((x) => Number(x.id) === Number(id)); const card = document.querySelector(`[data-template="${Number(id)}"]`);
   const items = [...card.querySelectorAll('[data-tgram]')].map((i) => ({food_name: i.dataset.food, grams: Number(i.value)}));
   if (!items.length) { toast('La plantilla no tiene alimentos del catálogo'); return; }
-  await busy(btn, async () => { await api('/api/meals', {method: 'POST', body: JSON.stringify({date: day(), time: nowHM(), name: t.name, notes: t.notes, items})}); toast('Plantilla registrada'); await load(); go('home'); });
+  await busy(btn, async () => { await apiQueued('/api/meals', {date: day(), time: nowHM(), name: t.name, notes: t.notes, items}); toast('Plantilla registrada'); await load(); go('home'); });
 }
 
 /* ---------- Alimentos ---------- */
@@ -272,7 +269,7 @@ function renderFoods() {
   <div class="chips food-kinds">${[['all','Todos'],['mine','Míos'],['super','Supermercado'],['generic','Genéricos']].map(([k,l]) => `<button type="button" class="chip${foodKind === k ? ' active' : ''}" onclick="foodKind='${k}';render()">${l}</button>`).join('')}</div>
   <details id="foodForm" class="card"><summary><h3>Nuevo o editar alimento</h3><small>Escanea el código, sube una foto de la etiqueta o escribe los valores por 100 g.</small></summary>
       <div id="foodLookup"></div>
-      <div class="photo-box"><div><b>📷 Foto etiqueta</b><small>OCR real local: sube foto, revisa las sugerencias y guarda.</small></div><input id="fPhoto" type="file" accept="image/*" onchange="uploadFoodPhoto()"><div id="photoPreview"></div></div>
+      <div class="photo-box"><div><b>Foto etiqueta</b><small>OCR real local: sube foto, revisa las sugerencias y guarda.</small></div><input id="fPhoto" type="file" accept="image/*" onchange="uploadFoodPhoto()"><div id="photoPreview"></div></div>
       <div class="row">
         <div class="field span-6"><label>Nombre</label><input id="fName" placeholder="Ej. Yogur Eroski +Proteína 120 g"></div>
         <div class="field span-6"><label>Marca</label><input id="fBrand" placeholder="Eroski, ElPozo..."></div>
@@ -297,7 +294,7 @@ function renderFoods() {
 function renderFoodList() {
   const q = normText($('#foodFilter')?.value);
   const foods = state.foods.filter((f) => foodKindOf(f) && normText(`${f.name} ${f.brand} ${f.barcode || ''}`).includes(q));
-  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="food-row" role="button" tabindex="0" onclick="editFood(${Number(f.id)})"><div><b>${esc(f.name)}</b><small>${esc(f.brand || 'Mío')} · ración ${fmt(f.typical_g)} g</small></div><span class="food-kcal">${fmt(f.kcal)}<small>kcal/100 g</small></span><span class="food-prot">${fmt(f.protein)} g<small>prot</small></span><button class="icon-btn" type="button" aria-label="Borrar ${esc(f.name)}" onclick="event.stopPropagation();deleteFood(${Number(f.id)})">×</button></div>`).join('') || '<div class="empty">Nada con esa búsqueda. Prueba el código de barras en «+ Nuevo».</div>') + moreButton('foods', foods.length);
+  $('#foodList').innerHTML = (foods.slice(0, listLimit('foods')).map((f) => `<div class="food-row" role="button" tabindex="0" onclick="editFood(${Number(f.id)})" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();editFood(${Number(f.id)})}"><div><b>${esc(f.brand ? f.name.replace(/ · [^·]+$/, '') : f.name)}</b><small>${esc(f.brand || 'Mío')} · ración ${fmt(f.typical_g)} g</small></div><span class="food-kcal">${fmt(f.kcal)}<small>kcal/100 g</small></span><span class="food-prot">${fmt(f.protein)} g<small>prot</small></span><button class="icon-btn" type="button" aria-label="Borrar ${esc(f.name)}" onclick="event.stopPropagation();deleteFood(${Number(f.id)})">×</button></div>`).join('') || '<div class="empty">Nada con esa búsqueda. Prueba el código de barras en «+ Nuevo».</div>') + moreButton('foods', foods.length);
 }
 function fillFoodForm(food) {
   const set = (id, val) => { const el = $(id); if (el && val !== undefined && val !== null) el.value = String(val); };
@@ -348,17 +345,19 @@ async function saveFood(btn) {
 
 /* ---------- Deporte ---------- */
 function ui5SportCard(w) {
-  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(w.date || '')} · ${esc(w.time || '')}</small></div><button class="btn small danger" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span><span><b>${fmt(w.distance_km)}</b><small>km</small></span><span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div><p>${esc(cleanWorkoutNote(w.notes))}</p></article>`;
+  return `<article class="ui5-sport-card"><div class="ui5-sport-head"><div><b>${esc(w.name || 'Entreno')}</b><small>${esc(window.friendlyDate(w.date))} · ${esc(w.time || '')}</small></div><button class="icon-btn" type="button" aria-label="Borrar entreno" onclick="deleteWorkout(${Number(w.id)})">×</button></div><div class="ui5-sport-metrics"><span><b>${fmt(w.minutes)}</b><small>min</small></span>${Number(w.distance_km) > 0 ? `<span><b>${fmt(w.distance_km)}</b><small>km</small></span>` : ''}<span><b>${fmt(w.kcal)}</b><small>kcal</small></span></div>${cleanWorkoutNote(w.notes) ? `<p>${esc(cleanWorkoutNote(w.notes))}</p>` : ''}</article>`;
 }
 function renderSport() {
   const all = [...state.workouts].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
   const last7 = all.filter((w) => Date.now() - new Date(w.date + 'T12:00:00').getTime() <= 7 * 86400000);
   const sum = (k) => last7.reduce((a, w) => a + Number(w[k] || 0), 0);
   $('#view').innerHTML = `
-    <section class="ui5-sport-hero"><div><span class="ui5-kicker">Deporte</span><h3>Registrar o revisar actividad</h3><p>Strava queda como fuente principal; el manual sirve para ajustes rápidos.</p></div>
-      <div class="ui5-sport-summary"><span><b>${fmt(sum('kcal'))}</b><small>kcal 7 días</small></span><span><b>${fmt(sum('minutes'))}</b><small>min 7 días</small></span><span><b>${fmt(sum('distance_km'))}</b><small>km 7 días</small></span></div></section>
+    <section class="ui5-sport-hero"><div class="ui5-sport-summary"><span><b>${fmt(sum('kcal'))}</b><small>kcal 7 días</small></span><span><b>${fmt(sum('minutes'))}</b><small>min 7 días</small></span><span><b>${fmt(sum('distance_km'))}</b><small>km 7 días</small></span></div></section>
+    <div class="section-title ui5-section-title"><div><h3>Historial</h3><p>${all.length} entrenos · últimos primero</p></div><button class="btn" type="button" onclick="const d=$('#sportForm');d.open=true;d.scrollIntoView({behavior:'smooth'})">+ Entreno</button></div>
+    <div class="ui5-sport-history">${all.slice(0, listLimit('sport')).map(ui5SportCard).join('') || '<div class="empty">Aún no hay entrenos. Strava los importa solos si lo conectas; o añade uno aquí abajo.</div>'}</div>${moreButton('sport', all.length)}
+    <details id="sportForm" class="card"${all.length ? '' : ' open'}><summary><h3>Añadir entreno o tipo de ejercicio</h3><small>Strava importa solo; esto es para ajustes manuales.</small></summary>
     <div class="ui5-sport-layout">
-      <div class="card ui5-sport-form"><h3>🏋️ Nuevo entreno</h3><div class="row compact-row">
+      <div class="card ui5-sport-form"><h3>Nuevo entreno</h3><div class="row compact-row">
         <div class="field span-3"><label>Fecha</label><input id="sDate" type="date" value="${esc(day())}"></div>
         <div class="field span-2"><label>Hora</label><input id="sTime" type="time" value="${esc(nowHM())}"></div>
         <div class="field span-4"><label>Ejercicio</label><select id="sName">${state.exercises.map((e) => `<option>${esc(e.name)}</option>`).join('')}</select></div>
@@ -368,19 +367,18 @@ function renderSport() {
         <div class="field span-6"><label>Notas</label><input id="sNotes" placeholder="Strava, reloj, sensación, etc."></div>
         <div class="field span-3"><label>&nbsp;</label><button class="btn" onclick="saveWorkout(this)">Guardar entreno</button></div>
       </div></div>
-      <div class="card ui5-exercise-form"><h3>➕ Tipo ejercicio</h3><p class="muted">Añade solo si falta un tipo manual. Para Strava no hace falta.</p><div class="row compact-row">
+      <div class="card ui5-exercise-form"><h3>Tipo ejercicio</h3><p class="muted">Añade solo si falta un tipo manual. Para Strava no hace falta.</p><div class="row compact-row">
         <div class="field span-6"><label>Nombre</label><input id="eName" placeholder="Ej. Caminata suave"></div>
         <div class="field span-3"><label>MET</label><input id="eMet" type="number" value="5"></div>
         <div class="field span-3"><label>&nbsp;</label><button class="btn secondary" onclick="saveExercise(this)">Guardar</button></div>
         <div class="field span-12"><label>Notas</label><input id="eNotes"></div>
       </div></div>
     </div>
-    <div class="section-title ui5-section-title"><div><h3>Historial deporte</h3><p>${all.length} entrenos · últimos primero</p></div></div>
-    <div class="ui5-sport-history">${all.slice(0, listLimit('sport')).map(ui5SportCard).join('')}</div>${moreButton('sport', all.length)}`;
+    </details>`;
 }
 async function saveWorkout(btn) {
   await busy(btn, async () => {
-    const r = await api('/api/workouts', {method: 'POST', body: JSON.stringify({date: $('#sDate').value, time: $('#sTime').value, name: $('#sName').value, minutes: $('#sMin').value, distance_km: $('#sKm').value, kcal: $('#sKcal').value, notes: $('#sNotes').value})});
+    const r = await apiQueued('/api/workouts', {date: $('#sDate').value, time: $('#sTime').value, name: $('#sName').value, minutes: $('#sMin').value, distance_km: $('#sKm').value, kcal: $('#sKcal').value, notes: $('#sNotes').value});
     toast(r.id ? `Entreno guardado · ${fmt(r.kcal)} kcal` : 'Ese entreno ya existía'); setSelectedDate($('#sDate').value); await load(); go('home');
   });
 }
@@ -419,11 +417,10 @@ function renderWeights() {
       <details class="more-fields"><summary>Fecha, hora y contexto</summary><div class="row compact-row"><div class="field span-6"><label>Fecha</label><input id="wDate" type="date" value="${esc(today())}"></div><div class="field span-6"><label>Hora</label><input id="wTime" type="time" value="${esc(nowHM())}"></div><div class="field span-12"><label>Contexto</label><input id="wCtx" placeholder="mañana, después del baño"></div></div></details>
       <button class="btn block" onclick="saveWeight(this)">Guardar peso</button></div>
     <div class="card"><h3>Peso oficial</h3>${weightChart()}<p class="muted small-note">Solo pesos oficiales. Más detalle en <a href="#" onclick="go('progress');return false">Progreso</a>.</p></div></div>
-    <div class="section-title"><div><h3>Historial</h3><p>${all.length} registros</p></div></div><div class="list">${all.slice(0, listLimit('weights')).map((w) => `<div class="list-card row-card"><div><b>${fmt(w.kg)} kg</b><small class="muted">${esc(w.date)} ${esc(w.time)} · ${w.official ? 'oficial' : 'referencia'}${w.context ? ' · ' + esc(w.context) : ''}</small></div><button class="btn small danger" aria-label="Borrar peso" onclick="deleteWeight(${Number(w.id)})">×</button></div>`).join('')}</div>${moreButton('weights', all.length)}`;
+    <div class="section-title"><div><h3>Historial</h3><p>${all.length} registros</p></div></div><div class="list">${all.slice(0, listLimit('weights')).map((w) => `<div class="list-card row-card"><div><b>${fmt(w.kg)} kg</b><small class="muted">${esc(window.friendlyDate(w.date))} ${esc(w.time)} · ${w.official ? 'oficial' : 'referencia'}${w.context ? ' · ' + esc(w.context) : ''}</small></div><button class="btn small danger" aria-label="Borrar peso" onclick="deleteWeight(${Number(w.id)})">×</button></div>`).join('')}</div>${moreButton('weights', all.length)}`;
 }
 async function deleteWeight(id) { if (!confirm('¿Borrar peso?')) return; await api('/api/weights/' + id, {method: 'DELETE'}); toast('Peso borrado'); await load(); }
 
-function renderHistory() { $('#view').innerHTML = `<div class="grid cols-2"><div><div class="section-title"><div><h3>Comidas</h3><p>${state.meals.length} registradas · ↻ repite una comida hoy</p></div></div><div class="list">${state.meals.slice(0, listLimit('hmeals')).map(mealCard).join('')}</div>${moreButton('hmeals', state.meals.length)}</div><div><div class="section-title"><div><h3>Deporte</h3><p>${state.workouts.length} entrenos</p></div></div><div class="list">${state.workouts.slice(0, listLimit('hwork')).map(workoutCard).join('')}</div>${moreButton('hwork', state.workouts.length)}</div></div>`; }
 function renderIntegrations() { $('#view').innerHTML = '<div class="empty">Cargando integraciones…</div>'; }
 
 /* ---------- Shell ---------- */
@@ -455,7 +452,7 @@ function ui5ApplyShell() {
 }
 function openHelpModal() {
   closeHelpModal(); const o = document.createElement('div'); o.id = 'helpOverlay'; o.className = 'help-overlay';
-  o.innerHTML = `<div class="help-modal" role="dialog" aria-modal="true" aria-label="Ayuda"><button class="help-close" onclick="closeHelpModal()" aria-label="Cerrar">×</button><span class="ui5-kicker">Ayuda rápida</span><h2>Diet Pro Planner</h2><div class="help-grid"><div><b>🍽️ Comidas</b><p>Busca alimentos o carga una plantilla, cambia gramos y guarda. ↻ repite una comida.</p></div><div><b>⚖️ Peso</b><p>Oficial por la mañana. Post-comida, noche o post-entreno son referencia.</p></div><div><b>📈 Progreso</b><p>Tendencia real, ritmo kg/semana y tu gasto energético medido con tus propios datos.</p></div><div><b>🥫 Alimentos</b><p>Código de barras (Open Food Facts), OCR de etiqueta o IA opcional.</p></div><div><b>🎯 Objetivos</b><p>Tus metas de peso, kcal y proteína. Copias de seguridad y exportación.</p></div><div><b>🔐 Privacidad</b><p>Todo se guarda en tu Raspberry. La IA y Open Food Facts son opcionales.</p></div></div><div class="help-actions"><button class="btn" onclick="closeHelpModal();go('register')">Registrar comida</button><button class="btn secondary" onclick="closeHelpModal();go('progress')">Progreso</button><button class="btn secondary" onclick="closeHelpModal();go('goals')">Objetivos</button></div></div>`;
+  o.innerHTML = `<div class="help-modal" role="dialog" aria-modal="true" aria-label="Ayuda"><button class="help-close" onclick="closeHelpModal()" aria-label="Cerrar">×</button><span class="ui5-kicker">Ayuda rápida</span><h2>Diet Pro Planner</h2><div class="help-grid"><div><b>Comidas</b><p>Busca alimentos o carga una plantilla, cambia gramos y guarda. ↻ repite una comida.</p></div><div><b>Peso</b><p>Oficial por la mañana. Post-comida, noche o post-entreno son referencia.</p></div><div><b>Progreso</b><p>Tendencia real, ritmo kg/semana y tu gasto energético medido con tus propios datos.</p></div><div><b>Alimentos</b><p>Código de barras (Open Food Facts), OCR de etiqueta o IA opcional.</p></div><div><b>Objetivos</b><p>Tus metas de peso, kcal y proteína. Copias de seguridad y exportación.</p></div><div><b>Privacidad</b><p>Todo se guarda en tu Raspberry. La IA y Open Food Facts son opcionales.</p></div></div><div class="help-actions"><button class="btn" onclick="closeHelpModal();go('register')">Registrar comida</button><button class="btn secondary" onclick="closeHelpModal();go('progress')">Progreso</button><button class="btn secondary" onclick="closeHelpModal();go('goals')">Objetivos</button></div></div>`;
   o.onclick = (ev) => { if (ev.target.id === 'helpOverlay') closeHelpModal(); }; document.body.appendChild(o);
 }
 function closeHelpModal() { document.getElementById('helpOverlay')?.remove(); }

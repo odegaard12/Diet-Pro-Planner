@@ -88,7 +88,7 @@
   };
   window.ui5ExportPlanJson = () => {
     const raw = JSON.stringify(readDom(), null, 2);
-    const box = $('#planRaw'); if (box) box.value = raw;
+    const box = $('#planRaw'); if (box) { box.value = raw; box.closest('details')?.setAttribute('open', ''); }
     navigator.clipboard?.writeText(raw).then(() => toast('JSON copiado')).catch(() => toast('JSON listo abajo'));
   };
   window.savePlan = async (btn) => {
@@ -98,13 +98,13 @@
   window.renderPlan = function () {
     const p = currentPlan(); const st = stats(p);
     $('#view').innerHTML = `
-      <section class="ui5-plan-hero2"><div><span class="ui5-kicker">Plan semanal previsto</span><h3>Plan previsto editable. El real registrado se consulta en Historial.</h3><p>Si el plan anterior venía roto, pulsa “Cargar plan base” o “Completar semana”.</p></div>
-        <div id="ui5PlanStats" class="ui5-plan-stats"><span><b>${st.days}</b><small>días</small></span><span><b>${st.planned}</b><small>con comidas</small></span><span><b>${st.missing}</b><small>faltan</small></span></div></section>
+      <section class="ui5-plan-hero2"><div id="ui5PlanStats" class="ui5-plan-stats"><span><b>${st.days}</b><small>días</small></span><span><b>${st.planned}</b><small>con comidas</small></span><span><b>${st.missing}</b><small>sin comidas</small></span></div></section>
       <section class="card ui5-plan-toolbar">
         <div class="row compact-row"><div class="field span-5"><label>Nombre del plan</label><input id="planName" value="${esc(p.name)}" oninput="ui5RefreshPlanStats()"></div><div class="field span-7"><label>Notas</label><input id="planNotes" value="${esc(p.notes)}" oninput="ui5RefreshPlanStats()"></div></div>
-        <div class="ui5-plan-actions"><button class="btn" onclick="ui5SaveEditablePlan(this)">Guardar cambios</button><button class="btn secondary" onclick="ui5AddPlanDay()">Añadir día</button><button class="btn secondary" onclick="ui5CompletePlanWeek()">Completar semana</button><button class="btn secondary" onclick="ui5ApplyDefaultPlan()">Cargar plan base</button><button class="btn secondary" onclick="ui5ExportPlanJson()">Copiar/mostrar JSON</button></div>
+        <div class="ui5-plan-actions"><button class="btn" onclick="ui5SaveEditablePlan(this)">Guardar cambios</button><button class="btn secondary" onclick="ui5AddPlanDay()">Añadir día</button></div>
+        <details class="plan-more"><summary>Más opciones</summary><div class="ui5-plan-actions"><button class="btn secondary" onclick="ui5CompletePlanWeek()">Completar semana</button><button class="btn secondary" onclick="ui5ApplyDefaultPlan()">Cargar plan base</button><button class="btn secondary" onclick="ui5ExportPlanJson()">Copiar JSON</button></div></details>
       </section>
       <section id="ui5PlanBoard" class="ui5-edit-plan-board">${p.days.map(dayHtml).join('')}</section>
-      <section class="card ui5-plan-json"><h3>JSON del plan</h3><p class="muted">Para importar otro plan: pega JSON y pulsa importar.</p><textarea id="planRaw" placeholder='{"name":"Semana...","days":[...]}'></textarea><button class="btn secondary" onclick="savePlan(this)">Importar JSON pegado</button></section>`;
+      <details class="card ui5-plan-json"><summary><h3>Importar un plan (JSON)</h3></summary><textarea id="planRaw" placeholder='{"name":"Semana...","days":[...]}'></textarea><button class="btn secondary" onclick="savePlan(this)">Importar JSON pegado</button></details>`;
   };
 })();
