@@ -160,7 +160,7 @@
 
   function homeHtml(d, data) {
     const bal = balance(d, data);
-    return `${header(d, bal.eaten, bal.target)}${weekStrip(d)}${bal.html}${tiles(d)}${timeline(d)}<div id="aiCoachSlot"></div>`;
+    return `${header(d, bal.eaten, bal.target)}${window.DPPWelcome?.html() || ''}${weekStrip(d)}${bal.html}${tiles(d)}${timeline(d)}<div id="aiCoachSlot"></div>`;
   }
 
   async function renderHome() {

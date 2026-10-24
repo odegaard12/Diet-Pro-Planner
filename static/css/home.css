@@ -103,3 +103,15 @@
 
 .sec-head { display: flex; align-items: center; justify-content: space-between; margin: 20px 2px 8px; }
 .sec-head .sec-title { margin: 0; }
+
+/* v0.5.5 · first-run guide */
+.welcome { margin: 0 0 12px; padding: 14px 16px; border-color: var(--primary); }
+.welcome > header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.welcome h3 { margin: 0; }
+.welcome ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.welcome li { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; opacity: .6; }
+.welcome li.next, .welcome li.done { opacity: 1; }
+.welcome li small { display: block; color: var(--text-2); font-size: 13px; }
+.welcome-n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--border-strong); font-size: 13px; font-weight: 700; }
+.welcome li.next .welcome-n { background: var(--primary); border-color: var(--primary); color: #111; }
+.welcome li.done .welcome-n { background: var(--good, #3fb68b); border-color: var(--good, #3fb68b); color: #0d1117; }
