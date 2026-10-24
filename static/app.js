@@ -354,8 +354,8 @@ function renderSport() {
   $('#view').innerHTML = `
     <section class="ui5-sport-hero"><div class="ui5-sport-summary"><span><b>${fmt(sum('kcal'))}</b><small>kcal 7 días</small></span><span><b>${fmt(sum('minutes'))}</b><small>min 7 días</small></span><span><b>${fmt(sum('distance_km'))}</b><small>km 7 días</small></span></div></section>
     <div class="section-title ui5-section-title"><div><h3>Historial</h3><p>${all.length} entrenos · últimos primero</p></div><button class="btn" type="button" onclick="const d=$('#sportForm');d.open=true;d.scrollIntoView({behavior:'smooth'})">+ Entreno</button></div>
-    <div class="ui5-sport-history">${all.slice(0, listLimit('sport')).map(ui5SportCard).join('')}</div>${moreButton('sport', all.length)}
-    <details id="sportForm" class="card"><summary><h3>Añadir entreno o tipo de ejercicio</h3><small>Strava importa solo; esto es para ajustes manuales.</small></summary>
+    <div class="ui5-sport-history">${all.slice(0, listLimit('sport')).map(ui5SportCard).join('') || '<div class="empty">Aún no hay entrenos. Strava los importa solos si lo conectas; o añade uno aquí abajo.</div>'}</div>${moreButton('sport', all.length)}
+    <details id="sportForm" class="card"${all.length ? '' : ' open'}><summary><h3>Añadir entreno o tipo de ejercicio</h3><small>Strava importa solo; esto es para ajustes manuales.</small></summary>
     <div class="ui5-sport-layout">
       <div class="card ui5-sport-form"><h3>Nuevo entreno</h3><div class="row compact-row">
         <div class="field span-3"><label>Fecha</label><input id="sDate" type="date" value="${esc(day())}"></div>

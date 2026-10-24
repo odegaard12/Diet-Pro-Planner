@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.5 — First-run guide and clearer empty states
+
+- 'Hoy' shows a three-step guide on a new install (about you, first weight, first meal): each step ticks itself off, the next one has a button, it can be hidden, and it never appears for someone who already logs meals.
+- Deporte opens with the add-workout form when there are no workouts yet, and says so instead of showing an empty list.
+- Despensa hides the four zero counters until there is something to count.
+
 ## v0.5.4 — Carrefour, Dia and Alcampo
 
 - 116 more own-brand products from Carrefour, Dia and Alcampo (283 supermarket products in total across seven chains), with barcode and label values from Open Food Facts (ODbL). Migration 9 adds them only where the barcode or name is new.

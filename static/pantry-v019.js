@@ -116,6 +116,7 @@
       ['Prioritarios', stats.preferred || 0, 'info']
     ];
     const root = document.querySelector('#pantryStats');
+    if (root) root.style.display = values.every(([, value]) => !value) ? 'none' : ''; // nothing to count yet
     if (root) root.innerHTML = values.map(([label, value, tone]) =>
       `<span class="pantry-stat ${tone}"><b>${value}</b><small>${label}</small></span>`
     ).join('');
