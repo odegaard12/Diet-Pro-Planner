@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.4 — Carrefour, Dia and Alcampo
+
+- 116 more own-brand products from Carrefour, Dia and Alcampo (283 supermarket products in total across seven chains), with barcode and label values from Open Food Facts (ODbL). Migration 9 adds them only where the barcode or name is new.
+- Keyboard: the rows in Alimentos open for editing with Enter or Space (and Enter on the delete button still only deletes); visible focus ring.
+
 ## v0.5.3 — Image and deployment hardening
 
 - OCR preprocessing no longer scales a very narrow image to billions of pixels (out-of-memory): upscaling is capped at 4x and the result at 16 megapixels; the file is closed after reading.

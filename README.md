@@ -34,7 +34,7 @@ to eat next. Everything lives on your own server.
 | --- | --- |
 | **Today at a glance** | Week strip, daily balance (kcal left, intake by meal, workout), protein / weight / sport / rate tiles with mini charts, and your day as a timeline. |
 | **Fast logging** | Search your catalog, load templates, change grams and save; repeat any meal with one tap. Barcode (type the digits, or scan where the browser allows it) and name search via Open Food Facts, label OCR on-device. |
-| **Spanish catalog** | About 60 generic foods plus ~170 own-brand products from Mercadona (Hacendado), Eroski, Consum and Lidl (Milbona), with barcode and label values. Search-first list with Todos / Míos / Supermercado / Genéricos filters. |
+| **Spanish catalog** | About 60 generic foods plus ~280 own-brand products from Mercadona (Hacendado), Carrefour, Dia, Eroski, Alcampo, Consum and Lidl (Milbona), with barcode and label values. Search-first list with Todos / Míos / Supermercado / Genéricos filters. |
 | **Smart Coach** | Suggests the next meal from what is actually in your pantry and what the day still needs; works without AI. |
 | **Real progress** | Trend weight (EMA), real kg/week, goal date and measured TDEE from your own data; adherence and weekly tables. |
 | **Sport** | Strava import with auto-sync, manual workouts, planned vs real training week. |
