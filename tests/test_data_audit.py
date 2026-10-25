@@ -66,7 +66,7 @@ class DataAuditTests(unittest.TestCase):
             db.execute("INSERT INTO meals(id, date, time, name) VALUES(1, '2026-10-20', '14:00', 'Comida'), (2, '2026-10-20', '14:00', 'Comida'), (3, '2026-11-30', '10:00', 'Cena')")
             db.execute("INSERT INTO meal_items(meal_id, food_id, food_name, grams, kcal) VALUES(1, NULL, 'Borrado', 100, 100), (2, 1, 'Arroz', 5000, 7000)")
             db.execute("INSERT INTO weights(date, time, kg, official) VALUES('2026-10-01', '08:00', 87.5, 1), ('2026-10-02', '08:00', 77.5, 1), ('2026-10-03', '08:00', 87.0, 1), ('2026-10-04', '08:00', 80.0, 1), ('2026-10-05', '08:00', 5, 0)")
-            db.execute("INSERT INTO workouts(date, time, name, minutes, kcal) VALUES('2026-10-10', '18:00', 'Correr', 900, 9000)")
+            db.execute("INSERT INTO workouts(date, time, name, minutes, kcal) VALUES('2026-10-10', '18:00', 'Correr', 1000, 9000), ('2026-10-11', '09:00', 'Ruta larga', 577, 6848)")
             db.execute("INSERT INTO templates(name, payload) VALUES('Rota', ?), ('Rota 2', 'no es json')", (json.dumps({"items": [{"food": "Fantasma", "grams": 50}]}),))
             db.commit()
         report = _audit(self.path, backups=[])
@@ -86,6 +86,12 @@ class DataAuditTests(unittest.TestCase):
         report = _audit(self.path)
         self.assertEqual(self.ids(report), {"weights_spike"})
         self.assertEqual(report["findings"][0]["count"], 1)
+
+    def test_a_long_real_ride_is_not_flagged(self) -> None:
+        with dpp_db.connect(self.path) as db:
+            db.execute("INSERT INTO workouts(date, time, name, minutes, kcal) VALUES('2026-09-26', '08:00', 'MountainBikeRide', 577, 6848)")
+            db.commit()
+        self.assertNotIn("workouts_extreme", self.ids(_audit(self.path)))
 
     def test_old_backup_is_reported_and_recent_is_not(self) -> None:
         old = _audit(self.path, backups=[{"name": "dieta-a.db", "created_at": "2026-10-10T03:00:00"}])
