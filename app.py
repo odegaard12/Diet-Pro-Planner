@@ -332,12 +332,16 @@ def seed(db: sqlite3.Connection) -> None:
 
 def fix_existing_data(db: sqlite3.Connection) -> None:
     # Renombra alimentos antiguos para que coincidan con los productos reales, conservando items existentes.
-    db.execute("UPDATE foods SET name='Jamón cocido extra ElPozo 85%' WHERE name='Jamón cocido extra 85%'")
-    db.execute("UPDATE meal_items SET food_name='Jamón cocido extra ElPozo 85%' WHERE food_name='Jamón cocido extra 85%'")
-    db.execute("UPDATE foods SET name='Pollo pechuga cruda Pazo de Pías' WHERE name='Pollo pechuga cruda'")
-    db.execute("UPDATE meal_items SET food_name='Pollo pechuga cruda Pazo de Pías' WHERE food_name='Pollo pechuga cruda'")
-    db.execute("UPDATE foods SET name='Champiñones laminados' WHERE name='Champiñones'")
-    db.execute("UPDATE meal_items SET food_name='Champiñones laminados' WHERE food_name='Champiñones'")
+    # Si el nombre nuevo ya existe (foods.name es UNIQUE) no se renombra: antes eso impedía arrancar la app.
+    for old, new in (
+        ("Jamón cocido extra 85%", "Jamón cocido extra ElPozo 85%"),
+        ("Pollo pechuga cruda", "Pollo pechuga cruda Pazo de Pías"),
+        ("Champiñones", "Champiñones laminados"),
+    ):
+        if db.execute("SELECT 1 FROM foods WHERE name=?", (new,)).fetchone():
+            continue
+        db.execute("UPDATE foods SET name=? WHERE name=?", (new, old))
+        db.execute("UPDATE meal_items SET food_name=? WHERE food_name=?", (new, old))
 
 
 def init_db() -> None:

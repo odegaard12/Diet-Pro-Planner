@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.7.0 — Recipes and more ingredients
+
+- 102 built-in recipes (18 breakfasts, 34 lunches, 22 dinners, 13 snacks, 10 desserts and 5 for sport) with their ingredients in grams from the catalog and a short method. They are templates: load one in Registrar or open it in Plantillas, change the grams and save in two taps. Your own templates are never touched.
+- Plantillas is now a searchable list with filters (Mis plantillas, Desayuno, Comida, Cena, Merienda, Postre, Deporte) and compact rows with kcal and protein; Registrar groups the template picker by type.
+- 89 more everyday ingredients in the generic catalog (meat, fish, eggs, dairy, pasta and rice, vegetables, fruit, oils, sauces, drinks): 149 in total, all consistent with the data review.
+- 209 more own-brand products from Carrefour and Mercadona (Hacendado), 492 supermarket products in total (Open Food Facts, ODbL). Migration 10 adds only what is missing.
+- Fix: the old start-up renames in `app.py` (for example "Champiñones" to "Champiñones laminados") crashed the app if the new name already existed. They now skip the rename in that case, with a regression test.
+
 ## v0.6.1 — Fewer false alarms in the data review
 
 - The workout check no longer flags a long real ride (found on real data: 577 min and 6848 kcal is plausible): it now warns only above 15 hours, 10000 kcal or 30 kcal per minute.

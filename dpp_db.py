@@ -240,6 +240,20 @@ def _m9_supermarket_more(db: sqlite3.Connection) -> None:
         dpp_catalog.add_supermarket(db)
 
 
+def _m10_ingredients_and_recipes(db: sqlite3.Connection) -> None:
+    """Add the everyday ingredients, the supermarket products and the built-in recipes (only what is missing)."""
+    if not _table_exists(db, "foods"):
+        return
+    import dpp_catalog
+
+    dpp_catalog.add_missing(db)
+    dpp_catalog.add_supermarket(db)
+    if _table_exists(db, "templates"):
+        import dpp_recipes
+
+        dpp_recipes.add_recipes(db)
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "meals without UNIQUE constraint", _m1_meals_without_unique),
     (2, "indexes + workouts.source/external_id", _m2_indexes_and_workout_source),
@@ -250,6 +264,7 @@ MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (7, "Spanish supermarket products (only missing barcodes)", _m7_supermarket_catalog),
     (8, "supermarket catalog cleanup (names, unused foreign rows)", _m8_supermarket_cleanup),
     (9, "supermarket catalog: Carrefour, Dia and Alcampo", _m9_supermarket_more),
+    (10, "everyday ingredients, more supermarket products and built-in recipes", _m10_ingredients_and_recipes),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 

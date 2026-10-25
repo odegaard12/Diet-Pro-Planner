@@ -11,6 +11,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+from dpp_catalog_basics import BASICS
+
 NOTE = "Valor medio aproximado (tablas de composición). Ajusta con la etiqueta si la tienes."
 
 # name, kcal, protein, carbs, fat, sugar, salt, typical portion (g)
@@ -82,6 +84,8 @@ _GENERIC: list[tuple[str, float, float, float, float, float, float, float]] = [
     ("Miel", 304, 0.3, 82.0, 0.0, 82.0, 0.01, 15),
     ("Proteína whey (polvo)", 390, 78.0, 6.0, 6.0, 4.0, 0.4, 30),
 ]
+
+_GENERIC = _GENERIC + [b for b in BASICS if b[0].lower() not in {g[0].lower() for g in _GENERIC}]
 
 GENERIC_FOODS: list[dict] = [
     {"name": n, "brand": "Genérico (aprox.)", "kcal": k, "protein": p, "carbs": c, "fat": f,
