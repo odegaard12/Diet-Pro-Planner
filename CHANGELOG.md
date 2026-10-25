@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.0 — Data review
+
+- New 'Revisión de datos' card in Ajustes (`GET /api/data-audit`): a read-only check that finds likely typos and broken references and says where to fix each one. It looks for foods whose macros exceed 100 g per 100 g or do not match their calories, weights that look like a typo (one day far from its neighbours) or jump more than 3 kg in 3 days, absurd portions (over 2 kg) and days over 6000 kcal, duplicated or future-dated meals, extreme workouts, templates whose foods no longer exist, and a missing or old backup. Nothing is changed automatically.
+- Plan semanal highlights today's day when the day is named after a weekday ('Lunes', 'Lunes · HIIT').
+- Tests for every check, for the capped examples and for the endpoint (login required).
+
 ## v0.5.5 — First-run guide and clearer empty states
 
 - 'Hoy' shows a three-step guide on a new install (about you, first weight, first meal): each step ticks itself off, the next one has a button, it can be hidden, and it never appears for someone who already logs meals.

@@ -302,3 +302,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .reg-scan { position: fixed; inset: 0; z-index: 60; background: #000; display: grid; grid-template-rows: 1fr auto; gap: 12px; padding: 12px; }
 .reg-scan video { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
 .food-row:focus-visible, .hist-actions .icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* v0.6.0 · data review */
+.audit-finding { border: 1px solid var(--border); border-left: 3px solid var(--text-3, #6e7681); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+.audit-finding.error { border-left-color: var(--bad, #e5484d); }
+.audit-finding.warn { border-left-color: var(--primary); }
+.audit-finding header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.audit-finding header .pill { margin-left: auto; }
+.audit-finding p { margin: 6px 0; }
+.audit-finding ul { margin: 6px 0; padding-left: 18px; font-size: 14px; }
+.audit-finding .btn { margin-top: 8px; }
+.ui5-edit-day.is-today { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.ui5-edit-day.is-today header span::after { content: " · HOY"; color: var(--primary); font-weight: 700; font-size: 12px; }
