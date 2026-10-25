@@ -128,11 +128,12 @@ def _workouts(db) -> list[dict]:
     if not _has(db, "workouts"):
         return []
     odd = [f'{r["date"]} {r["name"]}: {r["minutes"]:.0f} min, {r["kcal"]:.0f} kcal' for r in db.execute(
-        "SELECT date, name, minutes, kcal FROM workouts WHERE minutes > 600 OR kcal > 5000 ORDER BY date DESC")]
+        "SELECT date, name, minutes, kcal FROM workouts "
+        "WHERE minutes > 900 OR kcal > 10000 OR (minutes > 0 AND kcal / minutes > 30) ORDER BY date DESC")]
     if not odd:
         return []
     return [_finding("workouts_extreme", "warn", "Entrenos con duración o calorías extremas",
-                     "Más de 10 horas o más de 5000 kcal: puede ser un error de minutos o de unidades.",
+                     "Más de 15 horas, más de 10000 kcal o más de 30 kcal por minuto: puede ser un error de minutos o de unidades (una salida larga de verdad no cuenta).",
                      odd, len(odd), "sport")]
 
 

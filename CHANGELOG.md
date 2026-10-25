@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.1 — Fewer false alarms in the data review
+
+- The workout check no longer flags a long real ride (found on real data: 577 min and 6848 kcal is plausible): it now warns only above 15 hours, 10000 kcal or 30 kcal per minute.
+
 ## v0.6.0 — Data review
 
 - New 'Revisión de datos' card in Ajustes (`GET /api/data-audit`): a read-only check that finds likely typos and broken references and says where to fix each one. It looks for foods whose macros exceed 100 g per 100 g or do not match their calories, weights that look like a typo (one day far from its neighbours) or jump more than 3 kg in 3 days, absurd portions (over 2 kg) and days over 6000 kcal, duplicated or future-dated meals, extreme workouts, templates whose foods no longer exist, and a missing or old backup. Nothing is changed automatically.
