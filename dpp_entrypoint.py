@@ -9,6 +9,7 @@ import dpp_pantry_v019 as pantry_v019
 from dpp_ai import register_ai_routes
 from dpp_analytics import register_analytics_routes
 from dpp_data_api import register_data_routes
+from dpp_data_audit import register_data_audit_routes
 from dpp_food_lookup import register_food_lookup_routes
 from dpp_pantry_v019_policy import apply_pantry_v019_policy
 from dpp_profile import register_profile_routes
@@ -24,6 +25,7 @@ activity_plan_v020.register_activity_plan_v020(legacy.app, legacy)
 register_profile_routes(legacy.app)
 register_analytics_routes(legacy.app)
 register_data_routes(legacy.app)
+register_data_audit_routes(legacy.app)
 register_ai_routes(legacy.app)
 register_food_lookup_routes(legacy.app)
 register_error_handlers(legacy.app)

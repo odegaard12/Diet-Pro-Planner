@@ -42,6 +42,7 @@ to eat next. Everything lives on your own server.
 | **Optional AI (BYOK)** | Claude or a local Ollama for coaching and label reading; off by default. |
 | **Web app** | Installable on the phone, dark theme, home-screen shortcuts, works offline with the last data seen. |
 | **Safe data** | Versioned migrations with automatic backups, daily copies, SQLite download and CSV export. |
+| **Data review** | A read-only check in Ajustes that spots typos (a weight that jumps, a 5000 g portion), foods whose macros do not add up, templates with missing foods and old backups. |
 
 ## Navigation
 
