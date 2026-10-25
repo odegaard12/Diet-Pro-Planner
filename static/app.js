@@ -157,7 +157,6 @@ async function repeatMeal(id, btn) {
 }
 
 /* ---------- Registrar comida ---------- */
-function templateOptions() { return state.templates.map((t) => `<option value="${Number(t.id)}">${esc(t.name)}</option>`).join(''); }
 function renderRegister() {
   mealItems = [];
   $('#view').innerHTML = `<div class="register-grid">
@@ -249,7 +248,6 @@ async function saveMealAsTemplate() {
 
 /* ---------- Plantillas ---------- */
 function templateItems(t) { let p = {items: []}; try { p = JSON.parse(t.payload); } catch (e) { /* keep empty */ } return (p.items || []).map((it) => { const f = foodByName(it.food); return f ? calcFood(f, it.grams) : null; }).filter(Boolean); }
-function renderTemplates() { $('#view').innerHTML = `<p class="muted page-hint">Cambia los gramos y guarda la comida en dos toques.</p><div class="grid cols-2">${state.templates.map(templateCard).join('') || '<div class="empty">Aún no hay plantillas: créalas desde Registrar con «Guardar como plantilla».</div>'}</div>`; }
 function templateCard(t) {
   const items = templateItems(t); const total = calcList(items);
   return `<div class="card template-card" data-template="${Number(t.id)}"><h3>${esc(t.name)}</h3><p class="muted">${esc(t.notes || '')}</p><div class="template-items">${items.map((it, idx) => `<div class="template-item"><div><b>${esc(it.food_name)}</b><br><small>${fmt(it.kcal)} kcal · ${fmt(it.protein)} g prot.</small></div><input type="number" inputmode="decimal" value="${Number(it.grams)}" data-tgram="${idx}" data-food="${esc(it.food_name)}"></div>`).join('')}</div><div class="totals"><b>${fmt(total.kcal)} kcal</b><b>${fmt(total.protein)} g prot.</b></div><button class="btn" onclick="saveTemplateMeal(${Number(t.id)}, this)">Guardar ahora</button></div>`;

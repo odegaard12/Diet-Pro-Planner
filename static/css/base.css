@@ -314,3 +314,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .audit-finding .btn { margin-top: 8px; }
 .ui5-edit-day.is-today { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
 .ui5-edit-day.is-today header span::after { content: " · HOY"; color: var(--primary); font-weight: 700; font-size: 12px; }
+
+/* v0.7.0 · recipes */
+.tpl-row { grid-template-columns: 1fr auto auto; }
+.tpl-row[aria-expanded="true"] { border-color: var(--primary); }
+.tpl-open { margin: 2px 0 8px; }
+.tpl-open .template-card { margin: 0; }
+@media (max-width: 480px) { .tpl-row { grid-template-columns: 1fr auto auto; gap: 10px; } .tpl-row .food-prot { display: block; } }
