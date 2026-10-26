@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.2 — 33 more recipes
+
+- 33 more built-in recipes (135 in total: 24 breakfasts, 44 lunches, 30 dinners, 17 snacks, 13 desserts and 7 for sport), all with ingredients from the catalog. Migration 11 adds only the names that do not exist yet, so your own templates stay untouched.
+- Dia, Eroski, Alcampo and Consum products are still pending: Open Food Facts keeps answering 503 for them (the full data dump is 13 GB, so it is not an option).
+
 ## v0.7.1 — More Milbona (Lidl) products
 
 - 48 more Milbona (Lidl) products with barcode and label values from Open Food Facts (ODbL), after cleaning the names: about 540 supermarket products in total. Migration 10 adds only what is missing, so the rest of the catalog is untouched.
