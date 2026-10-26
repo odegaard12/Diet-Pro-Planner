@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.1 — More Milbona (Lidl) products
+
+- 48 more Milbona (Lidl) products with barcode and label values from Open Food Facts (ODbL), after cleaning the names: about 540 supermarket products in total. Migration 10 adds only what is missing, so the rest of the catalog is untouched.
+- Dia, Eroski, Alcampo and Consum are still pending: Open Food Facts answered 503 for them.
+
 ## v0.7.0 — Recipes and more ingredients
 
 - 102 built-in recipes (18 breakfasts, 34 lunches, 22 dinners, 13 snacks, 10 desserts and 5 for sport) with their ingredients in grams from the catalog and a short method. They are templates: load one in Registrar or open it in Plantillas, change the grams and save in two taps. Your own templates are never touched.
