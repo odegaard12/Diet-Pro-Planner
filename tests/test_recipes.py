@@ -16,7 +16,7 @@ FOODS = {f["name"]: f for f in dpp_catalog.GENERIC_FOODS}
 class RecipeCatalogTests(unittest.TestCase):
     def test_enough_unique_recipes_in_every_category(self) -> None:
         names = [r[0].lower() for r in dpp_recipes.RECIPES]
-        self.assertGreaterEqual(len(names), 100)
+        self.assertGreaterEqual(len(names), 130)
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual({r[1] for r in dpp_recipes.RECIPES}, set(dpp_recipes.CATEGORIES))
 

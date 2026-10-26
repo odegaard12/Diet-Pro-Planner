@@ -254,6 +254,16 @@ def _m10_ingredients_and_recipes(db: sqlite3.Connection) -> None:
         dpp_recipes.add_recipes(db)
 
 
+def _m11_more_recipes(db: sqlite3.Connection) -> None:
+    """Add the second batch of built-in recipes (only names that do not exist yet)."""
+    if _table_exists(db, "foods") and _table_exists(db, "templates"):
+        import dpp_catalog
+        import dpp_recipes
+
+        dpp_catalog.add_missing(db)  # ingredients first, in case migration 10 ran on an older catalog
+        dpp_recipes.add_recipes(db)
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "meals without UNIQUE constraint", _m1_meals_without_unique),
     (2, "indexes + workouts.source/external_id", _m2_indexes_and_workout_source),
@@ -265,6 +275,7 @@ MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (8, "supermarket catalog cleanup (names, unused foreign rows)", _m8_supermarket_cleanup),
     (9, "supermarket catalog: Carrefour, Dia and Alcampo", _m9_supermarket_more),
     (10, "everyday ingredients, more supermarket products and built-in recipes", _m10_ingredients_and_recipes),
+    (11, "second batch of built-in recipes", _m11_more_recipes),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 
