@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.7.3
+
+- Optional HTTPS port (`DPP_TLS_CERT`, `DPP_TLS_KEY`, `DPP_TLS_PORT`, default 8443): with a certificate the phone activates the service worker, so the installed app opens offline and queued meals, weights and workouts are sent when the server is reachable again.
+
 ## v0.7.2 — 33 more recipes
 
 - 33 more built-in recipes (135 in total: 24 breakfasts, 44 lunches, 30 dinners, 17 snacks, 13 desserts and 7 for sport), all with ingredients from the catalog. Migration 11 adds only the names that do not exist yet, so your own templates stay untouched.

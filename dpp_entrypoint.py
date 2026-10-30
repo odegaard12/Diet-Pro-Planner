@@ -64,6 +64,17 @@ if os.environ.get("DPP_DISABLE_BACKGROUND_JOBS") != "1":
 def serve() -> None:
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8099"))
+    cert = os.environ.get("DPP_TLS_CERT")
+    if cert:
+        # HTTPS on a second port so phones activate the service worker (offline app) on the home network.
+        # ponytail: Werkzeug's threaded server, fine for one household; a TLS proxy if it ever serves more.
+        import threading
+        from werkzeug.serving import make_server
+
+        tls_port = int(os.environ.get("DPP_TLS_PORT", "8443"))
+        tls = make_server(host, tls_port, legacy.app, threaded=True, ssl_context=(cert, os.environ.get("DPP_TLS_KEY")))
+        threading.Thread(target=tls.serve_forever, daemon=True).start()
+        print(f"[DPP] also on https://{host}:{tls_port}")
     if os.environ.get("DPP_SERVER", "waitress") != "flask":
         try:
             from waitress import serve as waitress_serve
