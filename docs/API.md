@@ -24,6 +24,7 @@ All `/api/*` routes require authentication except `/api/auth/login`, `/api/auth/
 - `GET /api/backup` · `POST /api/backup` · `GET /api/backup/download`
 - `GET /api/export/meals.csv` · `weights.csv` · `workouts.csv`
 - `GET /api/export` *(JSON)*
+- `GET /api/data-audit` — read-only data review: `{summary: {error, warn, info}, findings: [{id, level, title, detail, count, items[≤5], fix}]}` (typos in weights and portions, foods whose macros do not add up, templates with missing foods, old or missing backups). It never changes data.
 
 ### Food database and AI
 

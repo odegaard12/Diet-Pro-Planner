@@ -74,6 +74,7 @@
         <p class="muted">Bonus deporte: fracción de las kcal de entreno que se suman al objetivo del día (los relojes suelen sobrestimar). El modo adaptativo usa tu gasto real cuando hay 14+ días registrados y 6+ pesajes.</p>
         <div class="goals-actions"><button class="btn" onclick="dppSaveGoals(this)">Guardar objetivos</button></div>
       </article>
+      ${window.dppAuditCardHtml ? window.dppAuditCardHtml() : ''}
       <section class="goals-two">${aiPanel(ai)}${dataPanel(backups)}</section>
       <div class="footer-space"></div>`;
   }

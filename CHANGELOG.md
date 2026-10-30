@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.7.3
+
+- Optional HTTPS port (`DPP_TLS_CERT`, `DPP_TLS_KEY`, `DPP_TLS_PORT`, default 8443): with a certificate the phone activates the service worker, so the installed app opens offline and queued meals, weights and workouts are sent when the server is reachable again.
+
+## v0.7.2 — 33 more recipes
+
+- 33 more built-in recipes (135 in total: 24 breakfasts, 44 lunches, 30 dinners, 17 snacks, 13 desserts and 7 for sport), all with ingredients from the catalog. Migration 11 adds only the names that do not exist yet, so your own templates stay untouched.
+- Dia, Eroski, Alcampo and Consum products are still pending: Open Food Facts keeps answering 503 for them (the full data dump is 13 GB, so it is not an option).
+
+## v0.7.1 — More Milbona (Lidl) products
+
+- 48 more Milbona (Lidl) products with barcode and label values from Open Food Facts (ODbL), after cleaning the names: about 540 supermarket products in total. Migration 10 adds only what is missing, so the rest of the catalog is untouched.
+- Dia, Eroski, Alcampo and Consum are still pending: Open Food Facts answered 503 for them.
+
+## v0.7.0 — Recipes and more ingredients
+
+- 102 built-in recipes (18 breakfasts, 34 lunches, 22 dinners, 13 snacks, 10 desserts and 5 for sport) with their ingredients in grams from the catalog and a short method. They are templates: load one in Registrar or open it in Plantillas, change the grams and save in two taps. Your own templates are never touched.
+- Plantillas is now a searchable list with filters (Mis plantillas, Desayuno, Comida, Cena, Merienda, Postre, Deporte) and compact rows with kcal and protein; Registrar groups the template picker by type.
+- 89 more everyday ingredients in the generic catalog (meat, fish, eggs, dairy, pasta and rice, vegetables, fruit, oils, sauces, drinks): 149 in total, all consistent with the data review.
+- 209 more own-brand products from Carrefour and Mercadona (Hacendado), 492 supermarket products in total (Open Food Facts, ODbL). Migration 10 adds only what is missing.
+- Fix: the old start-up renames in `app.py` (for example "Champiñones" to "Champiñones laminados") crashed the app if the new name already existed. They now skip the rename in that case, with a regression test.
+
+## v0.6.1 — Fewer false alarms in the data review
+
+- The workout check no longer flags a long real ride (found on real data: 577 min and 6848 kcal is plausible): it now warns only above 15 hours, 10000 kcal or 30 kcal per minute.
+
+## v0.6.0 — Data review
+
+- New 'Revisión de datos' card in Ajustes (`GET /api/data-audit`): a read-only check that finds likely typos and broken references and says where to fix each one. It looks for foods whose macros exceed 100 g per 100 g or do not match their calories, weights that look like a typo (one day far from its neighbours) or jump more than 3 kg in 3 days, absurd portions (over 2 kg) and days over 6000 kcal, duplicated or future-dated meals, extreme workouts, templates whose foods no longer exist, and a missing or old backup. Nothing is changed automatically.
+- Plan semanal highlights today's day when the day is named after a weekday ('Lunes', 'Lunes · HIIT').
+- Tests for every check, for the capped examples and for the endpoint (login required).
+
 ## v0.5.5 — First-run guide and clearer empty states
 
 - 'Hoy' shows a three-step guide on a new install (about you, first weight, first meal): each step ticks itself off, the next one has a button, it can be hidden, and it never appears for someone who already logs meals.

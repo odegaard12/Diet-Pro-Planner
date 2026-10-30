@@ -42,7 +42,8 @@
   function dayHtml(d, idx) {
     const status = d.status || 'borrador';
     const area = (field, label, ph) => `<label><b>${label}</b><textarea data-plan-field="${field}" placeholder="${ph}">${esc(d[field])}</textarea></label>`;
-    return `<article class="ui5-edit-day" data-plan-day="${idx}">
+    const isToday = normText(d.day).startsWith(normText(new Date().toLocaleDateString('es-ES', {weekday: 'long'})));
+    return `<article class="ui5-edit-day${isToday ? ' is-today' : ''}" data-plan-day="${idx}"${isToday ? ' aria-current="date"' : ''}>
       <header><span>${idx + 1}</span><div>
         <input class="ui5-day-title" data-plan-field="day" value="${esc(d.day)}" placeholder="Ej. Viernes · recuperación">
         <select data-plan-field="status">${STATUSES.map((x) => `<option value="${esc(x)}" ${x === status ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>

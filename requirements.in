@@ -9,4 +9,4 @@ pytesseract>=0.3.13
 # Production WSGI server (pure Python, works on Raspberry Pi).
 waitress>=3.0.2
 # Optional AI features (only used when ANTHROPIC_API_KEY is configured).
-anthropic>=1.12
+anthropic>=2.3.0
