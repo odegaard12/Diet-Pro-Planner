@@ -1,5 +1,5 @@
 # Pinned base (patch + Debian release) so rebuilds are reproducible; bump deliberately.
-FROM python:3.14.8-slim-trixie
+FROM python:3.15.0-slim-trixie
 LABEL org.opencontainers.image.title="Diet Pro Planner"
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
