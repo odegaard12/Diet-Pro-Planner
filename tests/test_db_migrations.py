@@ -93,6 +93,18 @@ class MigrationTests(unittest.TestCase):
             db.execute("DELETE FROM meals WHERE id=7")
             self.assertEqual(db.execute("SELECT COUNT(*) FROM meal_items WHERE meal_id=7").fetchone()[0], 0)
 
+    def test_client_id_migration_on_existing_data(self) -> None:
+        dpp_db.migrate(self.db_path)
+        with dpp_db.connect(self.db_path) as db:
+            for table in ("meals", "weights", "workouts"):
+                self.assertIn("client_id", [r[1] for r in db.execute(f"PRAGMA table_info({table})")])
+                self.assertEqual(db.execute(f"SELECT COUNT(*) FROM {table} WHERE client_id IS NOT NULL").fetchone()[0], 0)
+            # Old rows (NULL client_id) never collide; a repeated non-NULL one does.
+            db.execute("INSERT INTO meals(date,time,name,notes) VALUES('2026-06-01','14:00','Comida','')")
+            db.execute("INSERT INTO meals(date,time,name,notes,client_id) VALUES('2026-06-01','14:00','Comida','','abc')")
+            with self.assertRaises(sqlite3.IntegrityError):
+                db.execute("INSERT INTO meals(date,time,name,notes,client_id) VALUES('2026-06-01','15:00','Cena','','abc')")
+
     def test_dangling_food_reference_does_not_block_upgrade(self) -> None:
         # Old cleanup scripts deleted foods with foreign keys off, leaving orphan food_id values.
         db = sqlite3.connect(self.db_path)

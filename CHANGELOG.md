@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.4
+
+- Offline queue is idempotent: every queued meal, weight or workout carries a `client_id` (migration 12 adds the column and a partial unique index), so a POST whose response was lost is no longer duplicated when the phone retries.
+- Offline queue: rejected (4xx) records are no longer dropped silently; they move to `dppQueueFailed` in localStorage and a toast reports how many and why. 401 keeps them queued.
+- Expired session (401) also purges the service worker caches (`dpp-*`), never the pending send queue. Fixed the service worker header comment about queued writes.
+- Fixed the legacy Strava sync counting every change of the connection as imported (now uses the per-statement row count).
 ## v0.7.3
 
 - Optional HTTPS port (`DPP_TLS_CERT`, `DPP_TLS_KEY`, `DPP_TLS_PORT`, default 8443): with a certificate the phone activates the service worker, so the installed app opens offline and queued meals, weights and workouts are sent when the server is reachable again.

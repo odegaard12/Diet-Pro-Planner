@@ -31,25 +31,38 @@ let toastLockUntil = 0; // keeps "guardado en el móvil" visible over the caller
 function toast(msg, lock) { if (!lock && Date.now() < toastLockUntil) return; if (lock) toastLockUntil = Date.now() + 2500; const t = $('#toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
 /* Offline queue: new meals, weights and workouts saved without connection wait on this device
    (localStorage) and are sent in order as soon as the Raspberry is reachable again. */
-const QUEUE_KEY = 'dppQueue', QUEUEABLE = ['/api/meals', '/api/weights', '/api/workouts'];
+const QUEUE_KEY = 'dppQueue', FAILED_KEY = 'dppQueueFailed', QUEUEABLE = ['/api/meals', '/api/weights', '/api/workouts'];
 function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { return []; } }
 function writeQueue(q) { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch (e) { /* private mode */ } }
+function newClientId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+}
 let flushing = false;
 async function flushQueue() {
   const q = readQueue();
   if (flushing || !q.length || !navigator.onLine) return;
   flushing = true;
   let sent = 0;
+  const failed = [];
   try {
     while (q.length) {
       const job = q[0];
       let r;
       try { r = await fetch(job.path, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: job.body}); } catch (e) { break; }
       if (r.status === 401 || r.status >= 500) break; // keep it: sign in again / server busy
-      q.shift(); writeQueue(q); // 2xx sent; 4xx would never succeed, drop it
+      q.shift(); writeQueue(q); // 2xx sent
       if (r.ok) sent += 1;
+      else { // 4xx would never succeed: park it instead of losing it silently
+        let why = `Error ${r.status}`; try { why = (await r.json()).error || why; } catch (x) { /* not JSON */ }
+        failed.push({...job, status: r.status, why});
+      }
     }
   } finally { flushing = false; }
+  if (failed.length) {
+    try { localStorage.setItem(FAILED_KEY, JSON.stringify([...JSON.parse(localStorage.getItem(FAILED_KEY) || '[]'), ...failed])); } catch (e) { /* private mode */ }
+    toast(`${failed.length} registro${failed.length > 1 ? 's' : ''} sin conexión rechazado${failed.length > 1 ? 's' : ''} por el servidor: ${failed[0].why}`, true);
+  }
   if (sent) { toast(`${sent} registro${sent > 1 ? 's' : ''} guardado${sent > 1 ? 's' : ''} sin conexión ya enviado${sent > 1 ? 's' : ''}`); load().catch(() => {}); }
 }
 async function api(path, opts = {}) {
@@ -58,7 +71,8 @@ async function api(path, opts = {}) {
 /* Only meals, weights and workouts may wait offline; everything else (settings, secrets) goes through api() and is never stored. */
 async function apiQueued(path, payload) {
   if (!QUEUEABLE.includes(path)) throw new Error('Ruta no admitida sin conexión');
-  const body = JSON.stringify(payload);
+  // client_id lets the server ignore a retry whose first response was lost
+  const body = JSON.stringify({...payload, client_id: newClientId()});
   try {
     const r = await fetch(path, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body});
     if (r.status === 503 && !navigator.onLine) throw new TypeError('offline');
@@ -71,7 +85,11 @@ async function apiQueued(path, payload) {
   }
 }
 async function handle(r) {
-  if (r.status === 401) { location.reload(); throw new Error('Sesión caducada'); }
+  if (r.status === 401) {
+    // Drop cached pages/data of the expired session (never the pending send queue in localStorage).
+    try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.filter((k) => k.startsWith('dpp-')).map((k) => caches.delete(k))); } } catch (e) { /* no Cache Storage */ }
+    location.reload(); throw new Error('Sesión caducada');
+  }
   if (!r.ok) { let e = `Error ${r.status}`; try { e = (await r.json()).error || e; } catch (x) { /* not JSON */ } throw new Error(e); }
   return r.json();
 }

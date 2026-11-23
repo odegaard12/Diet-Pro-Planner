@@ -264,6 +264,16 @@ def _m11_more_recipes(db: sqlite3.Connection) -> None:
         dpp_recipes.add_recipes(db)
 
 
+def _m12_client_ids(db: sqlite3.Connection) -> None:
+    """client_id on meals/weights/workouts so a retried offline POST never creates a duplicate."""
+    for table in ("meals", "weights", "workouts"):
+        if not _table_exists(db, table):
+            continue
+        if "client_id" not in _columns(db, table):
+            db.execute(f"ALTER TABLE {table} ADD COLUMN client_id TEXT")
+        db.execute(f"CREATE UNIQUE INDEX IF NOT EXISTS idx_{table}_client_id ON {table}(client_id) WHERE client_id IS NOT NULL")
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (1, "meals without UNIQUE constraint", _m1_meals_without_unique),
     (2, "indexes + workouts.source/external_id", _m2_indexes_and_workout_source),
@@ -276,6 +286,7 @@ MIGRATIONS: list[tuple[int, str, Callable[[sqlite3.Connection], None]]] = [
     (9, "supermarket catalog: Carrefour, Dia and Alcampo", _m9_supermarket_more),
     (10, "everyday ingredients, more supermarket products and built-in recipes", _m10_ingredients_and_recipes),
     (11, "second batch of built-in recipes", _m11_more_recipes),
+    (12, "client_id on meals/weights/workouts (idempotent offline retries)", _m12_client_ids),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 

@@ -207,12 +207,24 @@ def _insert_meal_items(db: sqlite3.Connection, meal_id: int, items: list[dict[st
         )
 
 
+def _client_id(d: dict[str, Any]) -> str | None:
+    """Optional idempotency key sent by the offline queue (None when absent)."""
+    return v.text(d.get("client_id"), 64) or None
+
+
+def _existing_by_client_id(db: sqlite3.Connection, table: str, cid: str | None) -> int | None:
+    if not cid:
+        return None
+    row = db.execute(f"SELECT id FROM {table} WHERE client_id=?", (cid,)).fetchone()
+    return int(row["id"]) if row else None
+
+
 def create_meal(db: sqlite3.Connection, meal: dict[str, Any], items: list[dict[str, Any]]) -> int:
     """Always creates a new meal (two identical meals at the same minute are both kept)."""
     try:
         cur = db.execute(
-            "INSERT INTO meals(date,time,name,notes) VALUES(?,?,?,?)",
-            (meal["date"], meal["time"], meal["name"], meal.get("notes", "")),
+            "INSERT INTO meals(date,time,name,notes,client_id) VALUES(?,?,?,?,?)",
+            (meal["date"], meal["time"], meal["name"], meal.get("notes", ""), meal.get("client_id")),
         )
     except sqlite3.IntegrityError:
         # Only possible if migration 1 could not drop the legacy UNIQUE constraint.
@@ -576,11 +588,11 @@ def api_strava_sync():
             if kcal <= 0 and minutes:
                 kcal = estimate_strava_kcal(name, minutes)
             notes = f"Strava · {title} · id={a.get('id')}"
-            db.execute(
+            cur = db.execute(
                 "INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes) VALUES(?,?,?,?,?,?,?,?)",
                 (d, tm, None, name, minutes, distance_km, kcal, notes),
             )
-            if db.total_changes:
+            if cur.rowcount:
                 imported += 1
     return jsonify({"ok": True, "imported": imported, "received": len(activities)})
 
@@ -701,8 +713,13 @@ def _weight_payload(d: dict[str, Any]) -> tuple:
 
 @app.post("/api/weights")
 def api_weights():
+    d = v.json_body()
+    cid = _client_id(d)
     with con() as db:
-        cur = db.execute("INSERT OR IGNORE INTO weights(date,time,kg,official,context) VALUES(?,?,?,?,?)", _weight_payload(v.json_body()))
+        wid = _existing_by_client_id(db, "weights", cid)
+        if wid is not None:  # retried offline POST: same record, nothing inserted
+            return jsonify({"ok": True, "id": wid, "duplicate": False})
+        cur = db.execute("INSERT OR IGNORE INTO weights(date,time,kg,official,context,client_id) VALUES(?,?,?,?,?,?)", (*_weight_payload(d), cid))
     return jsonify({"ok": True, "id": cur.lastrowid if cur.rowcount else None, "duplicate": not cur.rowcount})
 
 
@@ -760,8 +777,11 @@ def _meal_header(d: dict[str, Any]) -> dict[str, Any]:
 def api_meals():
     d = v.json_body()
     with con() as db:
-        items = _meal_items_from_payload(db, d.get("items"))
-        mid = create_meal(db, _meal_header(d), items)
+        cid = _client_id(d)
+        mid = _existing_by_client_id(db, "meals", cid)
+        if mid is None:  # a retried offline POST that already arrived is not inserted again
+            items = _meal_items_from_payload(db, d.get("items"))
+            mid = create_meal(db, {**_meal_header(d), "client_id": cid}, items)
     return jsonify({"ok": True, "id": mid})
 
 
@@ -813,14 +833,19 @@ def api_workouts():
     minutes = v.number(d.get("minutes"), "minutos", default=0, maximum=1440)
     distance = v.number(d.get("distance_km"), "distancia", default=0, maximum=1000)
     kcal = v.number(d.get("kcal"), "kcal", default=0, maximum=15000)
+    cid = _client_id(d)
     with con() as db:
+        wid = _existing_by_client_id(db, "workouts", cid)
+        if wid is not None:  # retried offline POST: return the stored record
+            row = db.execute("SELECT kcal FROM workouts WHERE id=?", (wid,)).fetchone()
+            return jsonify({"ok": True, "id": wid, "kcal": row["kcal"]})
         ex = db.execute("SELECT * FROM exercises WHERE name=?", (name,)).fetchone()
         ex_id = ex["id"] if ex else None
         if kcal <= 0 and ex and minutes:
             kcal = dpp_profile.estimate_met_kcal(float(ex["met"]), minutes)
         cur = db.execute(
-            "INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes) VALUES(?,?,?,?,?,?,?,?)",
-            (v.iso_date(d.get("date"), today_iso()), v.hhmm(d.get("time"), now_hm()), ex_id, name, minutes, distance, kcal, v.text(d.get("notes"), 500)),
+            "INSERT OR IGNORE INTO workouts(date,time,exercise_id,name,minutes,distance_km,kcal,notes,client_id) VALUES(?,?,?,?,?,?,?,?,?)",
+            (v.iso_date(d.get("date"), today_iso()), v.hhmm(d.get("time"), now_hm()), ex_id, name, minutes, distance, kcal, v.text(d.get("notes"), 500), cid),
         )
     return jsonify({"ok": True, "id": cur.lastrowid if cur.rowcount else None, "kcal": kcal})
 

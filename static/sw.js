@@ -1,7 +1,8 @@
 /*
  * Diet Pro Planner · offline shell (served at /sw.js, version injected by the server).
  * Network first for everything: online you always get the latest UI and data; offline the
- * last copy is shown read-only. Writes (POST/PUT/DELETE) are never cached or queued.
+ * last copy is shown read-only. Writes (POST/PUT/DELETE) are never cached here; the page queues
+ * offline meals/weights/workouts in localStorage (see app.js).
  */
 const CACHE = 'dpp-__DPP_VERSION__';
 const SHELL = ['/', '/static/manifest.webmanifest', '/static/icon-192.png', '/static/icon-512.png'];
