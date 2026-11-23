@@ -382,7 +382,18 @@ def build_state() -> dict[str, Any]:
         foods = rows(db.execute("SELECT * FROM foods ORDER BY purchased DESC, name COLLATE NOCASE"))
         exercises = rows(db.execute("SELECT * FROM exercises ORDER BY name COLLATE NOCASE"))
         weights = rows(db.execute("SELECT * FROM weights ORDER BY date DESC, time DESC, id DESC LIMIT 300"))
-        meals = [meal_with_items(db, r) for r in db.execute("SELECT * FROM meals ORDER BY date DESC, time DESC, id DESC LIMIT 300").fetchall()]
+        meals = []
+        by_meal: dict[int, list[dict[str, Any]]] = {}
+        for r in db.execute("SELECT * FROM meals ORDER BY date DESC, time DESC, id DESC LIMIT 300").fetchall():
+            d = dict(r)
+            d["items"] = by_meal.setdefault(r["id"], [])
+            meals.append(d)
+        if by_meal:  # one query for all items instead of one per meal
+            marks = ",".join("?" * len(by_meal))
+            for it in rows(db.execute(f"SELECT * FROM meal_items WHERE meal_id IN ({marks}) ORDER BY id", list(by_meal))):
+                by_meal[it["meal_id"]].append(it)
+        for d in meals:
+            d["totals"] = totals(d["items"])
         workouts = rows(db.execute("SELECT * FROM workouts ORDER BY date DESC, time DESC, id DESC LIMIT 300"))
         templates = rows(db.execute("SELECT * FROM templates ORDER BY name COLLATE NOCASE"))
         plans = rows(db.execute("SELECT * FROM plans ORDER BY id DESC LIMIT 20"))

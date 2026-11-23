@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.5
+
+- `/api/state` loads the items of all returned meals with a single query instead of one per meal (same output, pinned by a new snapshot test).
+- Strava duplicate detection is exact: an `external_id` match is preferred, and legacy rows without it are matched by the parsed `id=<number>` token, so id 1000001 no longer matches 10000012 or a manual note that merely contains similar text.
+- Added tests for the MET/kcal workout estimate (formula, default MET for unknown sports, TrailRun behaviour).
+
 ## v0.7.4
 
 - Offline queue is idempotent: every queued meal, weight or workout carries a `client_id` (migration 12 adds the column and a partial unique index), so a POST whose response was lost is no longer duplicated when the phone retries.

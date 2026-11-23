@@ -18,6 +18,27 @@ from dpp_validate import ApiError, iso_date, public_error
 
 VERSION = "v0.0.18"
 _SYNC_LOCK = threading.Lock()
+# Legacy rows keep the Strava id only inside notes ("... id=<n> ..."): the id must not be glued to a letter/digit or to more digits.
+_NOTE_ID = re.compile(r"(?<![A-Za-z0-9])id=(\d+)(?!\d)")
+
+
+def note_strava_ids(text: Any) -> list[str]:
+    return _NOTE_ID.findall(str(text or ""))
+
+
+def find_workout_by_strava_id(db, activity_id: str, indexed: bool):
+    """Exact lookup: external_id when the column exists, else equality on ids parsed from notes (never substring)."""
+    if indexed:
+        found = db.execute(
+            "SELECT id FROM workouts WHERE source='strava' AND external_id=? ORDER BY id DESC LIMIT 1",
+            (activity_id,),
+        ).fetchone()
+        if found:
+            return found
+    for row in db.execute("SELECT id, notes FROM workouts WHERE notes LIKE ? ORDER BY id DESC", (f"%id={activity_id}%",)).fetchall():
+        if activity_id in note_strava_ids(row["notes"]):
+            return row
+    return None
 
 
 class StravaRateLimitError(RuntimeError):
@@ -221,7 +242,7 @@ def register_strava_v018(app, legacy) -> None:
         rows = db.execute("SELECT notes FROM workouts WHERE notes LIKE '%id=%'").fetchall()
         for row in rows:
             text = row["notes"] if hasattr(row, "keys") else row[0]
-            output.update(re.findall(r"\bid=(\d+)", str(text or "")))
+            output.update(note_strava_ids(text))
         return output
 
     def upsert_activity(db, item: dict[str, Any], exact: bool) -> str:
@@ -234,17 +255,7 @@ def register_strava_v018(app, legacy) -> None:
         source = "detalle Strava" if exact else "estimación local"
         notes = f"Strava · {card['title']} · id={activity_id} · kcal desde {source}"
         indexed = has_external_id(db)
-        existing = None
-        if indexed:
-            existing = db.execute(
-                "SELECT id FROM workouts WHERE source='strava' AND external_id=? ORDER BY id DESC LIMIT 1",
-                (activity_id,),
-            ).fetchone()
-        if not existing:
-            existing = db.execute(
-                "SELECT id FROM workouts WHERE notes LIKE ? ORDER BY id DESC LIMIT 1",
-                (f"%id={activity_id}%",),
-            ).fetchone()
+        existing = find_workout_by_strava_id(db, activity_id, indexed)
         if existing:
             db.execute(
                 "UPDATE workouts SET date=?,time=?,name=?,minutes=?,distance_km=?,kcal=?,notes=? WHERE id=?",
