@@ -42,7 +42,7 @@ to eat next. Everything lives on your own server.
 | **Sport** | Strava import with auto-sync, manual workouts, planned vs real training week. |
 | **Goals** | Your own targets (manual, formula or adaptive calories) instead of hard-coded values. |
 | **Optional AI (BYOK)** | Claude or a local Ollama for coaching and label reading; off by default. |
-| **Web app** | Installable on the phone, dark theme, home-screen shortcuts, works offline with the last data seen. |
+| **Web app** | Installable on the phone, dark theme, home-screen shortcuts. Offline it opens with the last data seen, and meals, weights and workouts you log without connection are sent when the server is reachable again (over HTTPS, see below). |
 | **Safe data** | Versioned migrations with automatic backups, daily copies, SQLite download and CSV export. |
 | **Data review** | A read-only check in Ajustes that spots typos (a weight that jumps, a 5000 g portion), foods whose macros do not add up, templates with missing foods and old backups. |
 
@@ -90,6 +90,7 @@ All settings live in `.env` (see [`.env.example`](.env.example)):
 | `DPP_OFF_ENABLED`, `DPP_OFF_COUNTRY` | Open Food Facts lookups |
 | `DPP_BACKUP_KEEP` | Daily backups kept (0 disables) |
 | `DPP_COOKIE_SECURE`, `DPP_TRUSTED_PROXIES` | Behind HTTPS / a reverse proxy |
+| `DPP_TLS_CERT`, `DPP_TLS_KEY`, `DPP_TLS_PORT` | Optional second port with HTTPS (default 8443). Browsers only keep a web app for offline use over HTTPS, so on a home network either use this with a certificate your phone trusts or put a reverse proxy in front. |
 | `TZ` | Local time zone (set in `docker-compose.yml`) |
 
 More: session lifetimes, request limits and Docker hardening in [`docs/security.md`](docs/security.md).
@@ -99,7 +100,8 @@ More: session lifetimes, request limits and Docker hardening in [`docs/security.
 - Food logs, weights, body composition, Strava tokens, photos and backups stay in `data/` on your server and are
   never committed (a CI guard blocks private files, private IPs, home paths and activity ids).
 - Integrations are opt-in: Open Food Facts receives only a barcode or search text; AI only gets the minimal context.
-- The installed web app keeps a read-only copy of the last data on your phone for offline use; signing out clears it.
+- The installed web app keeps a read-only copy of the last data on your phone for offline use, plus the meals, weights
+  and workouts waiting to be sent (each with a `client_id`, so a retry never creates a duplicate). Signing out clears both.
 - Nothing here is medical advice; bioimpedance values are trends, not daily truth.
 
 ## Security

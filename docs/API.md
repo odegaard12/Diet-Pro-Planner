@@ -13,6 +13,9 @@ All `/api/*` routes require authentication except `/api/auth/login`, `/api/auth/
 - `POST /api/weights` · `PUT /api/weights/<id>` · `DELETE /api/weights/<id>`
 - `POST /api/workouts` · `DELETE /api/workouts/<id>`
 
+`POST /api/meals`, `/api/weights` and `/api/workouts` accept an optional `client_id` (text, up to 64 characters). Sending
+the same `client_id` again returns the record already stored instead of creating another one; the offline queue relies on it.
+
 ### Goals and progress
 
 - `GET /api/profile` · `PUT /api/profile`

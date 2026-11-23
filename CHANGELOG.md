@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.7
+
+- Internal refactor, no behaviour change: `app.py` shrank from about 3,400 to about 1,000 lines by moving helpers into `dpp_ocr.py` (label OCR), `dpp_strava_legacy.py` (legacy Strava helpers and auto-sync), `dpp_state.py` (DB helpers, schema/seed, state building and the `/api/state` sanitizer), `dpp_insights.py` (dashboard insights) and `dpp_nutrition.py` (Food Intelligence).
+- Routes and endpoint names stay in `app.py`; every moved name is re-exported there, so `legacy.<name>` users and tests keep working.
+- The served URL map and the endpoint list are pinned by a new test (`tests/test_route_map.py`).
+
 ## v0.7.6
 
 - Internal refactor, no behaviour change: the Food Intelligence and BioCharge corrections are now a pure function module (`dpp_food_intel_rules.py`) called by the endpoints themselves instead of an `after_request` hook that re-parsed and re-serialised the JSON.
