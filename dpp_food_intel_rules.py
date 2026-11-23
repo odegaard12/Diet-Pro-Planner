@@ -1,7 +1,7 @@
 """
-Diet Pro Planner truth patch.
+Pure Food Intelligence / body snapshot rules (no Flask, no I/O).
 
-Small response-normalization layer for:
+Take the already built response dict and return the corrected one:
 - body snapshot BioCharge / Zepp Hybrid Charge aliases
 - Food Intelligence false positives:
   - oil counted from non-pure-oil food names
@@ -9,13 +9,11 @@ Small response-normalization layer for:
   - galleta inside cheesecake wording
   - protein advice when protein is already high
 
-This module is intentionally small and removable once the canonical
-Food Intelligence backend is refactored into a proper day-dashboard endpoint.
+Called directly by the view functions in app.py before jsonify.
 """
 
 from __future__ import annotations
 
-import json
 import re
 from copy import deepcopy
 from typing import Any
@@ -259,37 +257,3 @@ def normalize_food_intel_day(data: dict[str, Any]) -> dict[str, Any]:
                 data["analysis"][key] = _clean_string(data["analysis"][key], protein_g=protein_g, text_blob=text_blob)
 
     return data
-
-
-def _replace_json_response(response, data: dict[str, Any]):
-    body = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-    response.set_data(body)
-    response.headers["Content-Type"] = "application/json; charset=utf-8"
-    response.headers["Content-Length"] = str(len(body.encode("utf-8")))
-    return response
-
-
-def register_food_intel_truth_patch(app):
-    @app.after_request
-    def dpp_truth_patch_after_request(response):  # pragma: no cover - Flask hook
-        try:
-            import flask
-
-            path = flask.request.path or ""
-            if not response.is_json:
-                return response
-
-            if path == "/api/body-snapshot/latest":
-                data = response.get_json(silent=True)
-                if isinstance(data, dict):
-                    return _replace_json_response(response, normalize_body_snapshot(data))
-
-            if path == "/api/food-intel/day":
-                data = response.get_json(silent=True)
-                if isinstance(data, dict):
-                    return _replace_json_response(response, normalize_food_intel_day(data))
-
-        except Exception:
-            return response
-
-        return response

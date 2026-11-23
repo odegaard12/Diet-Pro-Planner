@@ -24,6 +24,7 @@ import dpp_config as config
 import dpp_db
 import dpp_profile
 import dpp_validate as v
+from dpp_food_intel_rules import normalize_body_snapshot, normalize_food_intel_day
 from dpp_validate import ApiError
 
 config.ensure_dirs()
@@ -2679,6 +2680,20 @@ def _fi_build_day(d, planned_workout=None):
         "meals": meals,
     }
 
+def _dpp_rules_response(data, rule):
+    """Sort keys (as jsonify did), apply the pure rule, emit compact UTF-8 JSON like the removed hook."""
+    def _sorted(o):
+        if isinstance(o, dict):
+            return {k: _sorted(o[k]) for k in sorted(o)}
+        if isinstance(o, (list, tuple)):
+            return [_sorted(x) for x in o]
+        return o
+    body = json.dumps(rule(_sorted(data)), ensure_ascii=False, separators=(",", ":"))
+    resp = app.response_class(body)
+    resp.headers["Content-Type"] = "application/json; charset=utf-8"
+    resp.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    return resp
+
 @app.route("/api/food-intel/day", methods=["GET", "POST"])
 def api_food_intel_day():
     payload = {}
@@ -2702,7 +2717,7 @@ def api_food_intel_day():
             "intensity": v.text(request.args.get("planned_intensity"), 20) or "moderate",
         }
 
-    return jsonify(_fi_build_day(d, planned_workout=planned_workout))
+    return _dpp_rules_response(_fi_build_day(d, planned_workout=planned_workout), normalize_food_intel_day)
 
 @app.route("/api/food-intel/health")
 def api_food_intel_health():
@@ -3006,12 +3021,12 @@ def api_body_snapshot_latest():
 
     if not table:
         con.close()
-        return jsonify({
+        return _dpp_rules_response({
             "ok": True,
             "available": False,
             "version": "v0.0.14.1",
             "reason": "body_composition table not found"
-        })
+        }, normalize_body_snapshot)
 
     latest = con.execute("""
         SELECT date, time
@@ -3023,12 +3038,12 @@ def api_body_snapshot_latest():
 
     if not latest:
         con.close()
-        return jsonify({
+        return _dpp_rules_response({
             "ok": True,
             "available": False,
             "version": "v0.0.14.1",
             "reason": "no body composition records"
-        })
+        }, normalize_body_snapshot)
 
     rows = con.execute("""
         SELECT metric, value, unit, source, confidence, notes
@@ -3108,7 +3123,7 @@ def api_body_snapshot_latest():
     else:
         freshness = "old"
 
-    return jsonify({
+    return _dpp_rules_response({
         "ok": True,
         "available": True,
         "version": "v0.0.14.1",
@@ -3126,7 +3141,7 @@ def api_body_snapshot_latest():
             "time": previous["time"] if previous else None
         },
         "message": "Foto corporal estimada por bioimpedancia. Usar tendencia semanal, no valor aislado."
-    })
+    }, normalize_body_snapshot)
 
 # DPP_BODY_SNAPSHOT_API_END
 
@@ -3388,15 +3403,6 @@ def _dpp_v0141_after_request_sanitize_api_state(response):
         return response
 # DPP_V0141_API_STATE_SANITIZER_END
 
-
-
-# DPP_V0151_TRUTH_PATCH_REGISTER_START
-try:
-    from dpp_food_intel_truth_patch import register_food_intel_truth_patch
-    register_food_intel_truth_patch(app)
-except Exception as exc:
-    print(f"[DPP] food-intel truth patch not registered: {exc}")
-# DPP_V0151_TRUTH_PATCH_REGISTER_END
 
 
 # DPP_BODY_TRENDS_V2_START

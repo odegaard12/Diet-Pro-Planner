@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.6
+
+- Internal refactor, no behaviour change: the Food Intelligence and BioCharge corrections are now a pure function module (`dpp_food_intel_rules.py`) called by the endpoints themselves instead of an `after_request` hook that re-parsed and re-serialised the JSON.
+- Removed the hook registration (and its silent `except Exception`); `dpp_food_intel_truth_patch.py` is now only an alias for the old import path.
+- Added unit tests for the rules without Flask.
+
 ## v0.7.5
 
 - `/api/state` loads the items of all returned meals with a single query instead of one per meal (same output, pinned by a new snapshot test).

@@ -64,6 +64,9 @@ jobs:
             node --check "$file"
           done < <(find static -type f -name '*.js' -print0)
 
+      - name: JavaScript unit tests
+        run: node --test "tests/js/*.test.js"
+
       - name: Frontend monolith guard
         run: python scripts/check_frontend_monoliths.py
 
