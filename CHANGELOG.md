@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.8
+
+- Security: when a request arrives over HTTPS (the optional port 8443), the session cookie now carries `Secure` and the response sends HSTS. Plain HTTP on 8099 is unchanged, so both ports keep working; the flag is decided per request.
+- New test `tests/test_https_cookie.py` covers both cases.
+
 ## v0.7.7
 
 - Internal refactor, no behaviour change: `app.py` shrank from about 3,400 to about 1,000 lines by moving helpers into `dpp_ocr.py` (label OCR), `dpp_strava_legacy.py` (legacy Strava helpers and auto-sync), `dpp_state.py` (DB helpers, schema/seed, state building and the `/api/state` sanitizer), `dpp_insights.py` (dashboard insights) and `dpp_nutrition.py` (Food Intelligence).

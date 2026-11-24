@@ -35,6 +35,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from flask import g, jsonify, request, session
+from flask.sessions import SecureCookieSessionInterface
 
 import dpp_config as config
 
@@ -662,6 +663,11 @@ def _check_credentials(body: dict) -> tuple[bool, str]:
     return (bool(candidate) and _token_matches(candidate)), "token"
 
 
+class _PerRequestSecureSession(SecureCookieSessionInterface):
+    def get_cookie_secure(self, app) -> bool:
+        return bool(app.config.get("SESSION_COOKIE_SECURE")) or request.is_secure
+
+
 def register_security(app) -> None:
     if getattr(app, "_dpp_security_registered", False):
         return
@@ -683,6 +689,9 @@ def register_security(app) -> None:
     app.config["SESSION_COOKIE_SECURE"] = cookie_secure
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=SESSION_DAYS)
     app.config["SESSION_REFRESH_EACH_REQUEST"] = False
+    # HTTPS served by this same process (DPP_TLS_CERT, port 8443) while plain HTTP stays open on 8099:
+    # the Secure flag is decided per request instead of globally.
+    app.session_interface = _PerRequestSecureSession()
 
     @app.before_request
     def _dpp_protect_request():
@@ -698,7 +707,7 @@ def register_security(app) -> None:
         headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
         headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
-        if cookie_secure:
+        if cookie_secure or request.is_secure:
             headers.setdefault("Strict-Transport-Security", "max-age=31536000")
         path = request.path or ""
         if path.startswith("/api/") or path.startswith("/uploads/"):
